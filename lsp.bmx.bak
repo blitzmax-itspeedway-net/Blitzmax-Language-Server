@@ -5,18 +5,20 @@ SuperStrict
 '   VERSION 0.00 PA
 
 Framework brl.standardio 
+Import pub.freeprocess
+Import brl.stringbuilder
+Import brl.retro
+
 Import brl.collections      ' Used for Tokeniser
-'Import brl.linkedlist
 Import brl.map              ' Used as JSON dictionary
 Import brl.reflection		' USed by JSON.transpose
-Import brl.retro
-Import brl.stringbuilder
-Import brl.system
-
-Import pub.freeprocess
+'Import brl.retro
+'Import brl.linkedlist
 
 Include "bin/TLogger.bmx"
 Include "bin/json.bmx"
+
+' MESSAGE TYPES
 
 Include "bin/REQ_initialize.bmx"
 Include "bin/REQ_shutdown.bmx"
@@ -64,22 +66,22 @@ Local counter:Int = 0
                 'case 0  ' Read Headers
                 If line.startswith("Content-Length:")
                     contentlength = Int( line[15..] )
-                    Logfile.write( "HEADER: Content-Length:"+contentlength)
+                    Log.write( "HEADER: Content-Length:"+contentlength)
                 ElseIf line.startswith("Content-Type:")
                     contenttype = Int( line[13..] )
 					' Backward compatibility, utf8 is no longer supported
 					If contenttype = "utf8" contenttype = "utf-8"
-                    Logfile.write( "HEADER: Content-Type:"+contenttype)
+                    Log.write( "HEADER: Content-Type:"+contenttype)
                 ElseIf line=""
-                    Logfile.write( "CONTENT STARTING...")
+                    Log.write( "IGNORE BLANK")
                     content = stdIN.ReadString$( contentlength )
-                    Logfile.write( "- RECEIVED:~n"+content )
+                    Log.write( "RECEIVED:~n"+content )
 
                     ' Start a thread to process content
                     'local thread:TThread = CreateThread( OnMessage, content )
                     OnMessage( content )
                 Else
-                    Logfile.write( "SKIP:"+line)
+                    Log.write( "SKIP:"+line)
                 End If
                 'end select
                 'Input$( "#" )
@@ -150,28 +152,14 @@ end Rem
     ' Parse a request
     Function OnMessage( message:String )
 		' Parse message into a JSON object
-        Logfile.write( "onMessage()" )
         Local j:JSON = json.parse( message )
-
-        local debug:string = JSON.stringify(J)
 
 		' Check if message is a Request:
 		'	(Requests contain "method" key)
 		Local methd:String = j["method"].tostring()
-        Logfile.write( "- Method="+methd )
-		If methd<>""
-            Logfile.write( "Transposing..." )
-            Try
-                Local request:TRequest = j.transpose()
-                if request
-                    Logfile.write( "- Executing" )
-                    request.execute()
-                else
-                    Logfile.write( "- TRequest is null")
-                end if
-            catch exception:string
-                logfile.write( exception )
-            end try
+		If methd
+			Local request:TRequest = j.transpose()
+			If request request.execute()
 		End If
 
     End Function

@@ -4,13 +4,16 @@
 
 # Hidden Files
 
-# Examples
+# Unimportant clutter
 examples/
 notes/
+old/
 test.txt
+runlog.txt
 
 # Private files
 post.bmk
+update
 
 # Executables
 lsp

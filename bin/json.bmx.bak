@@ -36,13 +36,9 @@ Type JSON
     End Function
 
     ' Convert JSON into a string
-    function Stringify:String( j:JSON )
-		Return j.root.stringify()
-    End function
-
-    function Stringify:String( j:JNode )
-		Return j.stringify()
-    End function
+    Method Stringify:String()
+		Return _Stringify( root )
+    End Method
 
     'Method toString:String()
 	'	Return _Stringify( root )
@@ -55,7 +51,7 @@ Type JSON
 
     ' Push a JSON object into a Blitzmax Object using Reflection 
     Method transpose:TRequest()
-'DebugStop
+DebugStop
 		If Not root Return Null
 		
 		' Identify the Type that we are going to create
@@ -70,18 +66,23 @@ Type JSON
 		If Not invoke Return Null
 	
 		' Enumerate fields
-
-'DebugStop
+'WORKING HERE:
+DebugStop
 		Local fields:TMap = New TMap()
+		Local cursor:TTypeId = typeid
+		'Repeat
 		
-		' Add Field names and types to map
-		For Local fld:TField = EachIn typeid.EnumFields()
-			'Local fldtype:TTypeId = fld.typeid
-			Print fld.name() + ":" + fld.typeid.name()
-			
-			fields.insert( fld.name(), fld.typeid.name() )
-		Next
-	
+			' Add Field names and types to map
+			For Local fld:TField = EachIn cursor.EnumFields()
+				'Local fldtype:TTypeId = fld.typeid
+				Print fld.name() + ":" + fld.typeid.name()
+				
+				fields.insert( fld.name(), fld.typeid.name() )
+			Next
+		
+		'	cursor = cursor.superType()
+		'Until cursor = Null
+
 		' Copy JSON fields into object
 		For Local fldname:String = EachIn fields.keys()
 			Local fldtype:String = String(fields[fldname]).tolower()
@@ -97,6 +98,7 @@ Type JSON
 			End If
 		Next		
 		
+		Print "invoke.id"+TShutdown(invoke.id)
 		
     End Method
 
@@ -366,7 +368,36 @@ Type JSON
 
 	' ##### STRINGIFY
 	
+	Method _Stringify:String( j:JNode )
 	
+		'DebugStop
+		
+		Local text:String
+		If Not j Return "~q~q"
+		Select j.class
+		Case "object"
+			Local map:TMap = TMap( j.value )
+			text :+ "{"
+			If map
+			 
+				For Local key:String = EachIn map.keys()
+					text :+ "~q"+key+"~q:"
+					text :+ _stringify( JNode( map[key] ) )
+					text :+ ","
+				Next
+				' Strip trailing comma
+				text = text[..(Len(text)-1)]
+			End If
+			text :+ "}"
+		Case "number"
+			text :+ String(j.value)
+		Case "string"
+			text :+ "~q"+String(j.value)+"~q"
+		Default
+			Print "INVALID SYMBOL: '"+j.class+"'"
+		End Select
+		Return text
+	End Method
 
 End Type
 
@@ -390,36 +421,6 @@ Type JNode
 			If map Return JNode( map[key] )
 		End If
 		Return New JNode( "invalid", "" )
-	End Method
-
-    Method Stringify:String()
-	
-		'DebugStop
-		
-		Local text:String
-		'If Not j Return "~q~q"
-		Select class
-		Case "object"
-			Local map:TMap = TMap( value )
-			text :+ "{"
-			If map
-			 
-				For Local key:String = EachIn map.keys()
-                    local j:JNode = JNode( map[key] )
-					text :+ "~q"+key+"~q:"+j.stringify()+","
-				Next
-				' Strip trailing comma
-				text = text[..(Len(text)-1)]
-			End If
-			text :+ "}"
-		Case "number"
-			text :+ String(value)
-		Case "string"
-			text :+ "~q"+String(value)+"~q"
-		Default
-			Print "INVALID SYMBOL: '"+class+"'"
-		End Select
-		Return text
 	End Method
 End Type
 
