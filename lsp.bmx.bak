@@ -5,27 +5,25 @@ SuperStrict
 '   VERSION 0.00 PA
 
 Framework brl.standardio 
-Import pub.freeprocess
-Import brl.stringbuilder
-Import brl.retro
-
 Import brl.collections      ' Used for Tokeniser
+'Import brl.linkedlist
 Import brl.map              ' Used as JSON dictionary
 Import brl.reflection		' USed by JSON.transpose
-'Import brl.retro
-'Import brl.linkedlist
+Import brl.retro
+Import brl.stringbuilder
+Import brl.system
+
+Import pub.freeprocess
 
 Include "bin/TLogger.bmx"
 Include "bin/json.bmx"
-
-' MESSAGE TYPES
 
 Include "bin/REQ_initialize.bmx"
 Include "bin/REQ_shutdown.bmx"
 
 Global Version:String = "0.00 Pre-Alpha"
 Global Logfile:TLogger = New TLogger()
-
+debugstop
 Type Main
     Global instance:Main
 
@@ -66,75 +64,28 @@ Local counter:Int = 0
                 'case 0  ' Read Headers
                 If line.startswith("Content-Length:")
                     contentlength = Int( line[15..] )
-                    Log.write( "HEADER: Content-Length:"+contentlength)
+                    Logfile.write( "HEADER: Content-Length:"+contentlength)
                 ElseIf line.startswith("Content-Type:")
                     contenttype = Int( line[13..] )
 					' Backward compatibility, utf8 is no longer supported
 					If contenttype = "utf8" contenttype = "utf-8"
-                    Log.write( "HEADER: Content-Type:"+contenttype)
+                    Logfile.write( "HEADER: Content-Type:"+contenttype)
                 ElseIf line=""
-                    Log.write( "IGNORE BLANK")
+                    Logfile.write( "CONTENT STARTING...")
                     content = stdIN.ReadString$( contentlength )
-                    Log.write( "RECEIVED:~n"+content )
+                    Logfile.write( "- RECEIVED:~n"+content )
 
                     ' Start a thread to process content
                     'local thread:TThread = CreateThread( OnMessage, content )
                     OnMessage( content )
                 Else
-                    Log.write( "SKIP:"+line)
+                    Logfile.write( "SKIP:"+line)
                 End If
                 'end select
                 'Input$( "#" )
 
             Until quit  'len(line)=0 or eof(stdIn)
-Rem
-            print "STDIN OPEN"
-            repeat 
-                print( "Waiting for input" )
-                ' ## BLOCKING CALL ##
-                line = stdIN.ReadLine()
-                print "FINISHED READING LINE"
-                select fsm
-                case 0  ' Waiting for Content-Length
-                    print( "WAITING FOR CONTENT-LENGTH")
-                    if line.StartsWith( "Content-Length:" )
-                        contentlength = int( line[15..] )
-                        print( "LENGTH:"+contentlength )
-                        fsm = 1
-                    Else
-                        print( "SKIP: "+line)
-                    end if
-                case 1  ' Waiting for Header to complete (Blank Line)
-                    print( "WAITING FOR HEADER")
-                    line = stdIN.ReadLine()
-                    if trim(line)=""
-                        print( "Header complete")
-                        content = stdIN.ReadString$( contentlength )
-                        print "RECEIVED:~n"+content
-                        fsm = 0
-                    Else
-                        print( "SKIP: "+line)
-                    end if
-                Default
-                    print "..."
-                End Select
-                    ' Ignore everything else until start of JSON
-'                    local ignored:string
- '                   Repeat
-  '                      char = stdIN.ReadString(1)
-   '                     ignored :+ char
-    '                until char="{"
-     '               print "IGNORED: "+ignored
 
-                    'char :+ 
-                'else just ignore line
-                'End If
-                'Local input:string = ReadLine( stdIN )
-                'print( input )
-                counter :+ 1
-                if counter>5 end
-            Until quit 'or counter > 5
-end Rem
         Else
             Print "Failed to open StdIN"
         End If
@@ -152,14 +103,29 @@ end Rem
     ' Parse a request
     Function OnMessage( message:String )
 		' Parse message into a JSON object
+        Logfile.write( "onMessage()" )
         Local j:JSON = json.parse( message )
+
+        Local debug:String = JSON.stringify(J)
 
 		' Check if message is a Request:
 		'	(Requests contain "method" key)
 		Local methd:String = j["method"].tostring()
-		If methd
-			Local request:TRequest = j.transpose()
-			If request request.execute()
+        Logfile.write( "- Method="+methd )
+		If methd<>""
+            Logfile.write( "Transposing..." )
+            Try
+                Local request:TRequest = j.transpose()
+                If request
+                    Logfile.write( "- Executing" )
+                    request.execute()
+                Else
+                    Logfile.write( "- TRequest is null")
+                End If
+            Catch exception:String
+                logfile.write( exception )
+            End Try
+            Logfile.write( "Execution complete" )
 		End If
 
     End Function

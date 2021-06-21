@@ -36,13 +36,15 @@ Type JSON
     End Function
 
     ' Convert JSON into a string
-    function Stringify:String( j:JSON )
-		Return j.root.stringify()
-    End function
+    Function Stringify:String( j:JSON )
+		If j And j.root Return j.root.stringify()
+		Return ""
+    End Function
 
-    function Stringify:String( j:JNode )
-		Return j.stringify()
-    End function
+    Function Stringify:String( j:JNode )
+		If j Return j.stringify()
+		Return ""
+    End Function
 
     'Method toString:String()
 	'	Return _Stringify( root )
@@ -91,6 +93,8 @@ Type JSON
 			Select fldtype
 			Case "string"
 				fld.setString( invoke, "SCAREMONGER" )
+            case "int"
+                fld.setInt( invoke, 99 )
 			Default
 				DebugLog( fldtype + " not currently supported by transform" )
 			End Select
@@ -405,7 +409,7 @@ Type JNode
 			If map
 			 
 				For Local key:String = EachIn map.keys()
-                    local j:JNode = JNode( map[key] )
+                    Local j:JNode = JNode( map[key] )
 					text :+ "~q"+key+"~q:"+j.stringify()+","
 				Next
 				' Strip trailing comma

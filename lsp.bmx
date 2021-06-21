@@ -21,6 +21,7 @@ Include "bin/json.bmx"
 Include "bin/REQ_initialize.bmx"
 Include "bin/REQ_shutdown.bmx"
 
+DebugStop
 Global Version:String = "0.00 Pre-Alpha"
 Global Logfile:TLogger = New TLogger()
 
@@ -85,54 +86,7 @@ Local counter:Int = 0
                 'Input$( "#" )
 
             Until quit  'len(line)=0 or eof(stdIn)
-Rem
-            print "STDIN OPEN"
-            repeat 
-                print( "Waiting for input" )
-                ' ## BLOCKING CALL ##
-                line = stdIN.ReadLine()
-                print "FINISHED READING LINE"
-                select fsm
-                case 0  ' Waiting for Content-Length
-                    print( "WAITING FOR CONTENT-LENGTH")
-                    if line.StartsWith( "Content-Length:" )
-                        contentlength = int( line[15..] )
-                        print( "LENGTH:"+contentlength )
-                        fsm = 1
-                    Else
-                        print( "SKIP: "+line)
-                    end if
-                case 1  ' Waiting for Header to complete (Blank Line)
-                    print( "WAITING FOR HEADER")
-                    line = stdIN.ReadLine()
-                    if trim(line)=""
-                        print( "Header complete")
-                        content = stdIN.ReadString$( contentlength )
-                        print "RECEIVED:~n"+content
-                        fsm = 0
-                    Else
-                        print( "SKIP: "+line)
-                    end if
-                Default
-                    print "..."
-                End Select
-                    ' Ignore everything else until start of JSON
-'                    local ignored:string
- '                   Repeat
-  '                      char = stdIN.ReadString(1)
-   '                     ignored :+ char
-    '                until char="{"
-     '               print "IGNORED: "+ignored
 
-                    'char :+ 
-                'else just ignore line
-                'End If
-                'Local input:string = ReadLine( stdIN )
-                'print( input )
-                counter :+ 1
-                if counter>5 end
-            Until quit 'or counter > 5
-end Rem
         Else
             Print "Failed to open StdIN"
         End If
@@ -153,25 +107,26 @@ end Rem
         Logfile.write( "onMessage()" )
         Local j:JSON = json.parse( message )
 
-        local debug:string = JSON.stringify(J)
+        Local debug:String = JSON.stringify(J)
 
 		' Check if message is a Request:
 		'	(Requests contain "method" key)
 		Local methd:String = j["method"].tostring()
         Logfile.write( "- Method="+methd )
 		If methd<>""
-            Logfile.write( "Transposing..." )
+            Logfile.write( "Transposing...." )
             Try
                 Local request:TRequest = j.transpose()
-                if request
+                If request
                     Logfile.write( "- Executing" )
                     request.execute()
-                else
+                Else
                     Logfile.write( "- TRequest is null")
-                end if
-            catch exception:string
+                End If
+            Catch exception:String
                 logfile.write( exception )
-            end try
+            End Try
+            Logfile.write( "Execution complete" )
 		End If
 
     End Function
@@ -201,5 +156,10 @@ Function StdIO_Write_Thread()
 End Function
 
 '   Run the Application
-Global LSP:Main = New Main()
-exit_( LSP.run() )
+
+try
+    Global LSP:Main = New Main()
+    exit_( LSP.run() )
+catch exception:string
+    DebugLog( exception )
+end try
