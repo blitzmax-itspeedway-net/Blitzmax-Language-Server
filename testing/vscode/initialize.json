@@ -1,0 +1,4 @@
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":18223,"clientInfo":{"name":"Visual Studio Code","version":"1.57.1"},
+"locale":"en-gb","rootPath":"/home/si/dev/LSP","rootUri":"file:///home/si/dev/LSP","capabilities":{"workspace":{"applyEdit":true,"workspaceEdit":{"documentChanges":true,"resourceOperations":["create","rename","delete"],
+"failureHandling":"textOnlyTransactional","normalizesLineEndings":true,"changeAnnotationSupport":{"groupsOnLabel":true}}
+

@@ -36,13 +36,15 @@ Type JSON
     End Function
 
     ' Convert JSON into a string
-    function Stringify:String( j:JSON )
-		Return j.root.stringify()
-    End function
+    Function Stringify:String( j:JSON )
+		If j And j.root Return j.root.stringify()
+		Return ""
+    End Function
 
-    function Stringify:String( j:JNode )
-		Return j.stringify()
-    End function
+    Function Stringify:String( j:JNode )
+		If j Return j.stringify()
+		Return ""
+    End Function
 
     'Method toString:String()
 	'	Return _Stringify( root )
@@ -56,18 +58,27 @@ Type JSON
     ' Push a JSON object into a Blitzmax Object using Reflection 
     Method transpose:TRequest()
 'DebugStop
-		If Not root Return Null
-		
+        Logfile.write( "Transpose() start")
+        If Not root Return Null
+        Logfile.write( "- root is not null")
+        
 		' Identify the Type that we are going to create
-		Local invoke_method:String = Trim(root["method"].tostring())
-		If invoke_method="" Return Null
-		Local typestr:String = "MSG_"+invoke_method
-		
+        local methd:string = root["method"].tostring()
+        if methd="" return null
+		Local typestr:String = "REQ_"+methd
+		logfile.write( "- Creating "+methd )
 		' Create an object of type "typestr"
 		Print "Creating type "+typestr
 		Local typeid:TTypeId = TTypeId.ForName( typestr )
+        if not typeid
+            logfile.write( "- Not a valid type") 
+            return null
+        end if
 		Local invoke:Object = typeid.newObject()
-		If Not invoke Return Null
+		If Not invoke 
+            logfile.write( "- Failed to create object" )
+            Return Null
+        end if
 	
 		' Enumerate fields
 
@@ -91,6 +102,8 @@ Type JSON
 			Select fldtype
 			Case "string"
 				fld.setString( invoke, "SCAREMONGER" )
+            case "int"
+                fld.setInt( invoke, 99 )
 			Default
 				DebugLog( fldtype + " not currently supported by transform" )
 			End Select
@@ -136,10 +149,10 @@ Type JSON
 		'Next
 		
         ' Parse out the parent object
-        If PopToken().symbol <> "{" Return InvalidNode( "Unexpected Symbol" )
+        If PopToken().symbol <> "{" Return InvalidNode( "Expected '{'" )
         Local node:JNode = ReadObject()
 		If node.invalid() Return node
-        If PopToken().symbol <> "}" Return InvalidNode( "Unexpected Symbol" )
+        If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'" )
         ' There should be no more characters after the closing braces
         If tokens.isEmpty() Return node
         Return InvalidNode( "Unexpected characters past end" )
@@ -155,27 +168,27 @@ Type JSON
         If PeekToken().symbol = "}" Return New JNode( "object", node )
         Repeat
             ' Only valid option is a string (KEY)
-            If PeekToken().symbol <> "string" Return InvalidNode()
+            If PeekToken().symbol <> "string" Return InvalidNode( "Expected quoted string" )
             token = PopToken()
 
 			'DebugStop
 			'WE ARE LOOKING HERE To CHECK THAT JSON IS DEQUOTED
 
             Local name:String = Dequote( token.value )
+            debuglog( name )
 
             ' Only valid option is a colon
-            If Not PopToken().symbol = ":" Return InvalidNode()
+            If Not PopToken().symbol = ":" Return InvalidNode( "Expected ':'" )
 
             ' Get the value for this KEY
             Select PeekToken().symbol
             Case "{"    ' OBJECT
                 Local value:JNode = ReadObject()
-                If PopToken().symbol <> "}" Return InvalidNode()
+                If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'")
                 node.insert( name, New JNode( "object", value ) )
             Case "["    ' ARRAY
-                Local value:TList = ReadArray()
-                node.insert( name, value )
-                If PopToken().symbol <> "]" Return InvalidNode()
+                Local value:JNode = ReadArray()
+                If PopToken().symbol <> "]" Return InvalidNode( "Expected ']'" )
                 node.insert( name, New JNode( "array", value ) )
             Case "string"
                 token = PopToken()
@@ -214,7 +227,53 @@ Type JSON
 	End Method
 
     ' Reads an Array creating a TList
-    Method ReadArray:TList()
+    Method ReadArray:JNode()
+        Local node:JNode[]
+        Local token:JToken
+
+		'DebugStop
+		
+        If PeekToken().symbol = "]" Return New JNode( "array", node )
+        Repeat
+            ' Get the value for this array element
+            Select PeekToken().symbol
+            Case "{"    ' OBJECT
+
+                Local value:JNode = ReadObject()
+                If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'" )
+                node :+ [ New JNode( "object", value ) ]
+            Case "["    ' ARRAY
+                Local value:JNode = ReadArray()
+                If PopToken().symbol <> "]" Return InvalidNode( "Expected ']'" )
+                node :+ [ New JNode( "array", value ) ]
+            Case "string"
+                token = PopToken()
+                node :+ [ New JNode( "string", Dequote(token.value) ) ]
+            Case "number"
+                token = PopToken()
+                node :+ [ new JNode( "number", token.value ) ]
+            Case "alpha"
+                token = PopToken()
+                Local value:String = token.value
+                If value="true" Or value="false" Or value="null"
+                    node :+ [ new JNode( value, value ) ]
+                Else
+                    Return InvalidNode( "Unknown identifier '"+token.value+"'" )
+                End If
+            Default
+                Return InvalidNode( "Unknown identifier" )
+            End Select
+
+            ' Valid options now are "]" or ","
+            token = PeekToken()
+            If token.symbol = "]"
+                Return New JNode( "array", node )
+            ElseIf token.symbol = ","
+                PopToken()  ' Remove "," from token list
+            Else
+                Return InvalidNode( "Unexpected symbol '"+token.symbol+"'" )
+            End If
+        Forever
     End Method
 
     ' Pops the first token from the stack
@@ -405,7 +464,7 @@ Type JNode
 			If map
 			 
 				For Local key:String = EachIn map.keys()
-                    local j:JNode = JNode( map[key] )
+                    Local j:JNode = JNode( map[key] )
 					text :+ "~q"+key+"~q:"+j.stringify()+","
 				Next
 				' Strip trailing comma

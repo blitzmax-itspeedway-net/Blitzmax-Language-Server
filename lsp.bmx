@@ -15,15 +15,28 @@ Import brl.system
 
 Import pub.freeprocess
 
+'   INCLUDE APPLICATION COMPONENTS
+
 Include "bin/TLogger.bmx"
 Include "bin/json.bmx"
 
+Include "bin/sandbox.bmx"
 Include "bin/REQ_initialize.bmx"
 Include "bin/REQ_shutdown.bmx"
 
-DebugStop
-Global Version:String = "0.00 Pre-Alpha"
+'   GLOBALS
+
+'Global Version:String = "0.00 Pre-Alpha"
 Global Logfile:TLogger = New TLogger()
+
+'   INCREMENT BUILD NUMBER
+
+' @bmk include build.bmk
+' @bmk incrementVersion build.bmx
+Include "build.bmx"
+print( "Version "+version+":"+build )
+
+'   MAIN APPLICATION
 
 Type Main
     Global instance:Main
@@ -35,7 +48,7 @@ Type Main
 	
     Method New()
         DebugLog( "# BlitzMax LSP" )
-        DebugLog( "# V"+Version )
+        DebugLog( "# V"+Version+":"+build )
         'Log.write( "Initialised")
         ' Set up exit function
         instance = Self
@@ -48,8 +61,8 @@ Type Main
         Local content:String
         Local contentlength:Int
 		Local contenttype:String = "utf-8"
-        Local fsm:Int = 0
-Local counter:Int = 0
+        'Local fsm:Int = 0
+        'Local counter:Int = 0
         Local stdIN:TStream = ReadStream( StandardIOStream )
         If stdIN
             Repeat
@@ -105,18 +118,34 @@ Local counter:Int = 0
     Function OnMessage( message:String )
 		' Parse message into a JSON object
         Logfile.write( "onMessage()" )
-        Local j:JSON = json.parse( message )
+        Local j:JNode = JSON.Parse( message )
+
+        logfile.write( "JSON COMPLETION:" )
+        logfile.write( "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}" )
+
+        ' Report an error to the Client using stdOut
+        if J.isInvalid()
+            print "Failed to parse message"
+            print "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}"
+            if len(message)>50
+                print message[..50]+"..."
+            else
+                print message
+            end if
+        end if
 
         Local debug:String = JSON.stringify(J)
+        logfile.write( "STRINGIFY:" )
+        logfile.write( debug )
 
 		' Check if message is a Request:
 		'	(Requests contain "method" key)
 		Local methd:String = j["method"].tostring()
         Logfile.write( "- Method="+methd )
 		If methd<>""
-            Logfile.write( "Transposing...." )
+            Logfile.write( "Transposing..." )
             Try
-                Local request:TRequest = j.transpose()
+                Local request:TRequest = TRequest( j.transpose( "REQ_"+methd ))
                 If request
                     Logfile.write( "- Executing" )
                     request.execute()
@@ -127,7 +156,9 @@ Local counter:Int = 0
                 logfile.write( exception )
             End Try
             Logfile.write( "Execution complete" )
-		End If
+		else
+            Logfile.write( "No Method identified")
+        End If
 
     End Function
 
@@ -156,7 +187,7 @@ Function StdIO_Write_Thread()
 End Function
 
 '   Run the Application
-
+print "Starting LSP..."
 try
     Global LSP:Main = New Main()
     exit_( LSP.run() )

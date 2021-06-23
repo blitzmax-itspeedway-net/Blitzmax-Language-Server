@@ -27,6 +27,7 @@ Type TLogger
     Method Write( message:String, stamp:int=True )
         If Not file Return
         if stamp message = timestamp()+message
+        print message
 		file.WriteLine( message )
         file.flush()
     End Method

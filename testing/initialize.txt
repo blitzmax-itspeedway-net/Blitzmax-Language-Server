@@ -1,0 +1,24 @@
+{"jsonrpc":"2.0","id
+":0,"method":"initia
+lize","params":{"pro
+cessId":18223,"clien
+tInfo":{"name":"Visu
+al Studio Code","ver
+sion":"1.57.1"},"loc
+ale":"en-gb","rootPa
+th":"/home/si/dev/LS
+P","rootUri":"file:/
+//home/si/dev/LSP","
+capabilities":{"work
+space":{"applyEdit":
+true,"workspaceEdit"
+:{"documentChanges":
+true,"resourceOperat
+ions":["create","ren
+ame","delete"],"fail
+ureHandling":"textOn
+lyTransactional","no
+rmalizesLineEndings"
+:true,"changeAnnotat
+ionSupport":{"groups
+OnLabel":true}}

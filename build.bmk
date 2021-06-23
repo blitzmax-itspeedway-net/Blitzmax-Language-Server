@@ -1,0 +1,20 @@
+@define incrementVersion
+
+	file = io.open("build.txt", "r")
+	build = file:read()
+	file:close()	
+	build = build + 1
+	file = io.open("build.txt","w")
+	file:write(build)
+	file:close()
+
+	file = io.open("version.txt", "r")
+	version = file:read()
+	file:close()
+
+	file = io.open("build.bmx","w")
+	file:write( 'global version:string="'..version..'"\n' )
+	file:write( 'global build:string="'..build..'"' )
+	file:close()
+	
+@end
