@@ -10,6 +10,8 @@ notes/
 old/
 test.txt
 runlog.txt
+*.bak
+*.debug
 
 # Private files
 post.bmk

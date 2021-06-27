@@ -1,6 +1,6 @@
 
 '   JSON PARSER
-'   (c) Copyright Si Dunford, Jule 2021, All Right Reserved
+'   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
 '   JSON Specification:
 '   https://www.json.org/json-en.html
@@ -33,7 +33,7 @@ Type JSON
 	
     ' Convert text into a JSON object
     Function Parse:JNode( text:String )
-        if not JSON.instance JSON.instance = new JSON()
+        If Not JSON.instance JSON.instance = New JSON()
         Return JSON.instance.parseText( text )
     End Function
 
@@ -48,8 +48,8 @@ Type JSON
     'End Function
 
     ' Convert JSON to an Object
-    Function Transpose:Object( J:JNode, typestr:string )
-        if J J.transpose( typestr )
+    Function Transpose:Object( J:JNode, typestr:String )
+        If J J.transpose( typestr )
     End Function
     
     Private
@@ -60,7 +60,7 @@ Type JSON
     Const SYM_ALPHA:String = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghjklmnopqrstuvwxyz"
     Const SYM_NUMBER:String = "0123456789"
 
-    global instance:JSON
+    Global instance:JSON
     Field tokens:TQueue<JToken> = New TQueue<JToken>
     Field unparsed:String
 	'Field root:JNode		' The parsed content of this JSON
@@ -70,8 +70,6 @@ Type JSON
 
     ' Parse string into a JSON object
     Method parsetext:JNode( text:String )
-
-DebugStop
 
         'Local node:TMap = New TMap()
         ' For convenience, and empty string is the same as {}
@@ -112,6 +110,9 @@ DebugStop
             token = PopToken()
             If token.symbol <> "string" Return InvalidNode( "Expected quoted string" )
 
+'Print String(token.line)[..5]+String(token.pos)[..5]+token.symbol
+'If token.pos>240 DebugStop
+
 			'DebugStop
 			'WE ARE LOOKING HERE To CHECK THAT JSON IS DEQUOTED
 
@@ -123,12 +124,14 @@ DebugStop
 
             ' Get the value for this KEY
             token = PopToken()
-            Select token.symbol
+            Select token.symbol	' TOKENS
             Case "{"    ' OBJECT
                 'PopToken()  ' Throw away the "{"
                 Local value:JNode = ReadObject()
+				If value.isInvalid() Return value
                 If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'")
-                node.insert( name, New JNode( "object", value ) )
+                node.insert( name, value )
+				'node.insert( name, New JNode( "object", value ) )
             Case "["    ' ARRAY
                 'PopToken()  ' Throw away the "{"
                 Local value:JNode = ReadArray()
@@ -136,20 +139,20 @@ DebugStop
                 node.insert( name, New JNode( "array", value ) )
             Case "string"
                 'token = PopToken()
-                node.insert( name, New JNode( "string", Dequote(token.value) ) )
+				node.insert( name, New JNode( "string", dequote(token.value) ) )
             Case "number"
                 'token = PopToken()
                 node.insert( name, New JNode( "number", token.value ) )
-            Case "alpha"
+            Case "keyword"
                 'token = PopToken()
                 Local value:String = token.value
                 If value="true" Or value="false" Or value="null"
-                    node.insert( name, value )
+                    node.insert( name, New JNode( "keyword", token.value ) )
                 Else
                     Return InvalidNode( "Unknown identifier" )
                 End If
             Default
-                Return InvalidNode()
+                Return InvalidNode( "invalid symbol "+token.symbol+"/"+token.value)
             End Select
 
             ' Valid options now are "}" or ","
@@ -165,12 +168,6 @@ DebugStop
         Forever
     End Method
 
-	Method dequote:String( text:String )
-		If text.startswith( "~q" ) text = text[1..]
-		If text.endswith( "~q" ) text = text[..(Len(text)-1)]
-		Return text
-	End Method
-
     ' Reads an Array creating a TList
     Method ReadArray:JNode()
         Local node:JNode[]
@@ -185,8 +182,9 @@ DebugStop
             Select token.symbol
             Case "{"    ' OBJECT
                 Local value:JNode = ReadObject()
-                If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'" )
-                node :+ [ New JNode( "object", value ) ]
+				If value.isInvalid() Return value
+                If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'")
+                node :+ [ value ]
             Case "["    ' ARRAY
                 Local value:JNode = ReadArray()
                 If PopToken().symbol <> "]" Return InvalidNode( "Expected ']'" )
@@ -197,7 +195,7 @@ DebugStop
             Case "number"
                 'token = PopToken()
                 node :+ [ New JNode( "number", token.value ) ]
-            Case "alpha"
+            Case "keyword"
                 'token = PopToken()
                 Local value:String = token.value
                 If value="true" Or value="false" Or value="null"
@@ -228,7 +226,7 @@ DebugStop
         '    PopToken()
         'wend
         If tokens.isempty() Return New JToken( "EOF","", linenum, linepos)
-        local token:JToken = tokens.dequeue()
+        Local token:JToken = tokens.dequeue()
         ' Reset the token position
         linenum = token.line
         linepos = token.pos
@@ -286,8 +284,8 @@ DebugStop
     Local name:String
     Local token:JToken
     ' Save the Token position
-    local line:int = linenum
-    local pos:int = linepos
+    Local line:Int = linenum
+    Local pos:Int = linepos
         ' Identity the symbol
         If char=""
             Return New JToken( "EOF", "", line, pos )
@@ -299,7 +297,7 @@ DebugStop
         ElseIf Instr( SYM_NUMBER+"-", char )     	' Number
             Return New JToken( "number", ExtractNumber(), line, pos )
         ElseIf Instr( SYM_ALPHA, char )             ' Alphanumeric Identifier
-            Return New JToken( "alpha", ExtractIdent(), line, pos )
+            Return New JToken( "keyword", ExtractIdent(), line, pos )
         Else
             PopChar()   ' Throw it away!
             Return New JToken( "invalid", char, line, pos )
@@ -379,6 +377,10 @@ DebugStop
         Return text
     End Method
 
+    ' Helper Functions
+    Function Create:JNode()
+        Return New JNode( "object", New TMap() )
+    End Function
 
 End Type
 
@@ -390,12 +392,17 @@ Type JNode
     Field class:String
 
     Method New( class:String, value:Object )
+        'logfile.write "Creating new JNode '"+class+"'='"+string(value)
         Self.class=class
         Self.value=value
     End Method
 	
     Method toString:String()
 		Return String(value)
+	End Method
+
+    Method toInt:Int()
+		Return Int(String(value))
 	End Method
 
     Method isValid:Int()
@@ -406,13 +413,16 @@ Type JNode
 		Return ( class = "invalid" )
 	End Method
 
-	' Extract a JNode by key (Only works on objects)!
-	Method operator []:JNode( key:String )
-		If class="object" 
+	' Get "string" value of a JNode object's child
+	Method operator []:String( key:String )
+        If class = "object"
 			Local map:TMap = TMap( value )
-			If map Return JNode( map[key] )
+			If map
+				Local J:Jnode = JNode( map.valueforkey(key) )
+				If J Return String( J.value )
+			End If
 		End If
-		Return New JNode( "invalid", "" )
+		Return ""
 	End Method
 
     Method Stringify:String()
@@ -421,13 +431,13 @@ Type JNode
 		
 		Local text:String
 		'If Not j Return "~q~q"
-		Select class
+		Select class    ' JSON NODE TYPES
 		Case "object"
 			Local map:TMap = TMap( value )
 			text :+ "{"
 			If map
-			 
 				For Local key:String = EachIn map.keys()
+print( key )
                     Local j:JNode = JNode( map[key] )
 					text :+ "~q"+key+"~q:"+j.stringify()+","
 				Next
@@ -439,84 +449,237 @@ Type JNode
 			text :+ String(value)
 		Case "string"
 			text :+ "~q"+String(value)+"~q"
+		Case "keyword"
+			text :+ String(value)		
 		Default
-			Print "INVALID SYMBOL: '"+class+"'"
+			logfile.write "INVALID SYMBOL: '"+class+"'"
 		End Select
 		Return text
 	End Method
 
    ' Transpose a JNode object into a Blitzmax Object using Reflection 
-   Method transpose:object( typestr:string )
-    'DebugStop
-        debuglog( "Transpose() start")
-        print "JNode.Transpose()"
-        ' Identify the Type that we are going to create
-'        Local methd:String = root["method"].tostring()
-'        If methd="" Return Null
-'        Local typestr:String = "REQ_"+methd
-        'logfile.write( "- Creating "+typestr )
-        ' Create an object of type "typestr"
-        debuglog "Creating type "+typestr
-        print "- Creating type "+typestr
+   Method transpose:Object( typestr:String )
+        DebugLog( "Transpose() start")
+        'logfile.write "JNode.Transpose()"
+
+        ' We can only tanspose an object into a Type
+        'logfile.write( "I AM TYPE: "+class )
+        If class<>"object" Return Null
+        
+        'debuglog "Creating type "+typestr
+        'logfile.write "- Creating type "+typestr
         Local typeid:TTypeId = TTypeId.ForName( typestr )
         If Not typeid
-            debuglog( "- Not a valid type" )
-            print "- Not a valid type" 
+            'debuglog( "- Not a valid type" )
+            'logfile.write "- Not a valid type" 
             Return Null
         End If
         Local invoke:Object = typeid.newObject()
         If Not invoke 
-            debuglog( "- Failed to create object" )
-            print "- Failed to create object"
+            'debuglog( "- Failed to create object" )
+            'logfile.write "- Failed to create object"
             Return Null
         End If
     
         ' Enumerate object fields
         Local fields:TMap = New TMap()
-        debuglog( "Object fields:" )
-        print "- Enumerating objects"
+        'debuglog( "Object fields:" )
+        'logfile.write "- Enumerating objects"
 
         ' Add Field names and types to map
         For Local fld:TField = EachIn typeid.EnumFields()
-            debuglog( "  "+fld.name() + ":" + fld.typeid.name() )
-            print( "  "+fld.name() + ":" + fld.typeid.name() )
+            'debuglog( "  "+fld.name() + ":" + fld.typeid.name() )
+            'logfile.write( "  "+fld.name() + ":" + fld.typeid.name() )
             fields.insert( fld.name(), fld.typeid.name() )
         Next
     
-        ' Copy JSON fields into object
+        ' Extract MAP (of JNodes) from value
+        Local map:TMap = TMap( value )
+        If Not map Return Null
+        'logfile.write( "Map extracted from value successfully" )
+        'for local key:string = eachin map.keys()
+        '    logfile.write "  "+key+" = "+ JNode(map[key]).toString()
+        'next
+
+        'logfile.write( "TRANSPOSING MAP INTO OBJECT")
+
         For Local fldname:String = EachIn fields.keys()
             Local fldtype:String = String(fields[fldname]).tolower()
-            debuglog( "Field: "+fldname+":"+fldtype )
-            print "- Field: "+fldname+":"+fldtype
+            'debuglog( "Field: "+fldname+":"+fldtype )
+            'logfile.write "- Field: "+fldname+":"+fldtype
             Local fld:TField = typeid.findField( fldname )
             If fld
-                print "-- Is not null"
-                Select fldtype
-                Case "string"
-                    fld.setString( invoke, string(fields[fldname]) )
-                Case "int"
-                    fld.setInt( invoke, int(string(fields[fldname] )))
-                Default
-                    DebugLog( fldtype + " not currently supported by transform" )
-                    print "-- "+fldtype+" not currently supported by transform()"
-                End Select
-            else
-                print "-- Is null"
+                'logfile.write "-- Is not null"
+                Try
+                    Select fldtype	' BLITZMAX TYPES
+                    Case "string"
+                        Local J:JNode = JNode(map[fldname])
+                        If J fld.setString( invoke, J.tostring() )
+                    Case "int"
+                        Local J:JNode = JNode(map[fldname])
+                        If J fld.setInt( invoke, J.toInt() )
+                        'if J 
+                        '    local fldvalue:int = J.toInt()
+                        '    logfile.write fldname+":"+fldtype+"=="+fldvalue
+                        '    fld.setInt( invoke, fldvalue )
+                        '    logfile.write "INT FIELD SET"
+                        'end if
+                    Case "jnode"
+                        ' This is a direct copy of JNode
+                        Local J:JNode = JNode(map[fldname])
+                        fld.set( invoke, J )
+                    Default
+                        'DebugLog( fldtype + " not currently supported by transpose" )
+                        logfile.write "# ERROR: '"+fldtype+"' transpose is not supported"
+                    End Select
+                Catch Exception:String
+                    logfile.write "#CRITICAL: Transpose exception"
+                    logfile.write Exception
+                End Try
+            'else
+                'logfile.write "-- Is null"
             End If
         Next		
         Return invoke
     End Method
 
+    Method transpose_object_to_type( obj:Object, j:JNode )
+
+    End Method
+
+'		##### JSON HELPER
+'		##### Old version replaced on 27 JUN 2021
+
+    ' Set the value of a JNode
+    Method set( value:String )
+		If value.startswith("~q") And value.endswith("~q")
+			' STRING
+			Self.class = "string"
+			Self.value = dequote(value)
+		Else
+			If value = "true" Or value = "false" Or value = "null"
+				' KEYWORD (true/false/null)
+				Self.class = "keyword"
+				Self.value = value
+			'Else
+				' Malformed string/keyword, so ignore it!
+			End If
+		End If
+    End Method
+
+    Method set( value:Int )
+        ' If existing value is NOT a number, overwrite it
+		Self.class="number"
+		Self.value = String(value)
+    End Method
+
+    Method Set( route:String, value:String )
+		'_set( route, value, "string" )
+		Local J:JNode = find( route, True )	' Find route and create if missing
+		j.set( value )
+    End Method
+
+    Method Set( route:String, value:Int )
+		'_set( route, value, "number" )
+		Local J:JNode = find( route, True )	' Find route and create if missing
+		j.set( value )
+    End Method
+
+    Method Set( route:String, values:String[][] )
+		Local J:JNode = find( route, True )	' Find route and create if missing
+		For Local value:String[] = EachIn values
+			'_set( route+"|"+value[0], value[1], "string" )
+			If value.length=2
+				Local node:JNode = J.find( value[0], True )
+				node.set( value[1] )
+			End If
+		Next
+    End Method
+
+	Method find:JNode( route:String, createme:Int = False )
+        ' Ignore empty route
+        route = Trim(route)
+        If route="" Return Null
+		' Split up the path
+        Return find( route.split("|"), createme )
+	End Method
+	
+	Method find:JNode( path:String[], createme:Int = False )
+	'DebugStop
+		If path.length=0		' Found!
+			Return Self
+		Else
+			' If child is specified then I MUST be an object right?
+			Local child:JNode, map:TMap
+			If class="object" ' Yay, I am an object.				
+				map = TMap( value )
+			Else 
+				If Not createme Return Null	' Not found
+				' I must now evolve into an object, destroying my previous identity!
+				map = New TMap()
+				class = "object"
+				value = map
+			End If
+			' Does child exist?
+			child = JNode( map.valueforkey( path[0] ) )
+			If Not child 
+				If Not createme Return Null ' Not found
+				' Add a new child
+				child = New JNode( "string", "" )
+				map.insert( path[0], child )
+			End If
+			Return child.find( path[1..], createme )
+		End If
+	End Method
+
+
     Private
 
     Field value:Object
 
+	Rem DEPRECIATED 27 JUN 2021
+    Method _set( route:String, value:String, classtext:String="string" )
+		' First off, we can only set children of object types
+        ' Array is currently not supported by this function
+        If class<>"object" Return
+        ' Ignore empty route
+        route = Trim(route)
+        If route="" Return
+        ' Make sure we are a valid object node
+        Local map:TMap = TMap( Self.value )
+        If Not map Return
+        ' Split up the path
+        Local path:String[] = route.split("|")
+        If path.length=1 
+            ' Get child node            
+            Local J:JNode = JNode( map.valueforkey( path[0] ) )
+            If J And J.class = classtext
+                ' Update node
+                J.set( value )
+            Else
+                ' Add or Replace existing node
+                map.insert( path[0], New JNode( classtext, String(value) ))
+            End If
+		Else ' A path indicates that the child MUST be an "object"
+            ' Get child node            
+            Local J:JNode = JNode( map.valueforkey( path[0] ) )
+			If J And J.class = "object"
+				J._set( "|".join( path[1..] ), value, classtext )
+			Else ' Add or replace existing node
+				J = New JNode( "object", New TMap() )
+				map.insert( path[0], J )
+				J._set( "|".join( path[1..] ), value, classtext )
+			End If
+        End If
+    End Method
+	End Rem
+	
 End Type
 
 Type JToken
-    Field symbol:String, value:String, line:Int, pos:int
+    Field symbol:String, value:String, line:Int, pos:Int
 
-    Method New( symbol:String, value:String, line:int, pos:int )
+    Method New( symbol:String, value:String, line:Int, pos:Int )
         'print( "## "+symbol+", "+value+", "+line+", "+pos )
         Self.symbol = symbol
         Self.value = value
@@ -524,3 +687,9 @@ Type JToken
         Self.pos = pos 
     End Method
 End Type
+
+Function dequote:String( text:String )
+	If text.startswith( "~q" ) text = text[1..]
+	If text.endswith( "~q" ) text = text[..(Len(text)-1)]
+	Return text
+End Function

@@ -14,37 +14,66 @@ Import brl.stringbuilder
 Import brl.system
 
 Import pub.freeprocess
-
+debugstop
 '   INCLUDE APPLICATION COMPONENTS
 
+Include "bin/TConfig.bmx"
 Include "bin/TLogger.bmx"
+'Include "bin/TTemplate.bmx"    ' Depreciated (Functionality moved into JSON)
 Include "bin/json.bmx"
 
 Include "bin/sandbox.bmx"
-Include "bin/REQ_initialize.bmx"
-Include "bin/REQ_shutdown.bmx"
+
+Include "handlers/handlers.bmx"
+
+' RPC2.0 Error Messages
+Const ERR_PARSE_ERROR:String =       "-32700"  'Invalid JSON was received by the server.
+Const ERR_INVALID_REQUEST:String =   "-32600"  'The JSON sent is not a valid Request object.
+Const ERR_METHOD_NOT_FOUND:String =  "-32601"  'The method does not exist / is not available.
+Const ERR_INVALID_PARAMS:String =    "-32602"  'Invalid method parameter(s).
+Const ERR_INTERNAL_ERROR:String =    "-32603"  'Internal JSON-RPC error.
+
+' LSP Error Messages
+Const ERR_SERVER_NOT_INITIALIZED:String = "-32002"
+Const ERR_CONTENT_MODIFIED:String =       "-32801"
+Const ERR_REQUEST_CANCELLED:String =      "-32800"
+
+?win32
+    Const EOL:String = "~n"
+?Not win32
+    Const EOL:String = "~r~n"
+?
 
 '   GLOBALS
+apptitle = "Language Server for BlitzMax NG"
 
 'Global Version:String = "0.00 Pre-Alpha"
 Global Logfile:TLogger = New TLogger()
+Global LSP:Main
+
+logfile.write "CURRENTDIR: "+CurrentDir$()
+logfile.write "APPDIR:     "+AppDir
 
 '   INCREMENT BUILD NUMBER
 
 ' @bmk include build.bmk
 ' @bmk incrementVersion build.bmx
 Include "build.bmx"
-print( "Version "+version+":"+build )
+logfile.write( apptitle )
+logfile.write( "Version "+version+":"+build )
 
 '   MAIN APPLICATION
+
+DebugStop
 
 Type Main
     Global instance:Main
 
     Field exitcode:Int = 0
-    Field quit:Int = False      ' When to quit
 
-	Field initialised:Int = False
+	Field initialized:Int = False   ' Set by "iniialized" message
+    Field shutdown:int = false      ' Set by "shutdown" message
+    Field quit:Int = False          ' Set by "exit" message
 	
     Method New()
         DebugLog( "# BlitzMax LSP" )
@@ -78,14 +107,14 @@ Type Main
                 'case 0  ' Read Headers
                 If line.startswith("Content-Length:")
                     contentlength = Int( line[15..] )
-                    Logfile.write( "HEADER: Content-Length:"+contentlength)
+                    Logfile.write( "Content-Length:"+contentlength)
                 ElseIf line.startswith("Content-Type:")
                     contenttype = Int( line[13..] )
 					' Backward compatibility, utf8 is no longer supported
 					If contenttype = "utf8" contenttype = "utf-8"
-                    Logfile.write( "HEADER: Content-Type:"+contenttype)
+                    Logfile.write( "Content-Type:"+contenttype)
                 ElseIf line=""
-                    Logfile.write( "CONTENT STARTING...")
+                    Logfile.write( "- WAITING FOR CONTENT...")
                     content = stdIN.ReadString$( contentlength )
                     Logfile.write( "- RECEIVED:~n"+content )
 
@@ -93,18 +122,16 @@ Type Main
                     'local thread:TThread = CreateThread( OnMessage, content )
                     OnMessage( content )
                 Else
-                    Logfile.write( "SKIP:"+line)
+                    Logfile.write( "SKIP: "+line)
                 End If
                 'end select
                 'Input$( "#" )
 
             Until quit  'len(line)=0 or eof(stdIn)
-
+            logfile.write "Graceful shutdown"
         Else
-            Print "Failed to open StdIN"
+            logfile.write "Failed to open StdIN"
         End If
-            
-        
 
         ' Clean up and exit gracefully
 		Logfile.Close()
@@ -118,64 +145,104 @@ Type Main
     Function OnMessage( message:String )
 		' Parse message into a JSON object
         Logfile.write( "onMessage()" )
-        Local j:JNode = JSON.Parse( message )
+        Local J:JNode = JSON.Parse( message )
 
-        logfile.write( "JSON COMPLETION:" )
-        logfile.write( "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}" )
+        'logfile.write( "JSON COMPLETION:" )
+        'logfile.write( "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}" )
 
         ' Report an error to the Client using stdOut
-        if J.isInvalid()
-            print "Failed to parse message"
-            print "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}"
-            if len(message)>50
-                print message[..50]+"..."
-            else
-                print message
-            end if
+        if not J or J.isInvalid()
+            local errtext:string = "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}"
+            logfile.write "- Failed to parse message"
+            logfile.write "- "+errtext
+            'if len(message)>50
+            '    logfile.write message[..50]+"..."
+            'else
+            '    logfile.write message
+            'end if
+
+            ' Send error message to LSP Client
+            respond_error( ERR_PARSE_ERROR, errtext )
+
+            Return
         end if
 
-        Local debug:String = JSON.stringify(J)
-        logfile.write( "STRINGIFY:" )
-        logfile.write( debug )
+        ' Debugging
+        'Local debug:String = JSON.stringify(J)
+        'logfile.write( "STRINGIFY:" )
+        'logfile.write( "  "+debug )
 
-		' Check if message is a Request:
-		'	(Requests contain "method" key)
-		Local methd:String = j["method"].tostring()
-        Logfile.write( "- Method="+methd )
-		If methd<>""
-            Logfile.write( "Transposing..." )
-            Try
-                Local request:TRequest = TRequest( j.transpose( "REQ_"+methd ))
-                If request
-                    Logfile.write( "- Executing" )
-                    request.execute()
-                Else
-                    Logfile.write( "- TRequest is null")
-                End If
-            Catch exception:String
-                logfile.write( exception )
-            End Try
-            Logfile.write( "Execution complete" )
-		else
-            Logfile.write( "No Method identified")
-        End If
+        ' Check for a method
+        local node:JNode = J.find("method")
+        if not node
+            logfile.write "- No method specified"
+            ' Send error message to LSP Client
+            respond_error( ERR_METHOD_NOT_FOUND, "No method specified" )
+            Return
+        end if
+
+        ' Get method
+        Local methd:String = node.tostring()
+        Logfile.write( "- RPC METHOD: "+methd )
+        if methd = ""
+            logfile.write "- Method is empty"
+            ' Send error message to LSP Client
+            respond_error( ERR_INVALID_REQUEST, "Method cannot be empty" )
+            Return
+        end if
+
+        ' Validation
+        if not LSP.initialized and methd<>"initialize"
+            logfile.write "- Server is not initialized"
+            respond_error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" )
+            return
+        end if
+
+        ' Transpose JNode into Blitzmax Object
+        'Logfile.write( "- Transposing..." )
+        Local request:TMessage
+        Try
+            local typestr:string = "TMethod_"+methd
+            typestr = typestr.replace( "/", "_" )
+            typestr = typestr.replace( "$", "pid" ) ' Protocol Implementation Dependent
+            Logfile.write( "- BMX METHOD: "+typestr )
+            ' Transpose RPC
+            request = TMessage( J.transpose( typestr ))
+            if not request
+                Logfile.write( "- Transpose to '"+typestr+"' failed")
+                respond_error( ERR_METHOD_NOT_FOUND, "Method is not available" )
+                Return
+            end if               
+        Catch exception:String
+            logfile.write( "  "+exception )
+            respond_error( ERR_INTERNAL_ERROR, exception )
+            return
+        End Try
+
+        debugstop
+        ' Execute the request
+        'Logfile.write( "- Executing" )
+        try
+            request.execute()
+        catch exception:string
+            logfile.write( "  "+exception )
+            respond_error( ERR_INTERNAL_ERROR, exception )
+            return           
+        end try
+
+        Logfile.write( "- Execution complete" )
 
     End Function
 
     Function OnEnd()
-        Print( "Running exit function")
+        logfile.write( "Running onEnd() function")
         instance.Close()
 		Logfile.Close()
     End Function
-
+    
 End Type
 
-' BASIC REQUEST TYPE
-Type TRequest
-    Field id:String	' Always "2.0"
-    Method Execute() Abstract
-End Type
-
+rem
 Function StdIO_Read_Thread()
     'LockMutex( stdIO_read )
     'UnlockMutex( stdIO_read )
@@ -185,12 +252,31 @@ Function StdIO_Write_Thread()
     'LockMutex( stdIO_write )
     'UnlockMutex( stdIO_write )
 End Function
+end rem
+
+function respond( content:string )
+    Local response:String = "Content-Length: "+Len(content)+EOL
+    response :+ EOL
+    response :+ content
+    '
+    Logfile.write( response )
+    StandardIOStream.WriteString( response )
+    StandardIOStream.Flush()
+end function
+
+function respond_error( code:string, message:string )
+    local response:JNode = JSON.create()
+    response.set( "id", "null" )
+    response.set( "jsonrpc", "2.0" )
+    response.set( "error", [["code",code],["message","~q"+message+"~q"]] )
+    respond( response.stringify() )
+end Function
 
 '   Run the Application
-print "Starting LSP..."
+logfile.write "Starting LSP..."
 try
-    Global LSP:Main = New Main()
+    LSP = New Main()
     exit_( LSP.run() )
 catch exception:string
-    DebugLog( exception )
+    logfile.write( exception )
 end try
