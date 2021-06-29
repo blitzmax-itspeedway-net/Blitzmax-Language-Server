@@ -14,7 +14,7 @@ Import brl.stringbuilder
 Import brl.system
 
 Import pub.freeprocess
-debugstop
+'debugstop
 '   INCLUDE APPLICATION COMPONENTS
 
 Include "bin/TConfig.bmx"
@@ -49,31 +49,40 @@ apptitle = "Language Server for BlitzMax NG"
 
 'Global Version:String = "0.00 Pre-Alpha"
 Global Logfile:TLogger = New TLogger()
-Global LSP:Main
+Global LSP:TLSP
 
-logfile.write "CURRENTDIR: "+CurrentDir$()
-logfile.write "APPDIR:     "+AppDir
+logfile.debug "ARGS: ("+appargs.length+")"+(" ".join(appargs))
+logfile.debug "CURRENTDIR: "+CurrentDir$()
+logfile.debug "APPDIR:     "+AppDir
 
 '   INCREMENT BUILD NUMBER
 
 ' @bmk include build.bmk
 ' @bmk incrementVersion build.bmx
 Include "build.bmx"
-logfile.write( apptitle )
-logfile.write( "Version "+version+":"+build )
+logfile.info( apptitle )
+logfile.info( "Version "+version+":"+build )
 
 '   MAIN APPLICATION
 
-DebugStop
-
-Type Main
-    Global instance:Main
+'DebugStop
+Type TLSP
+    Global instance:TLSP
 
     Field exitcode:Int = 0
 
 	Field initialized:Int = False   ' Set by "iniialized" message
     Field shutdown:int = false      ' Set by "shutdown" message
     Field quit:Int = False          ' Set by "exit" message
+
+    Method run:Int() abstract
+End Type
+
+Type TLSP_TCP extends TLSP
+    Method Run:int() ; End Method
+End Type
+
+Type TLSP_Stdio extends TLSP
 	
     Method New()
         DebugLog( "# BlitzMax LSP" )
@@ -107,30 +116,30 @@ Type Main
                 'case 0  ' Read Headers
                 If line.startswith("Content-Length:")
                     contentlength = Int( line[15..] )
-                    Logfile.write( "Content-Length:"+contentlength)
+                    Logfile.debug( "Content-Length:"+contentlength)
                 ElseIf line.startswith("Content-Type:")
                     contenttype = Int( line[13..] )
 					' Backward compatibility, utf8 is no longer supported
 					If contenttype = "utf8" contenttype = "utf-8"
-                    Logfile.write( "Content-Type:"+contenttype)
+                    Logfile.debug( "Content-Type:"+contenttype)
                 ElseIf line=""
-                    Logfile.write( "- WAITING FOR CONTENT...")
+                    Logfile.debug( "- WAITING FOR CONTENT...")
                     content = stdIN.ReadString$( contentlength )
-                    Logfile.write( "- RECEIVED:~n"+content )
+                    Logfile.debug( "- RECEIVED:~n"+content )
 
                     ' Start a thread to process content
                     'local thread:TThread = CreateThread( OnMessage, content )
                     OnMessage( content )
                 Else
-                    Logfile.write( "SKIP: "+line)
+                    Logfile.debug( "SKIP: "+line)
                 End If
                 'end select
                 'Input$( "#" )
 
             Until quit  'len(line)=0 or eof(stdIn)
-            logfile.write "Graceful shutdown"
+            logfile.debug "Graceful shutdown"
         Else
-            logfile.write "Failed to open StdIN"
+            logfile.critical "Failed to open StdIN"
         End If
 
         ' Clean up and exit gracefully
@@ -144,17 +153,17 @@ Type Main
     ' Parse a request
     Function OnMessage( message:String )
 		' Parse message into a JSON object
-        Logfile.write( "onMessage()" )
+        Logfile.debug( "onMessage()" )
         Local J:JNode = JSON.Parse( message )
 
-        'logfile.write( "JSON COMPLETION:" )
-        'logfile.write( "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}" )
+        'logfile.debug( "JSON COMPLETION:" )
+        'logfile.debug( "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}" )
 
         ' Report an error to the Client using stdOut
         if not J or J.isInvalid()
             local errtext:string = "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}"
-            logfile.write "- Failed to parse message"
-            logfile.write "- "+errtext
+            logfile.error "- Failed to parse message"
+            logfile.error "- "+errtext
             'if len(message)>50
             '    logfile.write message[..50]+"..."
             'else
@@ -175,7 +184,7 @@ Type Main
         ' Check for a method
         local node:JNode = J.find("method")
         if not node
-            logfile.write "- No method specified"
+            logfile.error "- No method specified"
             ' Send error message to LSP Client
             respond_error( ERR_METHOD_NOT_FOUND, "No method specified" )
             Return
@@ -183,9 +192,9 @@ Type Main
 
         ' Get method
         Local methd:String = node.tostring()
-        Logfile.write( "- RPC METHOD: "+methd )
+        Logfile.debug( "- RPC METHOD: "+methd )
         if methd = ""
-            logfile.write "- Method is empty"
+            logfile.error "- Method is empty"
             ' Send error message to LSP Client
             respond_error( ERR_INVALID_REQUEST, "Method cannot be empty" )
             Return
@@ -193,49 +202,49 @@ Type Main
 
         ' Validation
         if not LSP.initialized and methd<>"initialize"
-            logfile.write "- Server is not initialized"
+            logfile.error "- Server is not initialized"
             respond_error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" )
             return
         end if
 
         ' Transpose JNode into Blitzmax Object
-        'Logfile.write( "- Transposing..." )
+        'Logfile.debug( "- Transposing..." )
         Local request:TMessage
         Try
             local typestr:string = "TMethod_"+methd
             typestr = typestr.replace( "/", "_" )
             typestr = typestr.replace( "$", "pid" ) ' Protocol Implementation Dependent
-            Logfile.write( "- BMX METHOD: "+typestr )
+            Logfile.debug( "- BMX METHOD: "+typestr )
             ' Transpose RPC
             request = TMessage( J.transpose( typestr ))
             if not request
-                Logfile.write( "- Transpose to '"+typestr+"' failed")
+                Logfile.debug( "- Transpose to '"+typestr+"' failed")
                 respond_error( ERR_METHOD_NOT_FOUND, "Method is not available" )
                 Return
             end if               
         Catch exception:String
-            logfile.write( "  "+exception )
+            logfile.critical( "  "+exception )
             respond_error( ERR_INTERNAL_ERROR, exception )
             return
         End Try
 
         debugstop
         ' Execute the request
-        'Logfile.write( "- Executing" )
+        'Logfile.debug( "- Executing" )
         try
             request.execute()
         catch exception:string
-            logfile.write( "  "+exception )
+            logfile.critical( "  "+exception )
             respond_error( ERR_INTERNAL_ERROR, exception )
             return           
         end try
 
-        Logfile.write( "- Execution complete" )
+        Logfile.debug( "- Execution complete" )
 
     End Function
 
     Function OnEnd()
-        logfile.write( "Running onEnd() function")
+        logfile.debug( "Running onEnd() function")
         instance.Close()
 		Logfile.Close()
     End Function
@@ -259,7 +268,7 @@ function respond( content:string )
     response :+ EOL
     response :+ content
     '
-    Logfile.write( response )
+    Logfile.debug( response )
     StandardIOStream.WriteString( response )
     StandardIOStream.Flush()
 end function
@@ -273,10 +282,11 @@ function respond_error( code:string, message:string )
 end Function
 
 '   Run the Application
-logfile.write "Starting LSP..."
+logfile.debug "Starting LSP..."
+
 try
-    LSP = New Main()
+    LSP = New TLSP_Stdio()
     exit_( LSP.run() )
 catch exception:string
-    logfile.write( exception )
+    logfile.critical( exception )
 end try
