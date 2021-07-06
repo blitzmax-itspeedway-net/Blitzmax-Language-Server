@@ -317,23 +317,27 @@ Type TLSP_Stdio Extends TLSP
         'Publish( "log", "DEBG", "STDIO.GetRequest()")
         ' Read messages from StdIN
         Repeat
-            line = stdIn.ReadLine()
-            If line.startswith("Content-Length:")
-                contentlength = Int( line[15..] )
-                'Publish( "log", "DEBG", "Content-Length:"+contentlength)
-            ElseIf line.startswith("Content-Type:")
-                contenttype = Int( line[13..] )
-                ' Backward compatibility, utf8 is no longer supported
-                If contenttype = "utf8" contenttype = "utf-8"
-                'Publish( "log", "DEBG", "Content-Type:"+contenttype)
-            ElseIf line=""
-                'Publish( "log", "DEBG", "WAITING FOR CONTENT...")
-                content = stdIN.ReadString$( contentlength )
-                Publish( "log", "DEBG", "Received "+contentlength+" bytes:~n"+content )
-                Return content
-            Else
-                Publish( "log", "DEBG", "Skipping: "+line )
-            End If
+            Try
+                line = stdIn.ReadLine()
+                If line.startswith("Content-Length:")
+                    contentlength = Int( line[15..] )
+                    'Publish( "log", "DEBG", "Content-Length:"+contentlength)
+                ElseIf line.startswith("Content-Type:")
+                    contenttype = Int( line[13..] )
+                    ' Backward compatibility, utf8 is no longer supported
+                    If contenttype = "utf8" contenttype = "utf-8"
+                    'Publish( "log", "DEBG", "Content-Type:"+contenttype)
+                ElseIf line=""
+                    'Publish( "log", "DEBG", "WAITING FOR CONTENT...")
+                    content = stdIN.ReadString$( contentlength )
+                    Publish( "log", "DEBG", "Received "+contentlength+" bytes:~n"+content )
+                    Return content
+                Else
+                    Publish( "log", "DEBG", "Skipping: "+line )
+                End If
+            Catch Exception:String
+                Publish( "critical", Exception )
+            End Try
         Until endprocess
     End Method
 

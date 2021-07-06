@@ -68,6 +68,8 @@ Type TLogger Extends TObserver
             write( "DEBG "+datastr )
         case "error"
             write( "ERRR "+datastr )
+        case "error"
+            write( "CRIT "+datastr )
         'case "receive","send"
         '    debug( upper(event)+":" )
         '    debug( extrastr )

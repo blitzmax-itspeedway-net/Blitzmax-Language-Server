@@ -11,7 +11,7 @@ Type TMessageQueue extends TObserver
     Field taskMutex:TMutex = CreateMutex()
     ' Semaphores
     Field sendCounter:TSemaphore = CreateSemaphore( 0 )
-    Field taskCounter:TSemaphore = CreateSemaphore( 0 )
+    'Field taskCounter:TSemaphore = CreateSemaphore( 0 )
 
     Method new()
         sendQueue = new TQueue<String>()
@@ -81,7 +81,7 @@ Type TMessageQueue extends TObserver
         case "exitnow"      ' System exit requested
             ' Force waiting threads to exit
             PostSemaphore( sendCounter )
-            PostSemaphore( taskCounter )
+            'PostSemaphore( taskCounter )
         case "sendmessage"         ' Send a message to the language client
             pushSendQueue( string(data) )
         case "pushtask"             ' Add a task to the task queue
@@ -105,7 +105,7 @@ Type TMessageQueue extends TObserver
         'Publish( "debug", "- task mutex locked" )
         taskqueue.insert( task.id, task )
         'Publish( "debug", "- task inserted" )
-        PostSemaphore( taskCounter )
+        'PostSemaphore( taskCounter )
         'Publish( "debug", "- task Semaphore Incremented" )
         UnlockMutex( TaskMutex )
         'Publish( "debug", "- task mutex unlocked" )
