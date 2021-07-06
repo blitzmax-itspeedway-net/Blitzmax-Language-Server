@@ -448,7 +448,6 @@ Type JNode
 			text :+ "{"
 			If map
 				For Local key:String = EachIn map.keys()
-'rint( key )
                     Local j:JNode = JNode( map[key] )
 					text :+ "~q"+key+"~q:"+j.stringify()+","
 				Next
@@ -458,7 +457,6 @@ Type JNode
 			text :+ "}"
         Case "array"
 			text :+ "["
-DebugStop
             For Local J:JNode = EachIn JNode[](value)
                 text :+ J.stringify()+","
             Next
@@ -479,7 +477,7 @@ DebugStop
 
     ' Transpose a JNode object into a Blitzmax Object using Reflection 
     Method transpose:Object( typestr:String )
-        Publish( "log", "DEBG", "Transpose() start" )
+        Publish( "log", "DEBG", "Transpose('"+typestr+"')" )
         ' We can only transpose an object into a Type
         If class<>"object" Return Null
         Local typeid:TTypeId = TTypeId.ForName( typestr )
@@ -540,7 +538,7 @@ DebugStop
             'else
                 'logfile.write "-- Is null"
             End If
-        Next		
+        Next
         Return invoke
     End Method
 

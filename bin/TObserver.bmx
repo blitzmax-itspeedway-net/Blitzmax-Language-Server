@@ -1,12 +1,14 @@
-
-'   JSON PARSER / Observer Publish/Subscriber
+'   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
+'   OBSERVER (Publish/Subscribe)
 
 REM     
         Currently defined event types:
 
         EVENT           DATA    EXTRA
         log             STRING  STRING      ' Request to log a message
+        debug           STRING              ' Same as ("log", "DEBG", message)
+        error           STRING              ' Same as ("log", "ERRR", message)
         receive         STRING              ' Message received from client
         sendmessage     JNODE               ' Message or Response to be sent to client
         pushtask        TMessage            ' New Request to add to the queue

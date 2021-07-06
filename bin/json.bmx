@@ -556,8 +556,10 @@ Type JNode
 				' KEYWORD (true/false/null)
 				Self.class = "keyword"
 				Self.value = value
-			'Else
-				' Malformed string/keyword, so ignore it!
+			Else
+				' Treat it as a string
+				Self.class = "string"
+				Self.value = value
 			End If
 		End If
     End Method

@@ -2,7 +2,6 @@ SuperStrict
 
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
-'   VERSION 0.00 PA
 
 Framework brl.standardio 
 Import brl.collections      ' Used for Tokeniser

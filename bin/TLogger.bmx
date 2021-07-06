@@ -1,6 +1,6 @@
-
-'   JSON PARSER / LOGGER
+'   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
+'   LOGGING
 
 const LOG_EMERGENCY:int = 0 
 const LOG_ALERT:int     = 1
@@ -37,7 +37,7 @@ Type TLogger Extends TObserver
         End Try
         '
         ' Start message observer
-        Subscribe( ["log","exitnow","cancelrequest","sendmessage","pushtask"] )
+        Subscribe( ["log","debug","error","exitnow","cancelrequest","sendmessage","pushtask"] )
     End Method
 
     method timestamp:string()
@@ -56,15 +56,19 @@ Type TLogger Extends TObserver
 
     ' Observations
     Method Notify( event:string, data:object, extra:object )
-        local level:string = string(data)
-        local message:string = string(extra)
+        local datastr:string = string(data)
+        local extrastr:string = string(extra)
         'debugstop
         select event
         case "log"
-            write( level[..4]+" "+message )
-        case "receive","send"
-            debug( upper(event)+":" )
-            debug( message )
+            write( datastr[..4]+" "+extrastr )
+        case "debug"
+            write( "DEBG "+datastr )
+        case "error"
+            write( "ERRR "+datastr )
+        'case "receive","send"
+        '    debug( upper(event)+":" )
+        '    debug( extrastr )
         case "cancelrequest"
             local node:JNode = JNode( data )
             if node debug( "CANCEL: "+node.toint() )

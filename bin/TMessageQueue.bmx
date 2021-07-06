@@ -1,5 +1,6 @@
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
+'   MESSAGE QUEUE
 
 Type TMessageQueue extends TObserver
     global requestThread:TThread
@@ -36,6 +37,7 @@ Type TMessageQueue extends TObserver
             elseif task.state = STATE_WAITING
                 'Publish( "Task "+task.id+" waiting")
                 task.state = STATE_RUNNING
+                UnlockMutex( TaskMutex )
                 return task
             'else
             '    Publish( "Task "+task.id+" running")
@@ -83,19 +85,30 @@ Type TMessageQueue extends TObserver
         case "sendmessage"         ' Send a message to the language client
             pushSendQueue( string(data) )
         case "pushtask"             ' Add a task to the task queue
+            Publish( "debug", "Pushtask received")
             local task:TMessage = TMessage(data)
             if task pushTaskQueue( task )
+            Publish( "debug", "Pushtask done" )
+        default
+            Publish( "error", "TMessageQueue: event '"+event+"' ignored" )
         end select
-        End Method
+    End Method
 
     private
 
     ' Add a new message to the queue
     Method pushTaskQueue( task:TMessage )
+        Publish( "debug", "PushTaskQueue()" )
+        if not task return
+        Publish( "debug", "- task is not null" )
         LockMutex( TaskMutex )
+        Publish( "debug", "- task mutex locked" )
         taskqueue.insert( task.id, task )
+        Publish( "debug", "- task inserted" )
         PostSemaphore( taskCounter )
+        Publish( "debug", "- task Semaphore Incremented" )
         UnlockMutex( TaskMutex )
+        Publish( "debug", "- task mutex unlocked" )
     end Method
     
     ' Add a message to send queue
