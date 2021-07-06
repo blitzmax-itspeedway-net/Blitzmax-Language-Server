@@ -29,11 +29,11 @@ Type TMessageQueue extends TObserver
             ' Debugging
             local state:string =  ["waiting","running","complete"][task.state]
             if task.cancelled state :+ ",cancelled"
-            Publish( "Task "+task.id+" ["+state+"]")
+            Publish( "debug", "Task "+task.id+" ["+state+"]")
             '
             if task.cancelled or task.state=STATE_COMPLETE
                 Publish( "Closing Task "+task.id)
-                taskqueue.remove( task.id)
+                taskqueue.remove( task.id )
             elseif task.state = STATE_WAITING
                 'Publish( "Task "+task.id+" waiting")
                 task.state = STATE_RUNNING
@@ -98,17 +98,17 @@ Type TMessageQueue extends TObserver
 
     ' Add a new message to the queue
     Method pushTaskQueue( task:TMessage )
-        Publish( "debug", "PushTaskQueue()" )
+        'Publish( "debug", "PushTaskQueue()" )
         if not task return
-        Publish( "debug", "- task is not null" )
+        'Publish( "debug", "- task is not null" )
         LockMutex( TaskMutex )
-        Publish( "debug", "- task mutex locked" )
+        'Publish( "debug", "- task mutex locked" )
         taskqueue.insert( task.id, task )
-        Publish( "debug", "- task inserted" )
+        'Publish( "debug", "- task inserted" )
         PostSemaphore( taskCounter )
-        Publish( "debug", "- task Semaphore Incremented" )
+        'Publish( "debug", "- task Semaphore Incremented" )
         UnlockMutex( TaskMutex )
-        Publish( "debug", "- task mutex unlocked" )
+        'Publish( "debug", "- task mutex unlocked" )
     end Method
     
     ' Add a message to send queue

@@ -15,7 +15,7 @@ Type TMethod_exit Extends TMessage
     Method Run:string()
         Publish( "lsp.exit.run() " )
         ' Stop LSP application loop
-        LSP.quit = True
+        LSP.endprocess = True
         ' NO RESPONSE REQUIRED
     End Method
 

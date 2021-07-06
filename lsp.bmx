@@ -82,7 +82,7 @@ Type TLSP Extends TObserver
 
 	Field initialized:Int = False   ' Set by "iniialized" message
     Field shutdown:Int = False      ' Set by "shutdown" message
-    Field quit:Int = False          ' Set by "exit" message
+    Field endprocess:Int = False    ' Set by "exit" message
 
     Field queue:TMessageQueue = New TMessageQueue()
 
@@ -101,6 +101,7 @@ Type TLSP Extends TObserver
     Method Close() ; End Method
     
     Function ExitProcedure()
+        Publish( "debug", "Exit Procedure running" )
         Publish( "exitnow" )
         instance.Close()
         'Logfile.Close()
@@ -151,14 +152,6 @@ Type TLSP Extends TObserver
                 Publish( "send", Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" ))
                 Continue
             End If
-    
-            ' Process "Immediate" notifications
-            ' Now performed by TMessage class
-            'If methd = "$/cancelRequest"
-            '    node = J.find("id")
-            '    if node Publish( "cancelrequest", node )
-            '    return True
-            'End If 
                 
             ' Transpose JNode into Blitzmax Object
             Local request:TMessage
@@ -199,11 +192,10 @@ Type TLSP Extends TObserver
                 End Try
             End If
         Until CompareAndSwap( lsp.QuitReceiver, quit, True )
-
+        Publish( "debug", "ReceiverThread - Exit" )
     End Function
 
     ' Thread based message sender
-'TODO
     Function SenderThread:Object( data:Object )
         Local lsp:TLSP = TLSP( data )
         Local quit:Int = False          ' Always got to know when to quit!
@@ -211,28 +203,31 @@ Type TLSP Extends TObserver
         'DebugLog( "SenderThread()" )
         Repeat
             Try
+                Publish( "debug", "Sender thread going to sleep")
                 WaitSemaphore( lsp.queue.sendcounter )
-                Publish( "LSP.queue.semaphore released" )
+                Publish( "debug", "SenderThread is awake" )
                 ' Create a Response from message
                 Local content:String = lsp.queue.popSendQueue()
-                'Publish( "Sending..." )
+                Publish( "Sending '"+content+"'" )
                 If content<>""  ' Only returns "" when thread exiting
                     Local response:String = "Content-Length: "+Len(content)+EOL
                     response :+ EOL
                     response :+ content
                     ' Log the response
-                    Publish( "log", "DEBG", "Sending:\n"+response )
+                    Publish( "log", "DEBG", "Sending:~n"+response )
                     ' Send to client
                     LockMutex( lsp.sendMutex )
                     StandardIOStream.WriteString( response )
                     StandardIOStream.Flush()
                     UnlockMutex( lsp.sendMutex )
+                    Publish( "debug", "Content sent" )
                 End If
             Catch Exception:String 
-                DebugLog( Exception )
-                Publish( Exception )
+                'DebugLog( Exception )
+                Publish( "log", "CRIT", Exception )
             End Try
         Until CompareAndSwap( lsp.QuitSender, quit, True )
+        Publish( "debug", "SenderThread - Exit" )
     End Function  
 
 End Type
@@ -257,6 +252,9 @@ Type TLSP_Stdio Extends TLSP
         ' Debugstop
         ThreadPoolSize = threads
 		ThreadPool = TThreadPoolExecutor.newFixedThreadPool( ThreadPoolSize )
+        '
+        ' Observations
+        'Subscribe( [""] )
     End Method
 
     Method run:Int()
@@ -277,15 +275,16 @@ Type TLSP_Stdio Extends TLSP
         Repeat
             ' Fill thread pool
             While ThreadPool.threadsWorking < ThreadPool.maxThreads            
-                ' Get next task
+                ' Get next task from queue
                 Local task:TMessage = queue.getNextTask()
                 If Not task Exit
                 ' Process the event handler
                 ThreadPool.execute( New TRunnableTask( task, self ) )
             Wend
             Delay(100)
-        Until quit
-
+        Until endprocess
+        Publish( "debug", "Mainloop - Exit" )
+        
         ' Clean up and exit gracefully
         Publish( "quit", "DEBG", "Closing threads" )
         AtomicSwap( QuitReceiver, False )
@@ -335,7 +334,7 @@ Type TLSP_Stdio Extends TLSP
             Else
                 Publish( "log", "DEBG", "Skipping: "+line )
             End If
-        Until quit
+        Until endprocess
     End Method
 
 End Type
@@ -360,8 +359,7 @@ Type TRunnableTask Extends TRunnable
     Method run()
         If not handler return
         local response:string = handler.run()
-        ' Send 
-        'Publish( "log", "DEBG", "Pushing response "+response )
+        ' Send the response to the client
         Publish( "sendmessage", response )
         'lsp.queue.pushSendQueue( response )
         ' Close the request as complete

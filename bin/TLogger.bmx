@@ -37,7 +37,7 @@ Type TLogger Extends TObserver
         End Try
         '
         ' Start message observer
-        Subscribe( ["log","debug","error","exitnow","cancelrequest","sendmessage","pushtask"] )
+        Subscribe( ["log","debug","error","exitnow","cancelrequest"] )
     End Method
 
     method timestamp:string()
@@ -49,7 +49,9 @@ Type TLogger Extends TObserver
     Method Write( message:String, stamp:int=True )
         If Not file Return
         if stamp message = timestamp()+message
-        'print message
+        ' Send to the client "output" window
+        writeStdErr( message )      
+        ' Send to the log file.
 		file.WriteLine( message )
         file.flush()
     End Method
