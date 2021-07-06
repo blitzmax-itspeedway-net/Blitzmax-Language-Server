@@ -31,12 +31,13 @@ Type TConfig Extends TMap
 
     Method defaults()
         insert( "logfile","" )
+        insert( "loglevel","7" )
     End Method 
 
     Method readconfig( filename:String )
         Local file:TStream = ReadStream( filename )
         If Not file
-            logfile.write "Unable to open logfile", "ERROR"
+            logfile.warning "Unable to open logfile"
             Return
         End If
         ' Read file into TMAP
