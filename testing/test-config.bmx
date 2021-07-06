@@ -10,7 +10,7 @@ Global logfile:TDummyLog = New TDummyLog
 
 Include "../bin/TConfig.bmx"
 
-DebugStop
+
 Local config:TConfig = New TConfig()
 
 Print "LOGFILE: "+config["logfile"]

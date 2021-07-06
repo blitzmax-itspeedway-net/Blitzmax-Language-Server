@@ -12,8 +12,8 @@ Type TMethod_exit Extends TMessage
     'Field id:int
     'Field jsonrpc:String
     'Field methd:String
-    Method Execute()
-        Logfile.write( "lsp.exit.execute() " )
+    Method Run:string()
+        Publish( "lsp.exit.run() " )
         ' Stop LSP application loop
         LSP.quit = True
         ' NO RESPONSE REQUIRED

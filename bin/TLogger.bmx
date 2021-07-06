@@ -11,10 +11,11 @@ const LOG_NOTICE:int    = 5
 const LOG_INFO:int      = 6
 const LOG_DEBUG:int     = 7
 
-Type TLogger 
+Type TLogger Extends TObserver
     Field file:TStream
     field loglevel:int = LOG_DEBUG
     global levels:string[] = ["EMER","ALRT","CRIT","ERRR","WARN","NOTE","INFO","DEBG"]
+
     Method New()
         ' Set loglevel within bounds
         loglevel = min( max( int( CONFIG["loglevel"] ), 0), 7 )
@@ -34,6 +35,9 @@ Type TLogger
             DebugLog( exception )
             'Print "ERROR "+e
         End Try
+        '
+        ' Start message observer
+        Subscribe( ["log","exitnow","cancelrequest","sendmessage","pushtask"] )
     End Method
 
     method timestamp:string()
@@ -48,6 +52,28 @@ Type TLogger
         'print message
 		file.WriteLine( message )
         file.flush()
+    End Method
+
+    ' Observations
+    Method Notify( event:string, data:object, extra:object )
+        local level:string = string(data)
+        local message:string = string(extra)
+        'debugstop
+        select event
+        case "log"
+            write( level[..4]+" "+message )
+        case "receive","send"
+            debug( upper(event)+":" )
+            debug( message )
+        case "cancelrequest"
+            local node:JNode = JNode( data )
+            if node debug( "CANCEL: "+node.toint() )
+        case "exitnow"
+            info( "Running exit procedure" )
+            close()
+        default
+            error( "TLogger: event '"+event+"' ignored")
+        end select
     End Method
 
     Public

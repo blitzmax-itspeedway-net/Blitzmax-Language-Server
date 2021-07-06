@@ -4,18 +4,11 @@
 
 # Hidden Files
 
-# Unimportant clutter
-examples/
-notes/
-old/
-test.txt
-runlog.txt
-*.bak
-*.debug
-
 # Private files
 post.bmk
 update
+build.txt
+lsp.config
 
 # Executables
 lsp
@@ -23,4 +16,16 @@ lsp.debug
 lsp.exe
 lsp.debug.exe
 
+# Unimportant clutter
+examples/
+notes/
+old/
+testing/
+test.txt
+runlog.txt
+*.bak
+*.debug
+*.bmx.bak
+*.old
 
+clean

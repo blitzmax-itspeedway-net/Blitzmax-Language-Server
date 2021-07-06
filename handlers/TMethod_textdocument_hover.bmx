@@ -13,8 +13,8 @@ Type TMethod_textdocument_hover Extends TMessage
     'Field methd:String
     'field params:TMap 
 
-    Method Execute()
-        Logfile.write( "TMethod_textdocument_hover.execute()" )
+    Method Run:string()
+        Logfile.write( "TMethod_textdocument_hover.run()" )
         
     End Method
 

@@ -21,9 +21,9 @@ Function LoadFile:String( filename:String )
 	Repeat 
 		'DebugStop
 		Local block:Int = Min( fp,400 )
-DebugStop;		Local text:String = ReadString( file, block )
+		Local text:String = ReadString( file, block )
 		Print( block + "," + Len(text) + "," + fp + "," + Len(content) )
-DebugStop;		content :+ text
+		content :+ text
 		fp :- block
 	Until fp<=0
 	CloseStream file
@@ -33,7 +33,7 @@ End Function
 'DebugStop
 Local request:String = loadfile( TESTFILE )
 
-DebugStop
+
 Local j:JSON = JSON.Parse( request )
 
 If j.error()

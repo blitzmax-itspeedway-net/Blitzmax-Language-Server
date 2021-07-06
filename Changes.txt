@@ -1,0 +1,11 @@
+[b]2 JUL 2021[/b]
+
+[b]CHANGES[/b]
+* Added "threadpool=" default=4 to config
+* Created Message Queue
+* Created Threaded Receiver
+* Created Threaded Sender
+* Created Threaded worker pool
+* Re-worked message calling
+
+( UNTESTED)

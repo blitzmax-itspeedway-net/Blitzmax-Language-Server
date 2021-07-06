@@ -20,26 +20,25 @@ Type TConfig Extends TMap
 			    writeconfig( filename )
             Case 2  ' Directory?
             Default
-                Logfile.write( "Invalid configuration file" )
+                Publish( "log", "WARN", "Invalid configuration file" )
             End Select
         Catch exception:String
             ' Show the error, but otherwise just continue
             'Logfile.write( exception, "CRITICAL" )
-            DebugLog "ERROR "+exception
+            Publish( "log", "ERRR", "ERROR: "+exception )
         End Try
     End Method
 
     Method defaults()
         insert( "logfile","" )
         insert( "loglevel","7" )
+        insert( "threadpool","4" )
     End Method 
 
-    Method readconfig( filename:String )
+    Method readconfig:int( filename:String )
         Local file:TStream = ReadStream( filename )
-        If Not file
-            logfile.warning "Unable to open logfile"
-            Return
-        End If
+        If Not file return Publish( "log", "WARN", "Unable to open logfile" )
+
         ' Read file into TMAP
         While Not Eof( file )
             Local line:String = Trim(ReadLine(file))
@@ -56,6 +55,7 @@ Type TConfig Extends TMap
             If keyvalue[0] <> "" insert( keyvalue[0], keyvalue[1] )
         Wend
         file.Close()
+        return True
     End Method
 
     Method writeconfig( filename:String )

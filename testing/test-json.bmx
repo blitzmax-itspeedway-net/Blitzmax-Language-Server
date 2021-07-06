@@ -7,8 +7,7 @@ Include "../bin/json.bmx"
 
 'DUMMY LOGFILE SO WE CAN STILL TEST JSON LIBRARY
 Type TDummyLog
-    Method write(msg:String, reserv:String="")
-		print msg
+    Method write(nul:String, reserv:String="")
     End Method
 End Type
 Global logfile:TDummyLog = New TDummyLog
@@ -31,7 +30,7 @@ Function Validate( filename:String, text:String, failtest:Int=False )
 		Print "  ERROR: "+ JSON.errtext + " {"+ JSON.errline+","+JSON.errpos+"}"
 		Print "  FILE:  "+ file
 		Return
-	End If
+	End Iftail
 	
 	Local str:String = JSON.Stringify( j )
 	If text = str And Not failtest
@@ -55,5 +54,4 @@ End Function
 'Validate( "success/empty-file.json", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )
 'Validate( "success/empty-object.json", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )
 'Validate( "success/basic.json", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )
-'debugstop
 Validate( "initialise.txt", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )

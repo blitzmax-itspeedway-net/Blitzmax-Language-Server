@@ -6,8 +6,24 @@ Include "TMethod_exit.bmx"
 include "TMethod_initialize.bmx"
 Include "TMethod_initialized.bmx"
 Include "TMethod_shutdown.bmx"
+Include "TMethod_dollar_cancelrequest.bmx"
+
+const STATE_WAITING:int = 0
+const STATE_RUNNING:int = 1
+const STATE_COMPLETE:int = 2
+'const STATE_CANCELLED:int = 3
 
 ' BASIC REQUEST TYPE
 Type TMessage
-    Method Execute() Abstract
+    Field state:int = STATE_WAITING    ' State of the message
+    Field cancelled:int = False         ' Message cancellation
+    Field J:JNode                       ' Original JNode message
+    Field id:int
+    Method Run:String() Abstract
+    ' Identify if message contains a symbol
+    Method contains:int( path:string )
+        'if J Publish( "log", "DEBG", J.Stringify() )
+        if J and J.find( path ) Return True
+        Return False
+    End Method
 End Type

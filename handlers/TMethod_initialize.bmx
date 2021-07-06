@@ -13,8 +13,8 @@ Type TMethod_initialize Extends TMessage
     Field methd:String
     field params:JNode
 
-    Method Execute()
-        Logfile.write( "TMethod_initialize.execute()" )
+    Method Run:string()
+        Publish( "TMethod_initialize.run()" )
         LSP.initialized = true
 
         ' Write Client information to logfile
@@ -26,7 +26,7 @@ Type TMethod_initialize Extends TMessage
                 'logfile.write( "CLIENT INFO EXISTS" )
                 local clientname:string = clientinfo["name"]
                 local clientver:string = clientinfo["version"]
-                logfile.write "CLIENT: "+clientname+", "+clientver
+                Publish "CLIENT: "+clientname+", "+clientver
             'else
                 'logfile.write( "NO CLIENT INFO EXISTS" )
             end if
@@ -40,7 +40,7 @@ Type TMethod_initialize Extends TMessage
         response.set( "result|capabilities", [["hover","true"]] )
         'response.set( "result|capabilities", [["hoverProvider","true"]] )
         response.set( "result|serverinfo", [["name","~q"+apptitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
-        respond( response.stringify() )
+        return response.stringify()
 
     End Method
 End Type

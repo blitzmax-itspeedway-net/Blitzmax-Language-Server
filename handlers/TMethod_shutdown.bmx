@@ -12,8 +12,8 @@ Type TMethod_shutdown Extends TMessage
     Field jsonrpc:String
     Field methd:String
 
-    Method Execute()
-        Logfile.write( "TMethod_shutdown.execute() " )
+    Method Run:String()
+        Publish( "TMethod_shutdown.run() " )
 
         LSP.shutdown = true
 
@@ -22,7 +22,7 @@ Type TMethod_shutdown Extends TMessage
         response.set( "jsonrpc", "2.0" )
         response.set( "result", "null" )
         'response.set( "error", [["code",0],["message","TTFN"]] )
-        respond( response.stringify() )
+        return response.stringify() 
 
     End Method
 

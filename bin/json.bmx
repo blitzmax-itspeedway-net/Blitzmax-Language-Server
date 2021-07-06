@@ -5,7 +5,17 @@
 '   JSON Specification:
 '   https://www.json.org/json-en.html
 
-' THis is the JSON Parse
+'   Internally all JSON variables are stored as JNode
+'   JNodes use the following types to store Blitzmax variables:
+'
+'   JSON    BLITZMAX
+'   ----------------
+'   array   JNode[]
+'   number  String
+'   object  TMap
+'   string  String
+
+' JSON Parser and Stringifier
 Type JSON
 
     Public
@@ -136,7 +146,8 @@ Type JSON
                 'PopToken()  ' Throw away the "{"
                 Local value:JNode = ReadArray()
                 If PopToken().symbol <> "]" Return InvalidNode( "Expected ']'" )
-                node.insert( name, New JNode( "array", value ) )
+                node.insert( name, value ) 
+                'node.insert( name, New JNode( "array", value ) )
             Case "string"
                 'token = PopToken()
 				node.insert( name, New JNode( "string", dequote(token.value) ) )
@@ -188,7 +199,7 @@ Type JSON
             Case "["    ' ARRAY
                 Local value:JNode = ReadArray()
                 If PopToken().symbol <> "]" Return InvalidNode( "Expected ']'" )
-                node :+ [ New JNode( "array", value ) ]
+                node :+ [ value ]	'New JNode( "array", value ) ]
             Case "string"
                 'token = PopToken()
                 node :+ [ New JNode( "string", Dequote(token.value) ) ]
@@ -437,7 +448,6 @@ Type JNode
 			text :+ "{"
 			If map
 				For Local key:String = EachIn map.keys()
-print( key )
                     Local j:JNode = JNode( map[key] )
 					text :+ "~q"+key+"~q:"+j.stringify()+","
 				Next
@@ -445,6 +455,14 @@ print( key )
 				If text.endswith(",") text = text[..(Len(text)-1)]
 			End If
 			text :+ "}"
+        Case "array"
+			text :+ "["
+            For Local J:JNode = EachIn JNode[](value)
+                text :+ J.stringify()+","
+            Next
+			' Strip trailing comma
+			If text.endswith(",") text = text[..(Len(text)-1)]
+			text :+ "]"
 		Case "number"
 			text :+ String(value)
 		Case "string"
@@ -452,44 +470,27 @@ print( key )
 		Case "keyword"
 			text :+ String(value)		
 		Default
-			logfile.write "INVALID SYMBOL: '"+class+"'"
+			Publish( "log", "DEBG", "INVALID SYMBOL: '"+class+"'" )
 		End Select
 		Return text
 	End Method
 
-   ' Transpose a JNode object into a Blitzmax Object using Reflection 
-   Method transpose:Object( typestr:String )
-        DebugLog( "Transpose() start")
-        'logfile.write "JNode.Transpose()"
-
-        ' We can only tanspose an object into a Type
-        'logfile.write( "I AM TYPE: "+class )
+    ' Transpose a JNode object into a Blitzmax Object using Reflection 
+    Method transpose:Object( typestr:String )
+        Publish( "log", "DEBG", "Transpose('"+typestr+"')" )
+        ' We can only transpose an object into a Type
         If class<>"object" Return Null
-        
-        'debuglog "Creating type "+typestr
-        'logfile.write "- Creating type "+typestr
         Local typeid:TTypeId = TTypeId.ForName( typestr )
         If Not typeid
-            'debuglog( "- Not a valid type" )
-            'logfile.write "- Not a valid type" 
+            Publish( "log", "DEBG", "Invalid Type: '"+typestr+"'" )
             Return Null
         End If
         Local invoke:Object = typeid.newObject()
-        If Not invoke 
-            'debuglog( "- Failed to create object" )
-            'logfile.write "- Failed to create object"
-            Return Null
-        End If
+        If Not invoke Return Null
     
-        ' Enumerate object fields
-        Local fields:TMap = New TMap()
-        'debuglog( "Object fields:" )
-        'logfile.write "- Enumerating objects"
-
         ' Add Field names and types to map
+        Local fields:TMap = New TMap()
         For Local fld:TField = EachIn typeid.EnumFields()
-            'debuglog( "  "+fld.name() + ":" + fld.typeid.name() )
-            'logfile.write( "  "+fld.name() + ":" + fld.typeid.name() )
             fields.insert( fld.name(), fld.typeid.name() )
         Next
     
@@ -501,8 +502,7 @@ print( key )
         '    logfile.write "  "+key+" = "+ JNode(map[key]).toString()
         'next
 
-        'logfile.write( "TRANSPOSING MAP INTO OBJECT")
-
+        ' Transpose fields into object
         For Local fldname:String = EachIn fields.keys()
             Local fldtype:String = String(fields[fldname]).tolower()
             'debuglog( "Field: "+fldname+":"+fldtype )
@@ -529,26 +529,21 @@ print( key )
                         Local J:JNode = JNode(map[fldname])
                         fld.set( invoke, J )
                     Default
-                        'DebugLog( fldtype + " not currently supported by transpose" )
-                        logfile.write "# ERROR: '"+fldtype+"' transpose is not supported"
+                        Publish( "log", "ERRR", "Transpose '"+fldtype+"' is not supported" )
                     End Select
                 Catch Exception:String
-                    logfile.write "#CRITICAL: Transpose exception"
-                    logfile.write Exception
+                    Publish( "log", "CRIT", "Transpose exception" )
+                    Publish( "log", "CRIT", Exception )
                 End Try
             'else
                 'logfile.write "-- Is null"
             End If
-        Next		
+        Next
         Return invoke
     End Method
 
-    Method transpose_object_to_type( obj:Object, j:JNode )
-
-    End Method
 
 '		##### JSON HELPER
-'		##### Old version replaced on 27 JUN 2021
 
     ' Set the value of a JNode
     Method set( value:String )
@@ -631,7 +626,6 @@ print( key )
 			Return child.find( path[1..], createme )
 		End If
 	End Method
-
 
     Private
 

@@ -13,8 +13,18 @@ Type TMethod_initialized Extends TMessage
     'Field methd:String
     'field params:TMap 
 
-    Method Execute()
-        Logfile.write( "TMethod_initialized.execute()" )
+    Method Run:string()
+        Publish( "TMethod_initialized.run()" )
+
+        ' Request configuration
+        'local request:JNode = JSON.create()
+        'request.set( "id", id )
+        'request.set( "jsonrpc", "2.0" )
+        'request.set( "method", "workspace/configuration" )
+        'request.set( "params|items", [["scope","lsp.todo"]] )
+        'local message:string = request.stringify()
+        'SendMessage( message )
+
         ' NO RESPONSE REQUIRED
     End Method
 

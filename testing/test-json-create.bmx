@@ -16,9 +16,9 @@ Global logfile:TDummyLog = New TDummyLog
 'DUMMY END
 
 Local response:JNode = JSON.Create()
-DebugStop;'DebugStop
+'DebugStop
 response.set( "id", 99 )
-DebugStop
+
 response.set( "test", "testing" )
 response.set( "error|code", 42 )
 
@@ -36,9 +36,9 @@ J = response.find( "error|text",True )
 Print J.stringify()
 
 response.set( "error|text", "~qLife the universe and everything~q" )
-DebugStop;Print response.stringify()
+Print response.stringify()
 
-DebugStop
+
 response.set( "result|capabilities", [["hoverProvider","true"]] )
 
 response.set( "capabilities", [["hover","true"]] )
@@ -48,7 +48,7 @@ response.set( "capabilities", [["hover","true"]] )
 'result.set( "serverinfo|name", "~qBlitzmax Language Server~q" )
 
 Print( "-------------_" )
-DebugStop
+
 Print response.stringify()
 
 Print( "-------------_" )
@@ -58,14 +58,14 @@ str   = "{~qjsonrpc~q:~q2.0~q,~qid~q:0,~qmethod~q:~qinitialize~q,"
 str  :+ "~qclientInfo~q:{~qname~q:~qVisual Studio~q,~qversion~q:~q123ABC~q},"
 str  :+ "~qlocale~q:~qen-gb~q}"
 
-DebugStop
+
 Local JS:JNode = JSON.parse( str )
 Print JS.stringify()
 
 J = JS.find( "method" )
-DebugStop
+
 Print J.stringify()
-DebugStop
+
 
 Local clientinfo:JNode = JS.find( "clientInfo" )
 If clientinfo
