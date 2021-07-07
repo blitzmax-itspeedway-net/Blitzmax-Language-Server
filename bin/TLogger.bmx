@@ -73,7 +73,7 @@ Type TLogger Extends TObserver
             WriteErr( datastr )
         case "debug"
             WriteFile( "DEBG "+datastr )
-            WriteErr( "# "+datastr )
+            if DEBUGGER WriteErr( "# "+datastr )
         case "error"
             WriteFile( "ERRR "+datastr )
             WriteErr( "# "+datastr )
