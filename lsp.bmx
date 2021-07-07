@@ -51,6 +51,8 @@ Const ERR_REQUEST_CANCELLED:String =      "-32800"
 
 '   GLOBALS
 AppTitle = "Language Server for BlitzMax NG"
+global DEBUGGER:int = FALSE
+
 'DebugStop
 'Global Version:String = "0.00 Pre-Alpha"
 Local Logfile:TLogger = New TLogger()         ' Please use Observer
@@ -70,7 +72,7 @@ Publish "log", "DEBG", "APPDIR:     "+AppDir
 ' @bmk incrementVersion build.bmx
 Include "build.bmx"
 Publish "log", "INFO", AppTitle
-Publish "log", "INFO", "Version "+version+":"+build
+Publish "log", "INFO", "Version "+version+"."+build
 
 '   MAIN APPLICATION
 
@@ -101,7 +103,7 @@ Type TLSP Extends TObserver
     Method Close() ; End Method
     
     Function ExitProcedure()
-        Publish( "debug", "Exit Procedure running" )
+        'Publish( "debug", "Exit Procedure running" )
         Publish( "exitnow" )
         instance.Close()
         'Logfile.Close()
@@ -192,7 +194,7 @@ Type TLSP Extends TObserver
                 End Try
             End If
         Until CompareAndSwap( lsp.QuitReceiver, quit, True )
-        Publish( "debug", "ReceiverThread - Exit" )
+        'Publish( "debug", "ReceiverThread - Exit" )
     End Function
 
     ' Thread based message sender
@@ -203,12 +205,12 @@ Type TLSP Extends TObserver
         'DebugLog( "SenderThread()" )
         Repeat
             Try
-                Publish( "debug", "Sender thread going to sleep")
+                'Publish( "debug", "Sender thread going to sleep")
                 WaitSemaphore( lsp.queue.sendcounter )
-                Publish( "debug", "SenderThread is awake" )
+                'Publish( "debug", "SenderThread is awake" )
                 ' Create a Response from message
                 Local content:String = lsp.queue.popSendQueue()
-                Publish( "Sending '"+content+"'" )
+                Publish( "log", "DEBG", "Sending '"+content+"'" )
                 If content<>""  ' Only returns "" when thread exiting
                     Local response:String = "Content-Length: "+Len(content)+EOL
                     response :+ EOL
@@ -220,7 +222,7 @@ Type TLSP Extends TObserver
                     StandardIOStream.WriteString( response )
                     StandardIOStream.Flush()
                     UnlockMutex( lsp.sendMutex )
-                    Publish( "debug", "Content sent" )
+                    'Publish( "debug", "Content sent" )
                 End If
             Catch Exception:String 
                 'DebugLog( Exception )
