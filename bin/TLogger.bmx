@@ -37,7 +37,7 @@ Type TLogger Extends TObserver
         End Try
         '
         ' Start message observer
-        Subscribe( ["log","debug","error","exitnow","cancelrequest"] )
+        Subscribe( ["log","info","debug","error","critical","exitnow","cancelrequest"] )
     End Method
 
     method timestamp:string()
@@ -46,14 +46,18 @@ Type TLogger Extends TObserver
 
     private
     
-    Method Write( message:String, stamp:int=True )
+    Method WriteFile( message:String, stamp:int=True )
         If Not file Return
         if stamp message = timestamp()+message
         ' Send to the client "output" window
-        writeStdErr( message )      
+        'writeStdErr( message )      
         ' Send to the log file.
 		file.WriteLine( message )
         file.flush()
+    End Method
+
+    Method WriteErr( message:string )
+        writeStdErr( message+"~n")      
     End Method
 
     ' Observations
@@ -63,13 +67,19 @@ Type TLogger Extends TObserver
         'debugstop
         select event
         case "log"
-            write( datastr[..4]+" "+extrastr )
+            WriteFile( datastr[..4]+" "+extrastr )
+        case "info"
+            WriteFile( "INFO "+datastr )
+            WriteErr( datastr )
         case "debug"
-            write( "DEBG "+datastr )
+            WriteFile( "DEBG "+datastr )
+            WriteErr( "# "+datastr )
         case "error"
-            write( "ERRR "+datastr )
-        case "error"
-            write( "CRIT "+datastr )
+            WriteFile( "ERRR "+datastr )
+            WriteErr( "# "+datastr )
+        case "critical"
+            WriteFile( "CRIT "+datastr )
+            WriteErr( "# "+datastr )
         'case "receive","send"
         '    debug( upper(event)+":" )
         '    debug( extrastr )
@@ -77,7 +87,7 @@ Type TLogger Extends TObserver
             local node:JNode = JNode( data )
             if node debug( "CANCEL: "+node.toint() )
         case "exitnow"
-            info( "Running exit procedure" )
+            debug( "TLogger is closing" )
             close()
         default
             error( "TLogger: event '"+event+"' ignored")
@@ -86,38 +96,38 @@ Type TLogger Extends TObserver
 
     Public
 
-    Method Write( message:String, severity:int, stamp:int=True )
+    Method WriteFile( message:String, severity:int, stamp:int=True )
         if loglevel < severity return
-        write( levels[severity]+" "+message )
+        WriteFile( levels[severity]+" "+message )
     End Method
 
     Method critical( message:string, stamp:int=True )
         if loglevel < LOG_CRITICAL return
-        write( "CRIT "+message )
+        WriteFile( "CRIT "+message )
     EndMethod
 
     Method error( message:string, stamp:int=True )
         if loglevel < LOG_ERROR return
-        write( "ERRR "+message )
+        WriteFile( "ERRR "+message )
     EndMethod
 
     Method warning( message:string, stamp:int=True )
         if loglevel < LOG_WARNING return
-        write( "WARN "+message )
+        WriteFile( "WARN "+message )
     EndMethod
 
     Method info( message:string, stamp:int=True )
         if loglevel < LOG_INFO return
-        write( "INFO "+message )
+        WriteFile( "INFO "+message )
     EndMethod
 
     method debug( message:string, stamp:int=True )
         if loglevel < LOG_DEBUG return
-        write( "DEBG "+message )
+        WriteFile( "DEBG "+message )
     EndMethod
 
     Method Close()
-        Self.write( "CLOSED" )
+        Self.WriteFile( "CLOSED" )
         If file file.Close()
         file = Null
     End Method

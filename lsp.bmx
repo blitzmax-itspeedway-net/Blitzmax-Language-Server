@@ -82,7 +82,7 @@ Type TLSP Extends TObserver
 
 	Field initialized:Int = False   ' Set by "iniialized" message
     Field shutdown:Int = False      ' Set by "shutdown" message
-    Field endprocess:Int = False    ' Set by "exit" message
+    Field QuitMain:Int = True       ' Atomic State - Set by "exit" message
 
     Field queue:TMessageQueue = New TMessageQueue()
 
@@ -110,7 +110,7 @@ Type TLSP Extends TObserver
     ' Thread based message receiver
     Function ReceiverThread:Object( data:Object )
         Local lsp:TLSP = TLSP( data )
-        Local quit:Int = False          ' Always got to know when to quit!
+        Local quit:Int = False     ' Local loop state
 
         ' Read messages from Language Client
         Repeat
@@ -243,8 +243,8 @@ Type TLSP_Stdio Extends TLSP
 	Field StdIn:TStream
 
     Method New( threads:Int = 4 )
-        DebugLog( "# BlitzMax LSP" )
-        DebugLog( "# V"+Version+":"+build )
+        Publish( "info", "LSP for BlitzMax NG" )
+        Publish( "info", "V"+Version+":"+build )
         'Log.write( "Initialised")
         ' Set up instance and exit function
         instance = Self
@@ -258,7 +258,8 @@ Type TLSP_Stdio Extends TLSP
     End Method
 
     Method run:Int()
-'DebugStop
+        local quit:int = False     ' Local loop state
+
         ' Open StandardIn
         StdIn = ReadStream( StandardIOStream )
         If Not StdIn
@@ -282,18 +283,23 @@ Type TLSP_Stdio Extends TLSP
                 ThreadPool.execute( New TRunnableTask( task, self ) )
             Wend
             Delay(100)
-        Until endprocess
+        'Until endprocess
+        Until CompareAndSwap( lsp.QuitMain, quit, True )
         Publish( "debug", "Mainloop - Exit" )
         
         ' Clean up and exit gracefully
-        Publish( "quit", "DEBG", "Closing threads" )
-        AtomicSwap( QuitReceiver, False )
-        WaitThread( Receiver )
-        AtomicSwap( QuitSender, False )
-        WaitThread( Sender )
+        AtomicSwap( QuitReceiver, False )   ' Inform thread it must exit
+        DetachThread( Receiver )
+        Publish( "debug", "Receiver thread closed" )
+
+        AtomicSwap( QuitSender, False )     ' Inform thread it must exit
+        'PostSemaphore( queue.sendCounter )  ' Wake the thread from it's slumber
+        DetachThread( Sender )
+        Publish( "debug", "Sender thread closed" )
+
         ThreadPool.shutdown()
-        '
-        Publish( "log", "DEBG", "Exit Gracefully" )
+        Publish( "debug", "Worker thread pool closed" )
+
         Return exitcode
     End Method
     
@@ -309,6 +315,7 @@ Type TLSP_Stdio Extends TLSP
 
     ' Read messages from the client
     Method getRequest:String()
+        local quit:int = False     ' Local loop state
         Local line:String   ', char:String
         Local content:String
         Local contentlength:Int
@@ -338,7 +345,8 @@ Type TLSP_Stdio Extends TLSP
             Catch Exception:String
                 Publish( "critical", Exception )
             End Try
-        Until endprocess
+        'Until endprocess
+        Until CompareAndSwap( lsp.QuitMain, quit, True )
     End Method
 
 End Type
@@ -377,6 +385,7 @@ Publish( "log", "DEBG", "Starting LSP..." )
 Try
     LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )
     exit_( LSP.run() )
+    'Publish( "debug", "Exit Gracefully" )
 Catch exception:String
     Publish( "log", "CRIT", exception )
 End Try

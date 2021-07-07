@@ -100,10 +100,5 @@ End Type
 
 ' Publish an event
 Function Publish:int( event:string, data:object=null, extra:object=null )
-    ' Are we publishing an informational log event?
-    if not data and not extra
-        Return TSignal.Publish( "log", "INFO", event )
-    else
-        Return TSignal.Publish( event, data, extra )
-    end if
+    Return TSignal.Publish( event, data, extra )
 End Function

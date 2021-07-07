@@ -15,7 +15,8 @@ Type TMethod_exit Extends TMessage
     Method Run:string()
         Publish( "lsp.exit.run() " )
         ' Stop LSP application loop
-        LSP.endprocess = True
+        'LSP.endprocess = True
+        AtomicSwap( LSP.QuitMain, False )
         ' NO RESPONSE REQUIRED
     End Method
 

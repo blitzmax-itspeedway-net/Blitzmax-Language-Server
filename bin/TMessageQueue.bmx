@@ -117,7 +117,7 @@ Type TMessageQueue extends TObserver
         if message="" return
         LockMutex( sendMutex )
         sendqueue.enqueue( message )
-        PostSemaphore( sendCounter )
+        PostSemaphore( sendCounter )    ' Increase message counter semaphore
         UnlockMutex( sendMutex )
     End Method
 
