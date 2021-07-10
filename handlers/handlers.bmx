@@ -19,7 +19,7 @@ Type TMessage
     Field cancelled:int = False         ' Message cancellation
     Field J:JNode                       ' Original JNode message
     Field id:int
-    Method Run:String() Abstract
+    Method Run:String() ; End Method    ' V0.2, chnaged from Abstract to Ancestor
     ' Identify if message contains a symbol
     Method contains:int( path:string )
         'if J Publish( "log", "DEBG", J.Stringify() )
