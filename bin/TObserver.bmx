@@ -2,7 +2,7 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 '   OBSERVER (Publish/Subscribe)
 
-REM     
+Rem     
         Currently defined event types:
 
         EVENT           DATA    EXTRA
@@ -19,19 +19,20 @@ REM
 END REM
 
 Type TObserver
-    private
-    Method Notify( event:string, data:object, extra:object ) abstract
-    public
-    Method Subscribe( event:string )
-        TSignal.Subscribe( event, self )
+    Private
+	' V0.2, changed from abstract to ancestor
+    Method Notify( event:String, data:Object, extra:Object ) ; End Method
+    Public
+    Method Subscribe( event:String )
+        TSignal.Subscribe( event, Self )
     End Method
-    Method Subscribe( events:string[])
-        for local event:string = eachin events
-            TSignal.Subscribe( event, self )
+    Method Subscribe( events:String[])
+        For Local event:String = EachIn events
+            TSignal.Subscribe( event, Self )
         Next
     End Method
-    Method Unsubscribe( event:string )
-        TSignal.Unsubscribe( event, self )
+    Method Unsubscribe( event:String )
+        TSignal.Unsubscribe( event, Self )
     End Method
     'Method Publish( event:string, data:object=null )
     '    TSignal.Publish( event, data )
@@ -45,60 +46,60 @@ Type TSignal
     Global lock:TMutex = CreateMutex()
     Global list:TMap = New TMap()
 
-    Method New() abstract   ' Prevent instance creation
+    Method New() Abstract   ' Prevent instance creation
     
     Public
 
-    global DisposeEmpties:int = True    ' Dispose of empty queue's
+    Global DisposeEmpties:Int = True    ' Dispose of empty queue's
 
-    Function Publish:int( event:string, data:object=null, extra:object=null )
+    Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
         ' Standardise event
-        event = lower( trim(event) )
+        event = Lower( Trim(event) )
         ' Get the event queue
-        local queue:TList = Tlist( list.ValueForKey( event ) )
-        If not queue return False
+        Local queue:TList = TList( list.ValueForKey( event ) )
+        If Not queue Return False
         ' Send event
-        for local observer:TObserver = eachin queue
-            observer.Notify( event:string, data, extra )
-        next
+        For Local observer:TObserver = EachIn queue
+            observer.Notify( event:String, data, extra )
+        Next
         Return True
     End Function
 
-    Function Subscribe( event:string, observer:TObserver )
+    Function Subscribe( event:String, observer:TObserver )
         ' Standardise event
-        event = lower( trim(event) )
+        event = Lower( Trim(event) )
         ' Get the messeventage queue
-        local queue:TList = Tlist( list.ValueForKey( event ) )
+        Local queue:TList = TList( list.ValueForKey( event ) )
         ' If queue does not exist, create it
         LockMutex( lock )
-        If not queue
-            queue = new TList()
+        If Not queue
+            queue = New TList()
             list.insert( event, queue )
         End If
         ' Add observer to event queue
         queue.addlast( observer )
-        UnLockMutex( lock )
+        UnlockMutex( lock )
     End Function
 
-    Function Unsubscribe( event:string, observer:TObserver )
+    Function Unsubscribe( event:String, observer:TObserver )
         ' Standardise event
-        event = lower( trim(event) )
+        event = Lower( Trim(event) )
         ' Get the event queue
-        local queue:TList = Tlist( list.ValueForKey( event ) )
-        If not queue return
+        Local queue:TList = TList( list.ValueForKey( event ) )
+        If Not queue Return
         ' Remove the observer
         LockMutex( lock )
         queue.remove( observer )
         ' Remove the queue (You may not always want to do this)
-        if queue.isempty() and disposeEmpties
+        If queue.isempty() And disposeEmpties
             list.remove( event )
-        end if
-        UnLockMutex( lock )
+        End If
+        UnlockMutex( lock )
     End Function
 
 End Type
 
 ' Publish an event
-Function Publish:int( event:string, data:object=null, extra:object=null )
+Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
     Return TSignal.Publish( event, data, extra )
 End Function

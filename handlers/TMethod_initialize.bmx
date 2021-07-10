@@ -8,39 +8,43 @@
 'https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialize
 
 Type TMethod_initialize Extends TMessage
-    field id:int
+    Field id:Int
     Field jsonrpc:String
     Field methd:String
-    field params:JNode
+    Field params:JNode
 
-    Method Run:string()
+    Method Run:String()
         Publish( "TMethod_initialize.run()" )
-        LSP.initialized = true
+        LSP.initialized = True
 
         ' Write Client information to logfile
-        if params
+        If params
             'logfile.write( "PARAMS EXIST" )
             'if params.isvalid() logfile.write( "PARAMS IS VALID" )
-            local clientinfo:JNode = params.find( "clientInfo" )    ' VSCODE=clientInfo
-            if clientinfo
+            Local clientinfo:JNode = params.find( "clientInfo" )    ' VSCODE=clientInfo
+            If clientinfo
                 'logfile.write( "CLIENT INFO EXISTS" )
-                local clientname:string = clientinfo["name"]
-                local clientver:string = clientinfo["version"]
+                Local clientname:String = clientinfo["name"]
+                Local clientver:String = clientinfo["version"]
                 Publish "CLIENT: "+clientname+", "+clientver
             'else
                 'logfile.write( "NO CLIENT INFO EXISTS" )
-            end if
-        end if
+            End If
+        End If
 
         ' RESPONSE 
 
-        local response:JNode = JSON.create()
+		'V0.2, Capabilities are managed by the LSP
+		Local capabilities:String[][] = lsp.getcapabilities()
+
+        Local response:JNode = JSON.Create()
         response.set( "id", id )
         response.set( "jsonrpc", "2.0" )
-        response.set( "result|capabilities", [["hover","true"]] )
+        'response.set( "result|capabilities", [["hover","true"]] )
         'response.set( "result|capabilities", [["hoverProvider","true"]] )
-        response.set( "result|serverinfo", [["name","~q"+apptitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
-        return response.stringify()
+        response.set( "result|capabilities", capabilities )
+        response.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
+        Return response.stringify()
 
     End Method
 End Type

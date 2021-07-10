@@ -2,7 +2,6 @@ SuperStrict
 
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
-'   VERSION 0.00 PA
 
 Framework brl.standardio 
 Import brl.collections      ' Used for Tokeniser
@@ -52,12 +51,18 @@ Const ERR_REQUEST_CANCELLED:String =      "-32800"
 
 '   GLOBALS
 AppTitle = "Language Server for BlitzMax NG"
+Global DEBUGGER:Int = False
+
 'DebugStop
 'Global Version:String = "0.00 Pre-Alpha"
 Local Logfile:TLogger = New TLogger()         ' Please use Observer
 Global LSP:TLSP
 
-Publish "log", "DEBG", "ARGS: ("+AppArgs.length+")"+(" ".join(AppArgs))
+'   DEBUG THE COMMAND LINE
+Publish "log", "DEBG", "ARGS: ("+AppArgs.length+")"     '+(" ".join(AppArgs))
+For Local n:Int=0 Until AppArgs.length
+    Publish "log", "DEBG", n+") "+AppArgs[n]
+Next
 Publish "log", "DEBG", "CURRENTDIR: "+CurrentDir$()
 Publish "log", "DEBG", "APPDIR:     "+AppDir
 
@@ -67,7 +72,7 @@ Publish "log", "DEBG", "APPDIR:     "+AppDir
 ' @bmk incrementVersion build.bmx
 Include "build.bmx"
 Publish "log", "INFO", AppTitle
-Publish "log", "INFO", "Version "+version+":"+build
+Publish "log", "INFO", "Version "+version+"."+build
 
 '   MAIN APPLICATION
 
@@ -79,9 +84,12 @@ Type TLSP Extends TObserver
 
 	Field initialized:Int = False   ' Set by "iniialized" message
     Field shutdown:Int = False      ' Set by "shutdown" message
-    Field quit:Int = False          ' Set by "exit" message
+    Field QuitMain:Int = True       ' Atomic State - Set by "exit" message
 
     Field queue:TMessageQueue = New TMessageQueue()
+
+	' Create a document manager
+	Field textDocument:TTextDocument	' Do not initialise here: Depends on lsp.
 
     ' Threads
     Field Receiver:TThread
@@ -92,31 +100,36 @@ Type TLSP Extends TObserver
     Field ThreadPoolSize:Int
     Field sendMutex:TMutex = CreateMutex()
     
+	' System
+	Field capabilities:String[]
+	Field handlers:TMap = New TMap
+	
     Method run:Int() Abstract
     Method getRequest:String() Abstract     ' Waits for a message from client
 
     Method Close() ; End Method
-    
+
+	'V0.0
     Function ExitProcedure()
+        'Publish( "debug", "Exit Procedure running" )
         Publish( "exitnow" )
         instance.Close()
         'Logfile.Close()
     End Function
 
+	'V0.1
     ' Thread based message receiver
     Function ReceiverThread:Object( data:Object )
         Local lsp:TLSP = TLSP( data )
-        Local quit:Int = False          ' Always got to know when to quit!
+        Local quit:Int = False     ' Local loop state
 
         ' Read messages from Language Client
         Repeat
 
             Local node:JNode
-            
-' CRASHES HERE            
+                       
             ' Get inbound message from Language Client
             Local content:String = lsp.getRequest()
-
 
             ' Parse message into a JSON object
             Local J:JNode = JSON.Parse( content )
@@ -140,7 +153,7 @@ Type TLSP Extends TObserver
                 Continue
             End If
             Local methd:String = node.tostring()
-            Publish( "log", "DEBG", "- RPC METHOD: "+methd )
+            'Publish( "log", "DEBG", "RPC METHOD: "+methd )
             If methd = "" 
                 Publish( "send", Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ))
                 Continue
@@ -150,87 +163,123 @@ Type TLSP Extends TObserver
                 Publish( "send", Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" ))
                 Continue
             End If
-    
-            ' Process "Immediate" notifications
-            ' Now performed by TMessage class
-            'If methd = "$/cancelRequest"
-            '    node = J.find("id")
-            '    if node Publish( "cancelrequest", node )
-            '    return True
-            'End If 
                 
             ' Transpose JNode into Blitzmax Object
             Local request:TMessage
             Try
                 Local typestr:String = "TMethod_"+methd
                 typestr = typestr.Replace( "/", "_" )
-                typestr = typestr.Replace( "$", "pid" ) ' Protocol Implementation Dependent
-                Publish( "log", "DEBG", "- BMX METHOD: "+typestr )
+                typestr = typestr.Replace( "$", "dollar" ) ' Protocol Implementation Dependent
+                'Publish( "log", "DEBG", "BMX METHOD: "+typestr )
                 ' Transpose RPC
                 request = TMessage( J.transpose( typestr ))
-                If Not request
-                    Publish( "log", "DEBG", "- Transpose to '"+typestr+"' failed")
-                    Publish( "send", Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available" ))
-                    Continue
-                End If               
+				' V0.2 - This is no longer a failure as we may have a handler
+                'If Not request
+                '    Publish( "log", "DEBG", "Transpose to '"+typestr+"' failed")
+                '    Publish( "send", Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available" ))
+                '    Continue
+                'Else
+                '    ' Save JNode into message
+                '    request.J = J
+                'End If
+				' V0.2, Save the original J node
+				If request request.J = J
             Catch exception:String
                 Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))
             End Try
+
+			' V0.2
+			' If Transpose fails, then all is not lost
+			If Not request
+				request = New TMessage( methd, J )
+			End If
     
             ' A Request is pushed to the task queue
             ' A Notification is executed now
             If request.contains( "id" )
                 ' This is a request, add to queue
-                lsp.queue.pushTaskQueue( request )
+                Publish( "log", "DEBG", "Pushing request to queue")
+                Publish( "pushtask", request )
+                'lsp.queue.pushTaskQueue( request )
                 Continue
             Else
                 ' This is a Notification, execute it now and throw away any response
                 Try
+                    Publish( "log", "DEBG", "Running Notification "+methd )
                     request.run()
                 Catch exception:String
                     Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))    
                 End Try
             End If
         Until CompareAndSwap( lsp.QuitReceiver, quit, True )
-
+        'Publish( "debug", "ReceiverThread - Exit" )
     End Function
 
+	'V0.1
     ' Thread based message sender
-'TODO
     Function SenderThread:Object( data:Object )
         Local lsp:TLSP = TLSP( data )
         Local quit:Int = False          ' Always got to know when to quit!
         
-        DebugLog( "SenderThread()" )
+        'DebugLog( "SenderThread()" )
         Repeat
             Try
+                'Publish( "debug", "Sender thread going to sleep")
                 WaitSemaphore( lsp.queue.sendcounter )
+                'Publish( "debug", "SenderThread is awake" )
                 ' Create a Response from message
                 Local content:String = lsp.queue.popSendQueue()
+                Publish( "log", "DEBG", "Sending '"+content+"'" )
                 If content<>""  ' Only returns "" when thread exiting
                     Local response:String = "Content-Length: "+Len(content)+EOL
                     response :+ EOL
                     response :+ content
                     ' Log the response
-                    Publish( "log", "DEBG", response )
+                    Publish( "log", "DEBG", "Sending:~n"+response )
                     ' Send to client
                     LockMutex( lsp.sendMutex )
                     StandardIOStream.WriteString( response )
                     StandardIOStream.Flush()
                     UnlockMutex( lsp.sendMutex )
+                    'Publish( "debug", "Content sent" )
                 End If
             Catch Exception:String 
-                DebugLog( Exception )
-                Publish( Exception )
+                'DebugLog( Exception )
+                Publish( "log", "CRIT", Exception )
             End Try
         Until CompareAndSwap( lsp.QuitSender, quit, True )
+        Publish( "debug", "SenderThread - Exit" )
     End Function  
 
+	'V0.2
+	Method addCapability( handler:TMessageHandler, capability:String, events:String[] )
+		capabilities :+ [capability]
+		For Local event:String = EachIn events
+			handlers.insert( event, handler )
+		Next
+	End Method
+
+	'V0.2 - Retrieve all registered capabilities
+	Method getCapabilities:String[][]()
+		Local result:String[][]
+		For Local capability:String = EachIn capabilities
+			result[0] :+ [capability,"true"]
+		Next
+		Return result
+	End Method
+	
+	'V0.2
+	Method getMessageHandler:TMessageHandler( methd:String )
+		Return TMessageHandler( handlers.valueForkey( methd ) )
+	End Method
+	
 End Type
 
 ' RESERVED FOR FUTURE EXPANSION
 Type TLSP_TCP Extends TLSP
-    Method Run:Int() ; End Method
+    Method Run:Int()
+		textDocument = New TTextDocument
+	End Method
     Method getRequest:String() ; End Method
 End Type
 
@@ -239,8 +288,8 @@ Type TLSP_Stdio Extends TLSP
 	Field StdIn:TStream
 
     Method New( threads:Int = 4 )
-        DebugLog( "# BlitzMax LSP" )
-        DebugLog( "# V"+Version+":"+build )
+        Publish( "info", "LSP for BlitzMax NG" )
+        Publish( "info", "V"+Version+"."+build )
         'Log.write( "Initialised")
         ' Set up instance and exit function
         instance = Self
@@ -248,10 +297,16 @@ Type TLSP_Stdio Extends TLSP
         ' Debugstop
         ThreadPoolSize = threads
 		ThreadPool = TThreadPoolExecutor.newFixedThreadPool( ThreadPoolSize )
+        '
+        ' Observations
+        'Subscribe( [""] )
     End Method
 
     Method run:Int()
-DebugStop
+		textDocument = New TTextDocument
+
+        Local quit:Int = False     ' Local loop state
+
         ' Open StandardIn
         StdIn = ReadStream( StandardIOStream )
         If Not StdIn
@@ -261,129 +316,39 @@ DebugStop
 
         ' Start threads
         Receiver = CreateThread( ReceiverThread, Self )
-        'Sender = CreateThread( SenderThread, Self )
+        Sender = CreateThread( SenderThread, Self )
         'ThreadPool = TThreadPoolExecutor.newFixedThreadPool( ThreadPoolSize )
-DebugStop
+'DebugStop
         ' Start Message Loop
         Repeat
             ' Fill thread pool
             While ThreadPool.threadsWorking < ThreadPool.maxThreads            
-                ' Get next task
-                Local task:TMessage = queue.getNextTask()
-                If Not task Exit
-                ' Process the event handler
-                ThreadPool.execute( New TRunnableTask( task ) )
+                ' Get next task from queue
+				Local task:TMessage = queue.getNextTask()
+				If Not task Exit
+				' Process the event handler
+				ThreadPool.execute( New TRunnableTask( task, Self ) )
             Wend
             Delay(100)
-        Until quit
-
+        'Until endprocess
+        Until CompareAndSwap( lsp.QuitMain, quit, True )
+        Publish( "debug", "Mainloop - Exit" )
+        
         ' Clean up and exit gracefully
-        Publish( "quit", "DEBG", "Closing threads" )
-        AtomicSwap( QuitReceiver, False )
-        WaitThread( Receiver )
-        AtomicSwap( QuitSender, False )
-        WaitThread( Sender )
+        AtomicSwap( QuitReceiver, False )   ' Inform thread it must exit
+        DetachThread( Receiver )
+        Publish( "debug", "Receiver thread closed" )
+
+        AtomicSwap( QuitSender, False )     ' Inform thread it must exit
+        'PostSemaphore( queue.sendCounter )  ' Wake the thread from it's slumber
+        DetachThread( Sender )
+        Publish( "debug", "Sender thread closed" )
+
         ThreadPool.shutdown()
-        '
-        Publish( "log", "DEBG", "Exit Gracefully" )
+        Publish( "debug", "Worker thread pool closed" )
+
         Return exitcode
     End Method
-
-
-Rem BUILD 93
-    ' Parse a request
-    Function OnMessage( message:String )
-		' Parse message into a JSON object
-        Logfile.debug( "onMessage()" )
-        Local J:JNode = JSON.Parse( message )
-
-        'logfile.debug( "JSON COMPLETION:" )
-        'logfile.debug( "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}" )
-
-        ' Report an error to the Client using stdOut
-        if not J or J.isInvalid()
-            local errtext:string = "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}"
-            logfile.error "- Failed to parse message"
-            logfile.error "- "+errtext
-            'if len(message)>50
-            '    logfile.write message[..50]+"..."
-            'else
-            '    logfile.write message
-            'end if
-
-            ' Send error message to LSP Client
-            respond_error( ERR_PARSE_ERROR, errtext )
-
-            Return
-        end if
-
-        ' Debugging
-        'Local debug:String = JSON.stringify(J)
-        'logfile.write( "STRINGIFY:" )
-        'logfile.write( "  "+debug )
-
-        ' Check for a method
-        local node:JNode = J.find("method")
-        if not node
-            logfile.error "- No method specified"
-            ' Send error message to LSP Client
-            respond_error( ERR_METHOD_NOT_FOUND, "No method specified" )
-            Return
-        end if
-
-        ' Get method
-        Local methd:String = node.tostring()
-        Logfile.debug( "- RPC METHOD: "+methd )
-        if methd = ""
-            logfile.error "- Method is empty"
-            ' Send error message to LSP Client
-            respond_error( ERR_INVALID_REQUEST, "Method cannot be empty" )
-            Return
-        end if
-
-        ' Validation
-        if not LSP.initialized and methd<>"initialize"
-            logfile.error "- Server is not initialized"
-            respond_error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" )
-            return
-        end if
-
-        ' Transpose JNode into Blitzmax Object
-        'Logfile.debug( "- Transposing..." )
-        Local request:TMessage
-        Try
-            local typestr:string = "TMethod_"+methd
-            typestr = typestr.replace( "/", "_" )
-            typestr = typestr.replace( "$", "pid" ) ' Protocol Implementation Dependent
-            Logfile.debug( "- BMX METHOD: "+typestr )
-            ' Transpose RPC
-            request = TMessage( J.transpose( typestr ))
-            if not request
-                Logfile.debug( "- Transpose to '"+typestr+"' failed")
-                respond_error( ERR_METHOD_NOT_FOUND, "Method is not available" )
-                Return
-            end if               
-        Catch exception:String
-            logfile.critical( "  "+exception )
-            respond_error( ERR_INTERNAL_ERROR, exception )
-            return
-        End Try
-
-        bugstop
-        ' Execute the request
-        'Logfile.debug( "- Executing" )
-        try
-            request.execute()
-        catch exception:string
-            logfile.critical( "  "+exception )
-            respond_error( ERR_INTERNAL_ERROR, exception )
-            return           
-        end try
-
-        Logfile.debug( "- Execution complete" )
-
-    End Function
-End Rem
     
     ' Observations
     Method Notify( event:String, data:Object, extra:Object )
@@ -397,167 +362,80 @@ End Rem
 
     ' Read messages from the client
     Method getRequest:String()
+        Local quit:Int = False     ' Local loop state
         Local line:String   ', char:String
         Local content:String
         Local contentlength:Int
 		Local contenttype:String = "utf-8"
 
-Publish( "log", "DEBG", "STDIO.GetRequest()")
+        'Publish( "log", "DEBG", "STDIO.GetRequest()")
         ' Read messages from StdIN
         Repeat
-            line = stdIn.ReadLine()
-            If line.startswith("Content-Length:")
-                contentlength = Int( line[15..] )
-                Publish( "log", "DEBG", "Content-Length:"+contentlength)
-            ElseIf line.startswith("Content-Type:")
-                contenttype = Int( line[13..] )
-                ' Backward compatibility, utf8 is no longer supported
-                If contenttype = "utf8" contenttype = "utf-8"
-                Publish( "log", "DEBG", "Content-Type:"+contenttype)
-            ElseIf line=""
-                Publish( "log", "DEBG", "WAITING FOR CONTENT...")
-                content = stdIN.ReadString$( contentlength )
-                Publish( "log", "DEBG", "RECEIVED:~n"+content )
-                Return content
-            Else
-                Publish( "log", "DEBG", "SKIP: "+line )
-            End If
-        Until quit
+            Try
+                line = stdIn.ReadLine()
+                If line.startswith("Content-Length:")
+                    contentlength = Int( line[15..] )
+                    'Publish( "log", "DEBG", "Content-Length:"+contentlength)
+                ElseIf line.startswith("Content-Type:")
+                    contenttype = Int( line[13..] )
+                    ' Backward compatibility, utf8 is no longer supported
+                    If contenttype = "utf8" contenttype = "utf-8"
+                    'Publish( "log", "DEBG", "Content-Type:"+contenttype)
+                ElseIf line=""
+                    'Publish( "log", "DEBG", "WAITING FOR CONTENT...")
+                    content = stdIN.ReadString$( contentlength )
+                    Publish( "log", "DEBG", "Received "+contentlength+" bytes:~n"+content )
+                    Return content
+                Else
+                    Publish( "log", "DEBG", "Skipping: "+line )
+                End If
+            Catch Exception:String
+                Publish( "critical", Exception )
+            End Try
+        'Until endprocess
+        Until CompareAndSwap( lsp.QuitMain, quit, True )
     End Method
 
-Rem Moved into thread
-    ' Called when a new message arrives on STDIN
-    Method MessageReceiver:int( content:string )
-        local node:JNode
-
-        ' Parse message into a JSON object
-        Publish( "MessageReceiver()" )
-        Local J:JNode = JSON.Parse( content )
-
-        ' Report an error to the Client using stdOut
-        if not J or J.isInvalid()
-            local errtext:string = "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}"
-            ' Send error message to LSP Client
-            Return respond_error( ERR_PARSE_ERROR, errtext )
-        end if
-
-        ' Debugging
-        'Local debug:String = JSON.stringify(J)
-        'logfile.write( "STRINGIFY:" )
-        'logfile.write( "  "+debug )
-
-        ' Check for a method
-        node = J.find("method")
-        if not node Return respond_error( ERR_METHOD_NOT_FOUND, "No method specified" )
-        Local methd:String = node.tostring()
-        Logfile.debug( "- RPC METHOD: "+methd )
-        if methd = "" Return respond_error( ERR_INVALID_REQUEST, "Method cannot be empty" )
-
-        ' Validation
-        if not LSP.initialized and methd<>"initialize"
-            Return respond_error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" )
-        end if
-
-        ' Process "Immediate" notifications
-        If methd = "$/cancelRequest"
-            node = J.find("id")
-            if node Publish( "cancelrequest", node )
-            return True
-        End If 
-            
-        ' Transpose JNode into Blitzmax Object
-        'Logfile.debug( "- Transposing..." )
-        Local request:TMessage
-        Try
-            local typestr:string = "TMethod_"+methd
-            typestr = typestr.replace( "/", "_" )
-            typestr = typestr.replace( "$", "pid" ) ' Protocol Implementation Dependent
-            Logfile.debug( "- BMX METHOD: "+typestr )
-            ' Transpose RPC
-            request = TMessage( J.transpose( typestr ))
-            if not request
-                Logfile.debug( "- Transpose to '"+typestr+"' failed")
-                respond_error( ERR_METHOD_NOT_FOUND, "Method is not available" )
-                Return
-            end if               
-        Catch exception:String
-            return respond_error( ERR_INTERNAL_ERROR, exception )
-        End Try
-
-        'debugstop
-
-        try
-            request.execute()
-        catch exception:string
-            return respond_error( ERR_INTERNAL_ERROR, exception )        
-        end try
-
-        Logfile.debug( "- Execution complete" )
-
-    End Method
-END REM
 End Type
 
-'Type TReceiver
-'    field lsp:TLSP
-'    field data:string
-'    method new( source:TLSP, content:String )
-'        self.lsp = source
-'        self.data = content
-'    end method
-'End Type
-
-Rem
-Function StdIO_Read_Thread()
-    'LockMutex( stdIO_read )
-    'UnlockMutex( stdIO_read )
-End Function
-
-Function StdIO_Write_Thread()
-    'LockMutex( stdIO_write )
-    'UnlockMutex( stdIO_write )
-End Function
-end rem
-
-'function respond:int( content:string )
-'    Local response:String = "Content-Length: "+Len(content)+EOL
-'    response :+ EOL
-'    response :+ content
-'    ' Log the response
-'    'Logfile.debug( response )
-'    Publish( "log", "DEBG", response )
-'    ' Send to client
-'    StandardIOStream.WriteString( response )
-'    StandardIOStream.Flush()
-'    Return True
-'end function
-
-Function Response_Error:String( code:String, message:String )
+Function Response_Error:String( code:String, message:String, id:String="null" )
     Publish( "log", "ERRR", message )
     Local response:JNode = JSON.Create()
-    response.set( "id", "null" )
+    response.set( "id", id )
     response.set( "jsonrpc", "2.0" )
     response.set( "error", [["code",code],["message","~q"+message+"~q"]] )
     Return response.stringify()
 End Function
 
-'   Threaded Task
+'   Worker Thread
 Type TRunnableTask Extends TRunnable
-    Field handler:TMessage
-    Method New( handler:TMessage )
-        Self.handler = handler
+    Field message:TMessage
+    Field lsp:TLSP
+    Method New( handler:TMessage, lsp:TLSP )
+        Self.message = handler
+        Self.lsp = lsp
     End Method
     Method run()
-        If handler handler.run()
+		Local response:String = message.run()
+		'V0.2, default to error if nothign returned from handler
+		If response="" response = Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available", message.id )
+		' Send the response to the client
+		Publish( "sendmessage", response )
+		'lsp.queue.pushSendQueue( response )
+		' Close the request as complete
+		message.state = STATE_COMPLETE
     End Method
 End Type
 
 '   Run the Application
 Publish( "log", "DEBG", "Starting LSP..." )
 
+'DebugStop
+
 Try
     LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )
     exit_( LSP.run() )
+    'Publish( "debug", "Exit Gracefully" )
 Catch exception:String
     Publish( "log", "CRIT", exception )
 End Try

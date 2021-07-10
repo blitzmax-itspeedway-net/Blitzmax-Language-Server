@@ -51,7 +51,7 @@ Const ERR_REQUEST_CANCELLED:String =      "-32800"
 
 '   GLOBALS
 AppTitle = "Language Server for BlitzMax NG"
-global DEBUGGER:int = FALSE
+Global DEBUGGER:Int = False
 
 'DebugStop
 'Global Version:String = "0.00 Pre-Alpha"
@@ -60,9 +60,9 @@ Global LSP:TLSP
 
 '   DEBUG THE COMMAND LINE
 Publish "log", "DEBG", "ARGS: ("+AppArgs.length+")"     '+(" ".join(AppArgs))
-for local n:int=0 until appargs.length
+For Local n:Int=0 Until AppArgs.length
     Publish "log", "DEBG", n+") "+AppArgs[n]
-next
+Next
 Publish "log", "DEBG", "CURRENTDIR: "+CurrentDir$()
 Publish "log", "DEBG", "APPDIR:     "+AppDir
 
@@ -88,6 +88,9 @@ Type TLSP Extends TObserver
 
     Field queue:TMessageQueue = New TMessageQueue()
 
+	' Create a document manager
+	Field textDocument:TTextDocument	' Do not initialise here: Depends on lsp.
+
     ' Threads
     Field Receiver:TThread
     Field QuitReceiver:Int = True   ' Atomic State
@@ -97,11 +100,16 @@ Type TLSP Extends TObserver
     Field ThreadPoolSize:Int
     Field sendMutex:TMutex = CreateMutex()
     
+	' System
+	Field capabilities:String[]
+	Field handlers:TMap = New TMap
+	
     Method run:Int() Abstract
     Method getRequest:String() Abstract     ' Waits for a message from client
 
     Method Close() ; End Method
-    
+
+	'V0.0
     Function ExitProcedure()
         'Publish( "debug", "Exit Procedure running" )
         Publish( "exitnow" )
@@ -109,6 +117,7 @@ Type TLSP Extends TObserver
         'Logfile.Close()
     End Function
 
+	'V0.1
     ' Thread based message receiver
     Function ReceiverThread:Object( data:Object )
         Local lsp:TLSP = TLSP( data )
@@ -164,17 +173,26 @@ Type TLSP Extends TObserver
                 'Publish( "log", "DEBG", "BMX METHOD: "+typestr )
                 ' Transpose RPC
                 request = TMessage( J.transpose( typestr ))
-                If Not request
-                    Publish( "log", "DEBG", "Transpose to '"+typestr+"' failed")
-                    Publish( "send", Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available" ))
-                    Continue
-                Else
-                    ' Save JNode into message
-                    request.J = J
-                End If
+				' V0.2 - This is no longer a failure as we may have a handler
+                'If Not request
+                '    Publish( "log", "DEBG", "Transpose to '"+typestr+"' failed")
+                '    Publish( "send", Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available" ))
+                '    Continue
+                'Else
+                '    ' Save JNode into message
+                '    request.J = J
+                'End If
+				' V0.2, Save the original J node
+				If request request.J = J
             Catch exception:String
                 Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))
             End Try
+
+			' V0.2
+			' If Transpose fails, then all is not lost
+			If Not request
+				request = New TMessage( methd, J )
+			End If
     
             ' A Request is pushed to the task queue
             ' A Notification is executed now
@@ -197,6 +215,7 @@ Type TLSP Extends TObserver
         'Publish( "debug", "ReceiverThread - Exit" )
     End Function
 
+	'V0.1
     ' Thread based message sender
     Function SenderThread:Object( data:Object )
         Local lsp:TLSP = TLSP( data )
@@ -232,11 +251,35 @@ Type TLSP Extends TObserver
         Publish( "debug", "SenderThread - Exit" )
     End Function  
 
+	'V0.2
+	Method addCapability( handler:TMessageHandler, capability:String, events:String[] )
+		capabilities :+ [capability]
+		For Local event:String = EachIn events
+			handlers.insert( event, handler )
+		Next
+	End Method
+
+	'V0.2 - Retrieve all registered capabilities
+	Method getCapabilities:String[][]()
+		Local result:String[][]
+		For Local capability:String = EachIn capabilities
+			result :+ [[capability,"true"]]
+		Next
+		Return result
+	End Method
+	
+	'V0.2
+	Method getMessageHandler:TMessageHandler( methd:String )
+		Return TMessageHandler( handlers.valueForkey( methd ) )
+	End Method
+	
 End Type
 
 ' RESERVED FOR FUTURE EXPANSION
 Type TLSP_TCP Extends TLSP
-    Method Run:Int() ; End Method
+    Method Run:Int()
+		textDocument = New TTextDocument
+	End Method
     Method getRequest:String() ; End Method
 End Type
 
@@ -246,7 +289,7 @@ Type TLSP_Stdio Extends TLSP
 
     Method New( threads:Int = 4 )
         Publish( "info", "LSP for BlitzMax NG" )
-        Publish( "info", "V"+Version+":"+build )
+        Publish( "info", "V"+Version+"."+build )
         'Log.write( "Initialised")
         ' Set up instance and exit function
         instance = Self
@@ -260,7 +303,9 @@ Type TLSP_Stdio Extends TLSP
     End Method
 
     Method run:Int()
-        local quit:int = False     ' Local loop state
+		textDocument = New TTextDocument
+
+        Local quit:Int = False     ' Local loop state
 
         ' Open StandardIn
         StdIn = ReadStream( StandardIOStream )
@@ -279,10 +324,10 @@ Type TLSP_Stdio Extends TLSP
             ' Fill thread pool
             While ThreadPool.threadsWorking < ThreadPool.maxThreads            
                 ' Get next task from queue
-                Local task:TMessage = queue.getNextTask()
-                If Not task Exit
-                ' Process the event handler
-                ThreadPool.execute( New TRunnableTask( task, self ) )
+				Local task:TMessage = queue.getNextTask()
+				If Not task Exit
+				' Process the event handler
+				ThreadPool.execute( New TRunnableTask( task, Self ) )
             Wend
             Delay(100)
         'Until endprocess
@@ -317,7 +362,7 @@ Type TLSP_Stdio Extends TLSP
 
     ' Read messages from the client
     Method getRequest:String()
-        local quit:int = False     ' Local loop state
+        Local quit:Int = False     ' Local loop state
         Local line:String   ', char:String
         Local content:String
         Local contentlength:Int
@@ -353,10 +398,10 @@ Type TLSP_Stdio Extends TLSP
 
 End Type
 
-Function Response_Error:String( code:String, message:String )
+Function Response_Error:String( code:String, message:String, id:String="null" )
     Publish( "log", "ERRR", message )
     Local response:JNode = JSON.Create()
-    response.set( "id", "null" )
+    response.set( "id", id )
     response.set( "jsonrpc", "2.0" )
     response.set( "error", [["code",code],["message","~q"+message+"~q"]] )
     Return response.stringify()
@@ -364,25 +409,28 @@ End Function
 
 '   Worker Thread
 Type TRunnableTask Extends TRunnable
-    Field handler:TMessage
+    Field message:TMessage
     Field lsp:TLSP
     Method New( handler:TMessage, lsp:TLSP )
-        Self.handler = handler
-        self.lsp = lsp
+        Self.message = handler
+        Self.lsp = lsp
     End Method
     Method run()
-        If not handler return
-        local response:string = handler.run()
-        ' Send the response to the client
-        Publish( "sendmessage", response )
-        'lsp.queue.pushSendQueue( response )
-        ' Close the request as complete
-        handler.state = STATE_COMPLETE
+		Local response:String = message.run()
+		'V0.2, default to error if nothign returned from handler
+		If response="" response = Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available", message.id )
+		' Send the response to the client
+		Publish( "sendmessage", response )
+		'lsp.queue.pushSendQueue( response )
+		' Close the request as complete
+		message.state = STATE_COMPLETE
     End Method
 End Type
 
 '   Run the Application
 Publish( "log", "DEBG", "Starting LSP..." )
+
+'DebugStop
 
 Try
     LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )

@@ -2,10 +2,10 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 '   MESSAGE QUEUE
 
-Type TMessageQueue extends TObserver
-    global requestThread:TThread
-    global sendqueue:TQueue<String>         ' Messages waiting to deliver to Language Client
-    global taskqueue:TIntMap                ' Tasks Waiting or Running
+Type TMessageQueue Extends TObserver
+    Global requestThread:TThread
+    Global sendqueue:TQueue<String>         ' Messages waiting to deliver to Language Client
+    Global taskqueue:TIntMap                ' Tasks Waiting or Running
     ' Locks
     Field sendMutex:TMutex = CreateMutex()
     Field taskMutex:TMutex = CreateMutex()
@@ -13,93 +13,94 @@ Type TMessageQueue extends TObserver
     Field sendCounter:TSemaphore = CreateSemaphore( 0 )
     'Field taskCounter:TSemaphore = CreateSemaphore( 0 )
 
-    Method new()
-        sendQueue = new TQueue<String>()
-        taskQueue = new TIntMap()
+    Method New()
+        sendQueue = New TQueue<String>()
+        taskQueue = New TIntMap()
+'DebugStop
         ' Subscribe to messages
         Subscribe( ["pushtask","sendmessage","exitnow","cancelrequest"] )
     End Method
 
     ' Get next waiting message in the queue
     Method getNextTask:TMessage()
-        if taskqueue.isEmpty() return null
+        If taskqueue.isEmpty() Return Null
         Publish( "getNextTask()" )
         LockMutex( TaskMutex )
-        for local task:TMessage = eachin taskqueue.values()
+        For Local task:TMessage = EachIn taskqueue.values()
             ' Debugging
-            local state:string =  ["waiting","running","complete"][task.state]
-            if task.cancelled state :+ ",cancelled"
+            Local state:String =  ["waiting","running","complete"][task.state]
+            If task.cancelled state :+ ",cancelled"
             Publish( "debug", "Task "+task.id+" ["+state+"]")
             '
-            if task.cancelled or task.state=STATE_COMPLETE
+            If task.cancelled Or task.state=STATE_COMPLETE
                 Publish( "Closing Task "+task.id)
                 taskqueue.remove( task.id )
-            elseif task.state = STATE_WAITING
+            ElseIf task.state = STATE_WAITING
                 'Publish( "Task "+task.id+" waiting")
                 task.state = STATE_RUNNING
                 UnlockMutex( TaskMutex )
-                return task
+                Return task
             'else
             '    Publish( "Task "+task.id+" running")
-            end if
-        next
+            End If
+        Next
         UnlockMutex( TaskMutex )
-        return null
-    end Method
+        Return Null
+    End Method
 
     ' Remove a message from the queue 
     Method removeTask( task:TMessage )
         LockMutex( TaskMutex )
         taskqueue.remove( task.id )
         UnlockMutex( TaskMutex )
-    end Method
+    End Method
     
     ' Retrieve a message from send queue
-    Method popSendQueue:string()
+    Method popSendQueue:String()
         LockMutex( sendMutex )
-        local result:String = String( sendqueue.dequeue() )
+        Local result:String = String( sendqueue.dequeue() )
         UnlockMutex( sendMutex )
-        return result
+        Return result
     End Method
 
     ' Observations
-    Method Notify( event:string, data:object, extra:object )
-        select event
-        case "cancelrequest"   '$/cancelRequest
+    Method Notify( event:String, data:Object, extra:Object )
+        Select event
+        Case "cancelrequest"   '$/cancelRequest
             ' A request has been cancelled
-            local node:JNode = JNode( data )
-            if not node return
-            local id:int = node.toInt()
+            Local node:JNode = JNode( data )
+            If Not node Return
+            Local id:Int = node.toInt()
             LockMutex( taskmutex )
-            for local task:TMessage = eachin taskqueue
-                if task.id = id 
+            For Local task:TMessage = EachIn taskqueue
+                If task.id = id 
                     task.cancelled = True
                     Exit
-                end if
-            next
+                End If
+            Next
             UnlockMutex( taskMutex )
-        case "exitnow"      ' System exit requested
+        Case "exitnow"      ' System exit requested
             ' Force waiting threads to exit
             PostSemaphore( sendCounter )
             'PostSemaphore( taskCounter )
-        case "sendmessage"         ' Send a message to the language client
-            pushSendQueue( string(data) )
-        case "pushtask"             ' Add a task to the task queue
+        Case "sendmessage"         ' Send a message to the language client
+            pushSendQueue( String(data) )
+        Case "pushtask"             ' Add a task to the task queue
             Publish( "debug", "Pushtask received")
-            local task:TMessage = TMessage(data)
-            if task pushTaskQueue( task )
+            Local task:TMessage = TMessage(data)
+            If task pushTaskQueue( task )
             Publish( "debug", "Pushtask done" )
-        default
+        Default
             Publish( "error", "TMessageQueue: event '"+event+"' ignored" )
-        end select
+        End Select
     End Method
 
-    private
+    Private
 
     ' Add a new message to the queue
     Method pushTaskQueue( task:TMessage )
         'Publish( "debug", "PushTaskQueue()" )
-        if not task return
+        If Not task Return
         'Publish( "debug", "- task is not null" )
         LockMutex( TaskMutex )
         'Publish( "debug", "- task mutex locked" )
@@ -109,12 +110,12 @@ Type TMessageQueue extends TObserver
         'Publish( "debug", "- task Semaphore Incremented" )
         UnlockMutex( TaskMutex )
         'Publish( "debug", "- task mutex unlocked" )
-    end Method
+    End Method
     
     ' Add a message to send queue
-    Method pushSendQueue( message:string )
-        message = trim( message )
-        if message="" return
+    Method pushSendQueue( message:String )
+        message = Trim( message )
+        If message="" Return
         LockMutex( sendMutex )
         sendqueue.enqueue( message )
         PostSemaphore( sendCounter )    ' Increase message counter semaphore
