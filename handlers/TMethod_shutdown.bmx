@@ -5,21 +5,21 @@
 '  https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#shutdown
 
 Type TMethod_shutdown Extends TMessage
-    Field id:int
+    Field id:Int
     Field jsonrpc:String
     Field methd:String
 
     Method Run:String()
         Publish( "TMethod_shutdown.run("+id+") " )
 
-        LSP.shutdown = true
+        LSP.shutdown = True
 
-        local response:JNode = JSON.create()
+        Local response:JSON = New JSON()
         response.set( "id", id )
         response.set( "jsonrpc", "2.0" )
         response.set( "result", "null" )
         'response.set( "error", [["code",0],["message","TTFN"]] )
-        return response.stringify() 
+        Return response.stringify() 
 
     End Method
 

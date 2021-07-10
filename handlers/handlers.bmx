@@ -7,8 +7,36 @@ Include "TMethod_initialize.bmx"
 Include "TMethod_initialized.bmx"
 Include "TMethod_shutdown.bmx"
 Include "TMethod_dollar_cancelrequest.bmx"
-
-Include "TTextDocument.bmx"
+	
+									'	Server Capabilities
+Include "TTextDocument.bmx"			'	textDocumentSync
+'Include "TCompletionProvider.bmx"	'	completionProvider
+'Include "xxxxxxxxxx.bmx"			'	hoverProvider
+'Include "xxxxxxxxxx.bmx"			'	signatureHelpProvider
+'Include "xxxxxxxxxx.bmx"			'	declarationProvider
+'Include "xxxxxxxxxx.bmx"			'	definitionProvider
+'Include "xxxxxxxxxx.bmx"			'	typeDefinitionProvider
+'Include "xxxxxxxxxx.bmx"			'	implementationProvider
+'Include "xxxxxxxxxx.bmx"			'	referencesProvider
+'Include "xxxxxxxxxx.bmx"			'	documentHighlightProvider
+'Include "xxxxxxxxxx.bmx"			'	documentSymbolProvider
+'Include "xxxxxxxxxx.bmx"			'	codeActionProvider
+'Include "xxxxxxxxxx.bmx"			'	codeLensProvider
+'Include "xxxxxxxxxx.bmx"			'	documentLinkProvider
+'Include "xxxxxxxxxx.bmx"			'	colorProvider
+'Include "xxxxxxxxxx.bmx"			'	documentFormattingProvider
+'Include "xxxxxxxxxx.bmx"			'	documentRangeFormattingProvider
+'Include "xxxxxxxxxx.bmx"			'	documentOnTypeFormattingProvider
+'Include "xxxxxxxxxx.bmx"			'	renameProvider
+'Include "xxxxxxxxxx.bmx"			'	foldingRangeProvider
+'Include "xxxxxxxxxx.bmx"			'	executeCommandProvider
+'Include "xxxxxxxxxx.bmx"			'	selectionRangeProvider
+'Include "xxxxxxxxxx.bmx"			'	linkedEditingRangeProvider
+'Include "xxxxxxxxxx.bmx"			'	callHierarchyProvider
+'Include "xxxxxxxxxx.bmx"			'	semanticTokensProvider
+'Include "xxxxxxxxxx.bmx"			'	monikerProvider
+'Include "xxxxxxxxxx.bmx"			'	workspaceSymbolProvider
+'Include "xxxxxxxxxx.bmx"			'	workspace
 
 Const STATE_WAITING:Int = 0
 Const STATE_RUNNING:Int = 1
@@ -17,18 +45,18 @@ Const STATE_COMPLETE:Int = 2
 
 ' BASIC REQUEST TYPE
 Type TMessage
-    Field state:Int = STATE_WAITING    ' State of the message
+    Field state:Int = STATE_WAITING		' State of the message
     Field cancelled:Int = False         ' Message cancellation
-    Field J:JNode                       ' Original JNode message
+    Field J:JSON                    	' Original JSON message
     Field id:Int
 
 	' V0.2
 	Field methd:String					' Original "method" from message
-	Method New( methd:String, J:JNode )
+	Method New( methd:String, J:JSON )
 		Self.methd = methd
 		Self.J = J
 		' Extract ID (if there is one)
-		Local idnode:JNode = J.find( "id" )
+		Local idnode:JSON = J.find( "id" )
 		If idnode id=idnode.toint()
 	End Method
 

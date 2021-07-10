@@ -51,7 +51,7 @@ Const ERR_REQUEST_CANCELLED:String =      "-32800"
 
 '   GLOBALS
 AppTitle = "Language Server for BlitzMax NG"
-Global DEBUGGER:Int = False
+Global DEBUGGER:Int = True
 
 'DebugStop
 'Global Version:String = "0.00 Pre-Alpha"
@@ -101,7 +101,7 @@ Type TLSP Extends TObserver
     Field sendMutex:TMutex = CreateMutex()
     
 	' System
-	Field capabilities:String[]
+	Field capabilities:JSON = New JSON( "object", Null )	' Empty object
 	Field handlers:TMap = New TMap
 	
     Method run:Int() Abstract
@@ -126,21 +126,30 @@ Type TLSP Extends TObserver
         ' Read messages from Language Client
         Repeat
 
-            Local node:JNode
+            Local node:JSON
                        
             ' Get inbound message from Language Client
             Local content:String = lsp.getRequest()
 
             ' Parse message into a JSON object
-            Local J:JNode = JSON.Parse( content )
+			Publish( "debug", "Parse starting" )
+            Local J:JSON = JSON.Parse( content )
+			Publish( "debug", "Parse finished" )
             ' Report an error to the Client using stdOut
             If Not J Or J.isInvalid()
-                Local errtext:String = "ERROR("+JSON.errNum+") "+JSON.errText+" at {"+JSON.errLine+","+JSON.errpos+"}"
+				Local errtext:String
+				If J.isInvalid()
+					errtext = "ERROR("+J.errNum+") "+J.errText+" at {"+J.errLine+","+J.errpos+"}"
+				Else
+					errtext = "ERROR: Parse returned null"
+				End If
                 ' Send error message to LSP Client
+				Publish( "debug", errtext )
                 Publish( "send", Response_Error( ERR_PARSE_ERROR, errtext ) )
                 Continue
             End If
-    
+			Publish( "debug", "Parse successful" )
+			
             ' Debugging
             'Local debug:String = JSON.stringify(J)
             'logfile.write( "STRINGIFY:" )
@@ -184,6 +193,7 @@ Type TLSP Extends TObserver
                 'End If
 				' V0.2, Save the original J node
 				If request request.J = J
+                If Not request Publish( "debug", "Transpose to '"+typestr+"' failed")
             Catch exception:String
                 Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))
             End Try
@@ -191,6 +201,7 @@ Type TLSP Extends TObserver
 			' V0.2
 			' If Transpose fails, then all is not lost
 			If Not request
+				Publish( "debug", "Creating V0.2 message object")
 				request = New TMessage( methd, J )
 			End If
     
@@ -198,15 +209,16 @@ Type TLSP Extends TObserver
             ' A Notification is executed now
             If request.contains( "id" )
                 ' This is a request, add to queue
-                Publish( "log", "DEBG", "Pushing request to queue")
+                Publish( "debug", "Pushing request to queue")
                 Publish( "pushtask", request )
                 'lsp.queue.pushTaskQueue( request )
                 Continue
             Else
                 ' This is a Notification, execute it now and throw away any response
                 Try
-                    Publish( "log", "DEBG", "Running Notification "+methd )
+                    Publish( "debug", "Notification "+methd+" starting" )
                     request.run()
+                    Publish( "debug", "Notification "+methd+" completed" )
                 Catch exception:String
                     Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))    
                 End Try
@@ -252,23 +264,31 @@ Type TLSP Extends TObserver
     End Function  
 
 	'V0.2
-	Method addCapability( handler:TMessageHandler, capability:String, events:String[] )
-		capabilities :+ [capability]
+	' Add a Capability
+	'Method addCapability( capability:String )
+	'	capabilities :+ [capability]
+	'End Method	
+
+	'V0.2
+	' Retrieve all registered capabilities
+	'Method getCapabilities:String[][]()
+	'	Local result:String[][]
+	'	For Local capability:String = EachIn capabilities
+	'		result :+ [[capability,"true"]]
+	'	Next
+	'	Return result
+	'End Method
+
+	'V0.2
+	' Add Message Handler
+	Method addHandler( handler:TMessageHandler, events:String[] )
 		For Local event:String = EachIn events
 			handlers.insert( event, handler )
 		Next
 	End Method
 
-	'V0.2 - Retrieve all registered capabilities
-	Method getCapabilities:String[][]()
-		Local result:String[][]
-		For Local capability:String = EachIn capabilities
-			result[0] :+ [capability,"true"]
-		Next
-		Return result
-	End Method
-	
 	'V0.2
+	' Get a Message Handler
 	Method getMessageHandler:TMessageHandler( methd:String )
 		Return TMessageHandler( handlers.valueForkey( methd ) )
 	End Method
@@ -384,7 +404,8 @@ Type TLSP_Stdio Extends TLSP
                 ElseIf line=""
                     'Publish( "log", "DEBG", "WAITING FOR CONTENT...")
                     content = stdIN.ReadString$( contentlength )
-                    Publish( "log", "DEBG", "Received "+contentlength+" bytes:~n"+content )
+                    'Publish( "log", "DEBG", "Received "+contentlength+" bytes:~n"+content )
+                    Publish( "log", "DEBG", "Received "+contentlength+" bytes" )
                     Return content
                 Else
                     Publish( "log", "DEBG", "Skipping: "+line )
@@ -400,7 +421,7 @@ End Type
 
 Function Response_Error:String( code:String, message:String, id:String="null" )
     Publish( "log", "ERRR", message )
-    Local response:JNode = JSON.Create()
+    Local response:JSON = New JSON()
     response.set( "id", id )
     response.set( "jsonrpc", "2.0" )
     response.set( "error", [["code",code],["message","~q"+message+"~q"]] )

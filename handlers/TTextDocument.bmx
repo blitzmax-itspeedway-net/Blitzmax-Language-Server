@@ -2,13 +2,20 @@
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-'	Document Mananger
+'	Document Manager (Added in V0.2)
 
 Type TTextDocument Extends TMessageHandler
 
+	Const TextDocumentSyncKind_None:Int=0
+	Const TextDocumentSyncKind_Full:Int=1
+	Const TextDocumentSyncKind_Incremental:Int=2
+
 	Method New()
+		'DebugStop
 		' Register Capabilities
-		lsp.addCapability( Self, "textDocumentSync", ["textDocument/didOpen", "textDocument/didChange", "textDocument/didClose"] )
+		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind_Incremental )
+		'DebugLog( lsp.capabilities.stringify() )
+		lsp.addHandler( Self, ["textDocument/didOpen", "textDocument/didChange", "textDocument/didClose"] )
 	End Method
 	
 	'Method Notify( message:String, data:Object, extra:Object )
@@ -24,6 +31,8 @@ Type TTextDocument Extends TMessageHandler
 		Case "textDocument/didOpen"		; Return didOpen( message )
 		Case "textDocument/didChange"	; Return didChange( message )
 		Case "textDocument/didClose"	; Return didClose( message )
+		Default
+			Publish( "error", "TTextDocument failed to handle "+message.methd )
 		End Select
 		Return ""
 	End Method

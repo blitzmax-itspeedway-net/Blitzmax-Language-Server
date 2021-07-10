@@ -5,26 +5,36 @@
 '   JSON Specification:
 '   https://www.json.org/json-en.html
 
-'   Internally all JSON variables are stored as JNode
-'   JNodes use the following types to store Blitzmax variables:
+'   Internally all JSON variables are stored as JSON
+'   JSONs use the following types to store Blitzmax variables:
 '
 '   JSON    BLITZMAX
 '   ----------------
-'   array   JNode[]
+'   array   JSON[]
 '   number  String
 '   object  TMap
 '   string  String
+
+Rem		CHANGELOG
+		V0.0	Basic JSON Parser
+		V0.1	Added Transpose into TypeStr using reflection
+				Added find() and set()
+		V0.2	Moved parser into JSON_Parser
+				Merged JSON and JNode
+				JNode is now depreciated, but not yet removed
+EndRem
 
 ' JSON Parser and Stringifier
 Type JSON
 
     Public
 
+	'V0.2 - Made these local
     ' Error Text, Line and Character
-    Global errLine:Int = 0
-    Global errPos:Int = 0
-	Global errNum:Int = 0
-    Global errText:String = ""
+    Field errLine:Int = 0
+    Field errPos:Int = 0
+	Field errNum:Int = 0
+    Field errText:String = ""
 
     ' Create JSON object from a string
     'Method New( text:String )
@@ -36,32 +46,296 @@ Type JSON
 		'root = reflect( obj )
     'End Method
 
+	'V0.2 - Depreciated: Use JSON.isInvalid() instead
 	' Confirm if there is an error condition
-	Method error:Int()
-		Return ( errNum > 0 ) 
-	End Method
+	'Method error:Int()
+	'	Return ( errNum > 0 ) 
+	'End Method
 	
     ' Convert text into a JSON object
-    Function Parse:JNode( text:String )
-        If Not JSON.instance JSON.instance = New JSON()
-        Return JSON.instance.parseText( text )
+    Function Parse:JSON( text:String )
+		Local parser:JSON_Parser = New JSON_Parser()
+        'If Not JSON.instance JSON.instance = New JSON()
+        Return parser.parse( text )
     End Function
 
+	' V0.2 - Depreciated: Use "J.Stringify()" instead.
     ' Convert JSON into a string
-    Function Stringify:String( j:JNode )
-		If j Return j.stringify()
-		Return ""
-    End Function
-
-    ' Convert an Object into a string
-    'Function Stringify:String( o:Object )
+    'Function Stringify:String( j:JNode )
+	'	If j Return j.stringify()
+	'	Return ""
     'End Function
 
+	' V0.2 - Depreciated: Use "J.Transpose( typestr:string )" instead.
     ' Convert JSON to an Object
-    Function Transpose:Object( J:JNode, typestr:String )
-        If J J.transpose( typestr )
-    End Function
+    'Function Transpose:Object( J:JNode, typestr:String )
+    '    If J J.transpose( typestr )
+    'End Function
+
+	' V0.2 - Depreciated: Use "New JSON()"
+    ' Helper Functions
+    'Function Create:JNode()
+    '    Return New JNode( "object", New TMap() )
+    'End Function
+
+'    Public 
+
+    Field class:String
+
+	' V2.0, replaces JSON.Create()
+    Method New()
+        'logfile.write "Creating new JNode '"+class+"'='"+string(value)
+        Self.class = "object"
+        Self.value = New TMap()
+    End Method
+
+    Method New( class:String, value:Object )
+        'logfile.write "Creating new JNode '"+class+"'='"+string(value)
+        Self.class = class
+        Self.value = value
+    End Method
+	
+    Method toString:String()
+		Return String(value)
+	End Method
+
+    Method toInt:Int()
+		Return Int(String(value))
+	End Method
+
+    Method isValid:Int()
+		Return ( class <> "invalid" )
+	End Method
+
+    Method isInvalid:Int()
+		Return ( class = "invalid" )
+	End Method
+
+	' Get "string" value of a JNode object's child
+	Method operator []:String( key:String )
+        If class = "object"
+			Local map:TMap = TMap( value )
+			If map
+				Local J:JSON = JSON( map.valueforkey(key) )
+				If J Return String( J.value )
+			End If
+		End If
+		Return ""
+	End Method
+
+    Method Stringify:String()
+	
+		'DebugStop
+		
+		Local text:String
+		'If Not j Return "~q~q"
+		Select class    ' JSON NODE TYPES
+		Case "object"
+			Local map:TMap = TMap( value )
+			text :+ "{"
+			If map
+				For Local key:String = EachIn map.keys()
+                    Local j:JSON = JSON( map[key] )
+					text :+ "~q"+key+"~q:"+j.stringify()+","
+				Next
+				' Strip trailing comma
+				If text.endswith(",") text = text[..(Len(text)-1)]
+			End If
+			text :+ "}"
+        Case "array"
+			text :+ "["
+            For Local J:JSON = EachIn JSON[](value)
+                text :+ J.stringify()+","
+            Next
+			' Strip trailing comma
+			If text.endswith(",") text = text[..(Len(text)-1)]
+			text :+ "]"
+		Case "number"
+			text :+ String(value)
+		Case "string"
+			text :+ "~q"+String(value)+"~q"
+		Case "keyword"
+			text :+ String(value)		
+		Default
+			Publish( "log", "DEBG", "INVALID SYMBOL: '"+class+"'" )
+		End Select
+		Return text
+	End Method
+
+    ' Transpose a JSON object into a Blitzmax Object using Reflection 
+    Method transpose:Object( typestr:String )
+        Publish( "log", "DEBG", "Transpose('"+typestr+"')" )
+        ' We can only transpose an object into a Type
+        If class<>"object" Return Null
+        Local typeid:TTypeId = TTypeId.ForName( typestr )
+        If Not typeid
+            Publish( "log", "DEBG", "Invalid Type: '"+typestr+"'" )
+            Return Null
+        End If
+        Local invoke:Object = typeid.newObject()
+        If Not invoke Return Null
     
+        ' Add Field names and types to map
+        Local fields:TMap = New TMap()
+        For Local fld:TField = EachIn typeid.EnumFields()
+            fields.insert( fld.name(), fld.typeid.name() )
+        Next
+    
+        ' Extract MAP (of JSONs) from value
+        Local map:TMap = TMap( value )
+        If Not map Return Null
+        'logfile.write( "Map extracted from value successfully" )
+        'for local key:string = eachin map.keys()
+        '    logfile.write "  "+key+" = "+ JNode(map[key]).toString()
+        'next
+
+        ' Transpose fields into object
+        For Local fldname:String = EachIn fields.keys()
+            Local fldtype:String = String(fields[fldname]).tolower()
+            'debuglog( "Field: "+fldname+":"+fldtype )
+            'logfile.write "- Field: "+fldname+":"+fldtype
+            Local fld:TField = typeid.findField( fldname )
+            If fld
+                'logfile.write "-- Is not null"
+                Try
+                    Select fldtype	' BLITZMAX TYPES
+                    Case "string"
+                        Local J:JSON = JSON(map[fldname])
+                        If J fld.setString( invoke, J.tostring() )
+                    Case "int"
+                        Local J:JSON = JSON(map[fldname])
+                        If J fld.setInt( invoke, J.toInt() )
+                        'if J 
+                        '    local fldvalue:int = J.toInt()
+                        '    logfile.write fldname+":"+fldtype+"=="+fldvalue
+                        '    fld.setInt( invoke, fldvalue )
+                        '    logfile.write "INT FIELD SET"
+                        'end if
+                    Case "json"
+                        ' This is a direct copy of JSON
+                        Local J:JSON = JSON(map[fldname])
+                        fld.set( invoke, J )
+                    Default
+                        Publish( "log", "ERRR", "Blitzmax type '"+fldtype+"' cannot be transposed()" )
+                    End Select
+                Catch Exception:String
+                    Publish( "log", "CRIT", "Transpose exception" )
+                    Publish( "log", "CRIT", Exception )
+                End Try
+            'else
+                'logfile.write "-- Is null"
+            End If
+        Next
+        Return invoke
+    End Method
+
+
+'		##### JSON HELPER
+
+    ' Set the value of a JSON
+    Method set( value:String )
+		If value.startswith("~q") And value.endswith("~q")
+			' STRING
+			Self.class = "string"
+			Self.value = dequote(value)
+		Else
+			If value = "true" Or value = "false" Or value = "null"
+				' KEYWORD (true/false/null)
+				Self.class = "keyword"
+				Self.value = value
+			Else
+				' Treat it as a string
+				Self.class = "string"
+				Self.value = value
+			End If
+		End If
+    End Method
+
+    Method set( value:Int )
+        ' If existing value is NOT a number, overwrite it
+		Self.class="number"
+		Self.value = String(value)
+    End Method
+
+    Method Set( route:String, value:String )
+		'_set( route, value, "string" )
+		Local J:JSON = find( route, True )	' Find route and create if missing
+		J.set( value )
+    End Method
+
+    Method Set( route:String, value:Int )
+		'_set( route, value, "number" )
+		Local J:JSON = find( route, True )	' Find route and create if missing
+		J.set( value )
+    End Method
+
+    Method Set( route:String, values:String[][] )
+		Local J:JSON = find( route, True )	' Find route and create if missing
+		For Local value:String[] = EachIn values
+			'_set( route+"|"+value[0], value[1], "string" )
+			If value.length=2
+				Local node:JSON = J.find( value[0], True )
+				node.set( value[1] )
+			End If
+		Next
+    End Method
+
+	' V0.2
+	' Set a route to an existing JSON
+    Method Set( route:String, node:JSON )
+		Local J:JSON = find( route, True )	' Find route and create if missing
+		J.class = node.class
+		J.value = node.value
+    End Method
+
+	Method find:JSON( route:String, createme:Int = False )
+        ' Ignore empty route
+        route = Trim(route)
+        If route="" Return Null
+		' Split up the path
+        Return find( route.split("|"), createme )
+	End Method
+	
+	Method find:JSON( path:String[], createme:Int = False )
+	'DebugStop
+		If path.length=0		' Found!
+			Return Self
+		Else
+			' If child is specified then I MUST be an object right?
+			Local child:JSON, map:TMap
+			If class="object" ' Yay, I am an object.
+				If value=Null
+					value = New TMap()
+				End If
+				map = TMap( value )
+			Else 
+				If Not createme Return Null	' Not found
+				' I must now evolve into an object, destroying my previous identity!
+				map = New TMap()
+				class = "object"
+				value = map
+			End If
+			' Does child exist?
+			child = JSON( map.valueforkey( path[0] ) )
+			If Not child 
+				If Not createme Return Null ' Not found
+				' Add a new child
+				child = New JSON( "string", "" )
+				map.insert( path[0], child )
+			End If
+			Return child.find( path[1..], createme )
+		End If
+	End Method
+
+    Private
+
+    Field value:Object
+	
+End Type
+
+'V0.2
+Type JSON_Parser
+
     Private
 
     ' ##### PARSER
@@ -70,16 +344,17 @@ Type JSON
     Const SYM_ALPHA:String = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghjklmnopqrstuvwxyz"
     Const SYM_NUMBER:String = "0123456789"
 
-    Global instance:JSON
+    'Global instance:JSON
     Field tokens:TQueue<JToken> = New TQueue<JToken>
     Field unparsed:String
-	'Field root:JNode		' The parsed content of this JSON
 	
     Field linenum:Int = 1
     Field linepos:Int = 1
 
+	Public 
+	
     ' Parse string into a JSON object
-    Method parsetext:JNode( text:String )
+    Method Parse:JSON( text:String )
 
         'Local node:TMap = New TMap()
         ' For convenience, and empty string is the same as {}
@@ -89,7 +364,9 @@ Type JSON
         ' Tokenise the JSON string
         linenum = 1
         linepos = 1
+		Publish( "debug", "Tokenising..." )
         Tokenise()
+		Publish( "debug", "Tokenising finished" )
 
 		' Dump the tokens, just for debugging purposes
 		'For Local t:JToken = EachIn tokens
@@ -98,7 +375,7 @@ Type JSON
 		
         ' Parse out the parent object
         If PopToken().symbol <> "{" Return InvalidNode( "Expected '{'" )
-        Local node:JNode = ReadObject()
+        Local node:JSON = ReadObject()
 		If node.isInvalid() Return node
         If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'" )
         ' There should be no more characters after the closing braces
@@ -107,14 +384,16 @@ Type JSON
         Return InvalidNode( "Unexpected characters past end" )
     End Method
 
+	Private
+	
     ' Reads an Object creating a TMAP
-    Method ReadObject:JNode()
+    Method ReadObject:JSON()
         Local node:TMap = New TMap()
         Local token:JToken
 
 		'DebugStop
 		
-        If PeekToken().symbol = "}" Return New JNode( "object", node )
+        If PeekToken().symbol = "}" Return New JSON( "object", node )
         Repeat
             ' Only valid option is a string (KEY)
             token = PopToken()
@@ -137,28 +416,28 @@ Type JSON
             Select token.symbol	' TOKENS
             Case "{"    ' OBJECT
                 'PopToken()  ' Throw away the "{"
-                Local value:JNode = ReadObject()
+                Local value:JSON = ReadObject()
 				If value.isInvalid() Return value
                 If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'")
                 node.insert( name, value )
-				'node.insert( name, New JNode( "object", value ) )
+				'node.insert( name, New JSON( "object", value ) )
             Case "["    ' ARRAY
                 'PopToken()  ' Throw away the "{"
-                Local value:JNode = ReadArray()
+                Local value:JSON = ReadArray()
                 If PopToken().symbol <> "]" Return InvalidNode( "Expected ']'" )
                 node.insert( name, value ) 
-                'node.insert( name, New JNode( "array", value ) )
+                'node.insert( name, New JSON( "array", value ) )
             Case "string"
                 'token = PopToken()
-				node.insert( name, New JNode( "string", dequote(token.value) ) )
+				node.insert( name, New JSON( "string", dequote(token.value) ) )
             Case "number"
                 'token = PopToken()
-                node.insert( name, New JNode( "number", token.value ) )
+                node.insert( name, New JSON( "number", token.value ) )
             Case "keyword"
                 'token = PopToken()
                 Local value:String = token.value
                 If value="true" Or value="false" Or value="null"
-                    node.insert( name, New JNode( "keyword", token.value ) )
+                    node.insert( name, New JSON( "keyword", token.value ) )
                 Else
                     Return InvalidNode( "Unknown identifier" )
                 End If
@@ -169,7 +448,7 @@ Type JSON
             ' Valid options now are "}" or ","
             token = PeekToken()
             If token.symbol = "}"
-                Return New JNode( "object", node )
+                Return New JSON( "object", node )
             ElseIf token.symbol = ","
                 PopToken()  ' Remove "," from token list
             Else
@@ -180,37 +459,37 @@ Type JSON
     End Method
 
     ' Reads an Array creating a TList
-    Method ReadArray:JNode()
-        Local node:JNode[]
+    Method ReadArray:JSON()
+        Local node:JSON[]
         Local token:JToken
 
 		'DebugStop
 		
-        If PeekToken().symbol = "]" Return New JNode( "array", node )
+        If PeekToken().symbol = "]" Return New JSON( "array", node )
         Repeat
             ' Get the value for this array element
             token = PopToken()
             Select token.symbol
             Case "{"    ' OBJECT
-                Local value:JNode = ReadObject()
+                Local value:JSON = ReadObject()
 				If value.isInvalid() Return value
                 If PopToken().symbol <> "}" Return InvalidNode( "Expected '}'")
                 node :+ [ value ]
             Case "["    ' ARRAY
-                Local value:JNode = ReadArray()
+                Local value:JSON = ReadArray()
                 If PopToken().symbol <> "]" Return InvalidNode( "Expected ']'" )
-                node :+ [ value ]	'New JNode( "array", value ) ]
+                node :+ [ value ]	'New JSON( "array", value ) ]
             Case "string"
                 'token = PopToken()
-                node :+ [ New JNode( "string", Dequote(token.value) ) ]
+                node :+ [ New JSON( "string", Dequote(token.value) ) ]
             Case "number"
                 'token = PopToken()
-                node :+ [ New JNode( "number", token.value ) ]
+                node :+ [ New JSON( "number", token.value ) ]
             Case "keyword"
                 'token = PopToken()
                 Local value:String = token.value
                 If value="true" Or value="false" Or value="null"
-                    node :+ [ New JNode( value, value ) ]
+                    node :+ [ New JSON( value, value ) ]
                 Else
                     Return InvalidNode( "Unknown identifier '"+token.value+"'" )
                 End If
@@ -221,7 +500,7 @@ Type JSON
             ' Valid options now are "]" or ","
             token = PeekToken()
             If token.symbol = "]"
-                Return New JNode( "array", node )
+                Return New JSON( "array", node )
             ElseIf token.symbol = ","
                 PopToken()  ' Remove "," from token list
             Else
@@ -255,14 +534,15 @@ Type JSON
     End Method
 
     ' Returns an invalid node object
-    Method InvalidNode:JNode( message:String = "Invalid JSON" )
+    Method InvalidNode:JSON( message:String = "Invalid JSON" )
         'print( "Creating invalid node at "+linenum+","+linepos )
         'print( errtext )
-        errNum  = 1
-		errLine = linenum
-        errPos  = linepos
-        errText = message
-        Return New JNode( "invalid", message )
+		Local J:JSON = New JSON( "invalid", message )
+        J.errNum  = 1
+		J.errLine = linenum
+        J.errPos  = linepos
+        J.errText = message
+        Return J
     End Method
 
     ' Returns an error condition
@@ -278,15 +558,17 @@ Type JSON
 
     ' Tokenise an unparsed string
     Method Tokenise()
+		Publish( "debug", "Tokenise() - START" )
         tokens.clear()
         ' Toker the unparsed text
         Local token:JToken = ExtractToken()
-		'Print( token.symbol )
+		Publish( "debug", "["+ token.line+","+token.pos+"] "+token.symbol )
         While token.symbol <> "EOF"
             tokens.enqueue( token )    ' ListAddLast()
             token = ExtractToken()
-			'Print( token.symbol )
+			Publish( "debug", "["+ token.line+","+token.pos+"] "+token.symbol )
         Wend
+		Publish( "debug", "Tokenise() - END" )
     End Method
 
     ' Extract the next Token from the string
@@ -297,7 +579,7 @@ Type JSON
     ' Save the Token position
     Local line:Int = linenum
     Local pos:Int = linepos
-        ' Identity the symbol
+        ' Identify the symbol
         If char=""
             Return New JToken( "EOF", "", line, pos )
 		ElseIf Instr( "{}[]:,", char, 1 )               ' Single character symbol
@@ -368,12 +650,28 @@ Type JSON
     End Method
 
     Method ExtractNumber:String()
+'DebugStop
         Local text:String
         Local char:String = peekChar()
-        While Instr( SYM_NUMBER+".", char ) And char<>""
+		' Leading "-" (Negative number)
+		If char="-"	
+			text :+ popChar()
+			char = peekChar()
+		End If
+		' Number
+        While Instr( SYM_NUMBER, char ) And char<>""
             text :+ popChar()
             char = PeekChar()
         Wend
+		' Decimal
+		If char="."
+			text :+ popChar()
+            char = PeekChar()
+			While Instr( SYM_NUMBER, char ) And char<>""
+				text :+ popChar()
+				char = PeekChar()
+			Wend			
+		End If
         Return text
     End Method
 
@@ -388,290 +686,9 @@ Type JSON
         Return text
     End Method
 
-    ' Helper Functions
-    Function Create:JNode()
-        Return New JNode( "object", New TMap() )
-    End Function
-
 End Type
 
-' Individual data elemement in a JSON tree
-Type JNode
-
-    Public 
-
-    Field class:String
-
-    Method New( class:String, value:Object )
-        'logfile.write "Creating new JNode '"+class+"'='"+string(value)
-        Self.class=class
-        Self.value=value
-    End Method
-	
-    Method toString:String()
-		Return String(value)
-	End Method
-
-    Method toInt:Int()
-		Return Int(String(value))
-	End Method
-
-    Method isValid:Int()
-		Return ( class <> "invalid" )
-	End Method
-
-    Method isInvalid:Int()
-		Return ( class = "invalid" )
-	End Method
-
-	' Get "string" value of a JNode object's child
-	Method operator []:String( key:String )
-        If class = "object"
-			Local map:TMap = TMap( value )
-			If map
-				Local J:Jnode = JNode( map.valueforkey(key) )
-				If J Return String( J.value )
-			End If
-		End If
-		Return ""
-	End Method
-
-    Method Stringify:String()
-	
-		'DebugStop
-		
-		Local text:String
-		'If Not j Return "~q~q"
-		Select class    ' JSON NODE TYPES
-		Case "object"
-			Local map:TMap = TMap( value )
-			text :+ "{"
-			If map
-				For Local key:String = EachIn map.keys()
-                    Local j:JNode = JNode( map[key] )
-					text :+ "~q"+key+"~q:"+j.stringify()+","
-				Next
-				' Strip trailing comma
-				If text.endswith(",") text = text[..(Len(text)-1)]
-			End If
-			text :+ "}"
-        Case "array"
-			text :+ "["
-            For Local J:JNode = EachIn JNode[](value)
-                text :+ J.stringify()+","
-            Next
-			' Strip trailing comma
-			If text.endswith(",") text = text[..(Len(text)-1)]
-			text :+ "]"
-		Case "number"
-			text :+ String(value)
-		Case "string"
-			text :+ "~q"+String(value)+"~q"
-		Case "keyword"
-			text :+ String(value)		
-		Default
-			Publish( "log", "DEBG", "INVALID SYMBOL: '"+class+"'" )
-		End Select
-		Return text
-	End Method
-
-    ' Transpose a JNode object into a Blitzmax Object using Reflection 
-    Method transpose:Object( typestr:String )
-        Publish( "log", "DEBG", "Transpose('"+typestr+"')" )
-        ' We can only transpose an object into a Type
-        If class<>"object" Return Null
-        Local typeid:TTypeId = TTypeId.ForName( typestr )
-        If Not typeid
-            Publish( "log", "DEBG", "Invalid Type: '"+typestr+"'" )
-            Return Null
-        End If
-        Local invoke:Object = typeid.newObject()
-        If Not invoke Return Null
-    
-        ' Add Field names and types to map
-        Local fields:TMap = New TMap()
-        For Local fld:TField = EachIn typeid.EnumFields()
-            fields.insert( fld.name(), fld.typeid.name() )
-        Next
-    
-        ' Extract MAP (of JNodes) from value
-        Local map:TMap = TMap( value )
-        If Not map Return Null
-        'logfile.write( "Map extracted from value successfully" )
-        'for local key:string = eachin map.keys()
-        '    logfile.write "  "+key+" = "+ JNode(map[key]).toString()
-        'next
-
-        ' Transpose fields into object
-        For Local fldname:String = EachIn fields.keys()
-            Local fldtype:String = String(fields[fldname]).tolower()
-            'debuglog( "Field: "+fldname+":"+fldtype )
-            'logfile.write "- Field: "+fldname+":"+fldtype
-            Local fld:TField = typeid.findField( fldname )
-            If fld
-                'logfile.write "-- Is not null"
-                Try
-                    Select fldtype	' BLITZMAX TYPES
-                    Case "string"
-                        Local J:JNode = JNode(map[fldname])
-                        If J fld.setString( invoke, J.tostring() )
-                    Case "int"
-                        Local J:JNode = JNode(map[fldname])
-                        If J fld.setInt( invoke, J.toInt() )
-                        'if J 
-                        '    local fldvalue:int = J.toInt()
-                        '    logfile.write fldname+":"+fldtype+"=="+fldvalue
-                        '    fld.setInt( invoke, fldvalue )
-                        '    logfile.write "INT FIELD SET"
-                        'end if
-                    Case "jnode"
-                        ' This is a direct copy of JNode
-                        Local J:JNode = JNode(map[fldname])
-                        fld.set( invoke, J )
-                    Default
-                        Publish( "log", "ERRR", "Transpose '"+fldtype+"' is not supported" )
-                    End Select
-                Catch Exception:String
-                    Publish( "log", "CRIT", "Transpose exception" )
-                    Publish( "log", "CRIT", Exception )
-                End Try
-            'else
-                'logfile.write "-- Is null"
-            End If
-        Next
-        Return invoke
-    End Method
-
-
-'		##### JSON HELPER
-
-    ' Set the value of a JNode
-    Method set( value:String )
-		If value.startswith("~q") And value.endswith("~q")
-			' STRING
-			Self.class = "string"
-			Self.value = dequote(value)
-		Else
-			If value = "true" Or value = "false" Or value = "null"
-				' KEYWORD (true/false/null)
-				Self.class = "keyword"
-				Self.value = value
-			Else
-				' Treat it as a string
-				Self.class = "string"
-				Self.value = value
-			End If
-		End If
-    End Method
-
-    Method set( value:Int )
-        ' If existing value is NOT a number, overwrite it
-		Self.class="number"
-		Self.value = String(value)
-    End Method
-
-    Method Set( route:String, value:String )
-		'_set( route, value, "string" )
-		Local J:JNode = find( route, True )	' Find route and create if missing
-		j.set( value )
-    End Method
-
-    Method Set( route:String, value:Int )
-		'_set( route, value, "number" )
-		Local J:JNode = find( route, True )	' Find route and create if missing
-		j.set( value )
-    End Method
-
-    Method Set( route:String, values:String[][] )
-		Local J:JNode = find( route, True )	' Find route and create if missing
-		For Local value:String[] = EachIn values
-			'_set( route+"|"+value[0], value[1], "string" )
-			If value.length=2
-				Local node:JNode = J.find( value[0], True )
-				node.set( value[1] )
-			End If
-		Next
-    End Method
-
-	Method find:JNode( route:String, createme:Int = False )
-        ' Ignore empty route
-        route = Trim(route)
-        If route="" Return Null
-		' Split up the path
-        Return find( route.split("|"), createme )
-	End Method
-	
-	Method find:JNode( path:String[], createme:Int = False )
-	'DebugStop
-		If path.length=0		' Found!
-			Return Self
-		Else
-			' If child is specified then I MUST be an object right?
-			Local child:JNode, map:TMap
-			If class="object" ' Yay, I am an object.				
-				map = TMap( value )
-			Else 
-				If Not createme Return Null	' Not found
-				' I must now evolve into an object, destroying my previous identity!
-				map = New TMap()
-				class = "object"
-				value = map
-			End If
-			' Does child exist?
-			child = JNode( map.valueforkey( path[0] ) )
-			If Not child 
-				If Not createme Return Null ' Not found
-				' Add a new child
-				child = New JNode( "string", "" )
-				map.insert( path[0], child )
-			End If
-			Return child.find( path[1..], createme )
-		End If
-	End Method
-
-    Private
-
-    Field value:Object
-
-	Rem DEPRECIATED 27 JUN 2021
-    Method _set( route:String, value:String, classtext:String="string" )
-		' First off, we can only set children of object types
-        ' Array is currently not supported by this function
-        If class<>"object" Return
-        ' Ignore empty route
-        route = Trim(route)
-        If route="" Return
-        ' Make sure we are a valid object node
-        Local map:TMap = TMap( Self.value )
-        If Not map Return
-        ' Split up the path
-        Local path:String[] = route.split("|")
-        If path.length=1 
-            ' Get child node            
-            Local J:JNode = JNode( map.valueforkey( path[0] ) )
-            If J And J.class = classtext
-                ' Update node
-                J.set( value )
-            Else
-                ' Add or Replace existing node
-                map.insert( path[0], New JNode( classtext, String(value) ))
-            End If
-		Else ' A path indicates that the child MUST be an "object"
-            ' Get child node            
-            Local J:JNode = JNode( map.valueforkey( path[0] ) )
-			If J And J.class = "object"
-				J._set( "|".join( path[1..] ), value, classtext )
-			Else ' Add or replace existing node
-				J = New JNode( "object", New TMap() )
-				map.insert( path[0], J )
-				J._set( "|".join( path[1..] ), value, classtext )
-			End If
-        End If
-    End Method
-	End Rem
-	
-End Type
-
+'V0.0
 Type JToken
     Field symbol:String, value:String, line:Int, pos:Int
 
@@ -684,8 +701,10 @@ Type JToken
     End Method
 End Type
 
+'V0.0
 Function dequote:String( text:String )
 	If text.startswith( "~q" ) text = text[1..]
 	If text.endswith( "~q" ) text = text[..(Len(text)-1)]
 	Return text
 End Function
+

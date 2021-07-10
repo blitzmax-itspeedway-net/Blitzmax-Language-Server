@@ -2,25 +2,25 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 '   LOGGING
 
-const LOG_EMERGENCY:int = 0 
-const LOG_ALERT:int     = 1
-const LOG_CRITICAL:int  = 2
-const LOG_ERROR:int     = 3
-const LOG_WARNING:int   = 4
-const LOG_NOTICE:int    = 5
-const LOG_INFO:int      = 6
-const LOG_DEBUG:int     = 7
+Const LOG_EMERGENCY:Int = 0 
+Const LOG_ALERT:Int     = 1
+Const LOG_CRITICAL:Int  = 2
+Const LOG_ERROR:Int     = 3
+Const LOG_WARNING:Int   = 4
+Const LOG_NOTICE:Int    = 5
+Const LOG_INFO:Int      = 6
+Const LOG_DEBUG:Int     = 7
 
 Type TLogger Extends TObserver
     Field file:TStream
-    field loglevel:int = LOG_DEBUG
-    global levels:string[] = ["EMER","ALRT","CRIT","ERRR","WARN","NOTE","INFO","DEBG"]
+    Field loglevel:Int = LOG_DEBUG
+    Global levels:String[] = ["EMER","ALRT","CRIT","ERRR","WARN","NOTE","INFO","DEBG"]
 
     Method New()
         ' Set loglevel within bounds
-        loglevel = min( max( int( CONFIG["loglevel"] ), 0), 7 )
+        loglevel = Min( Max( Int( CONFIG["loglevel"] ), 0), 7 )
         Try
-            Local filename:String = trim(CONFIG["logfile"])
+            Local filename:String = Trim(CONFIG["logfile"])
             'filename="/home/si/dev/LSP/runlog.txt"
             If filename<>"" 
                 'file = AppendStream:TStream( filename )
@@ -40,15 +40,15 @@ Type TLogger Extends TObserver
         Subscribe( ["log","info","debug","error","critical","exitnow","cancelrequest"] )
     End Method
 
-    method timestamp:string()
-        return currentDate( "%d-%m-%Y %H:%M:%S")+" "
-    end method
+    Method timestamp:String()
+        Return CurrentDate( "%d-%m-%Y %H:%M:%S")+" "
+    End Method
 
-    private
+    Private
     
-    Method WriteFile( message:String, stamp:int=True )
+    Method WriteFile( message:String, stamp:Int=True )
         If Not file Return
-        if stamp message = timestamp()+message
+        If stamp message = timestamp()+message
         ' Send to the client "output" window
         'writeStdErr( message )      
         ' Send to the log file.
@@ -56,73 +56,73 @@ Type TLogger Extends TObserver
         file.flush()
     End Method
 
-    Method WriteErr( message:string )
-        writeStdErr( message+"~n")      
+    Method WriteErr( message:String )
+        WriteStderr( message+"~n")      
     End Method
 
     ' Observations
-    Method Notify( event:string, data:object, extra:object )
-        local datastr:string = string(data)
-        local extrastr:string = string(extra)
+    Method Notify( event:String, data:Object, extra:Object )
+        Local datastr:String = String(data)
+        Local extrastr:String = String(extra)
         'debugstop
-        select event
-        case "log"
+        Select event
+        Case "log"
             WriteFile( datastr[..4]+" "+extrastr )
-        case "info"
+        Case "info"
             WriteFile( "INFO "+datastr )
             WriteErr( datastr )
-        case "debug"
+        Case "debug"
             WriteFile( "DEBG "+datastr )
-            if DEBUGGER WriteErr( "# "+datastr )
-        case "error"
+            If DEBUGGER WriteErr( "# "+datastr )
+        Case "error"
             WriteFile( "ERRR "+datastr )
             WriteErr( "# "+datastr )
-        case "critical"
+        Case "critical"
             WriteFile( "CRIT "+datastr )
             WriteErr( "# "+datastr )
         'case "receive","send"
         '    debug( upper(event)+":" )
         '    debug( extrastr )
-        case "cancelrequest"
-            local node:JNode = JNode( data )
-            if node debug( "CANCEL: "+node.toint() )
-        case "exitnow"
+        Case "cancelrequest"
+            Local node:JSON = JSON( data )
+            If node debug( "CANCEL: "+node.toint() )
+        Case "exitnow"
             debug( "TLogger is closing" )
-            close()
-        default
+            Close()
+        Default
             error( "TLogger: event '"+event+"' ignored")
-        end select
+        End Select
     End Method
 
     Public
 
-    Method WriteFile( message:String, severity:int, stamp:int=True )
-        if loglevel < severity return
+    Method WriteFile( message:String, severity:Int, stamp:Int=True )
+        If loglevel < severity Return
         WriteFile( levels[severity]+" "+message )
     End Method
 
-    Method critical( message:string, stamp:int=True )
-        if loglevel < LOG_CRITICAL return
+    Method critical( message:String, stamp:Int=True )
+        If loglevel < LOG_CRITICAL Return
         WriteFile( "CRIT "+message )
     EndMethod
 
-    Method error( message:string, stamp:int=True )
-        if loglevel < LOG_ERROR return
+    Method error( message:String, stamp:Int=True )
+        If loglevel < LOG_ERROR Return
         WriteFile( "ERRR "+message )
     EndMethod
 
-    Method warning( message:string, stamp:int=True )
-        if loglevel < LOG_WARNING return
+    Method warning( message:String, stamp:Int=True )
+        If loglevel < LOG_WARNING Return
         WriteFile( "WARN "+message )
     EndMethod
 
-    Method info( message:string, stamp:int=True )
-        if loglevel < LOG_INFO return
+    Method info( message:String, stamp:Int=True )
+        If loglevel < LOG_INFO Return
         WriteFile( "INFO "+message )
     EndMethod
 
-    method debug( message:string, stamp:int=True )
-        if loglevel < LOG_DEBUG return
+    Method debug( message:String, stamp:Int=True )
+        If loglevel < LOG_DEBUG Return
         WriteFile( "DEBG "+message )
     EndMethod
 

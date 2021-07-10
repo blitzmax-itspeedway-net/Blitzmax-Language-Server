@@ -11,7 +11,7 @@ Type TMethod_initialize Extends TMessage
     Field id:Int
     Field jsonrpc:String
     Field methd:String
-    Field params:JNode
+    Field params:JSON
 
     Method Run:String()
         Publish( "TMethod_initialize.run()" )
@@ -21,7 +21,7 @@ Type TMethod_initialize Extends TMessage
         If params
             'logfile.write( "PARAMS EXIST" )
             'if params.isvalid() logfile.write( "PARAMS IS VALID" )
-            Local clientinfo:JNode = params.find( "clientInfo" )    ' VSCODE=clientInfo
+            Local clientinfo:JSON = params.find( "clientInfo" )    ' VSCODE=clientInfo
             If clientinfo
                 'logfile.write( "CLIENT INFO EXISTS" )
                 Local clientname:String = clientinfo["name"]
@@ -35,9 +35,9 @@ Type TMethod_initialize Extends TMessage
         ' RESPONSE 
 
 		'V0.2, Capabilities are managed by the LSP
-		Local capabilities:String[][] = lsp.getcapabilities()
+		Local capabilities:JSON = lsp.capabilities
 
-        Local response:JNode = JSON.Create()
+        Local response:JSON = New JSON()
         response.set( "id", id )
         response.set( "jsonrpc", "2.0" )
         'response.set( "result|capabilities", [["hover","true"]] )

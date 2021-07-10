@@ -68,7 +68,7 @@ Type TMessageQueue Extends TObserver
         Select event
         Case "cancelrequest"   '$/cancelRequest
             ' A request has been cancelled
-            Local node:JNode = JNode( data )
+            Local node:JSON = JSON( data )
             If Not node Return
             Local id:Int = node.toInt()
             LockMutex( taskmutex )

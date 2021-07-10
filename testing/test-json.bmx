@@ -11,6 +11,10 @@ Type TDummyLog
     End Method
 End Type
 Global logfile:TDummyLog = New TDummyLog
+
+Function Publish( info:String, message:String, extra:String="" )
+	Print( info[..6]+message+"; "+extra )
+End Function
 'DUMMY END
 
 
@@ -24,15 +28,15 @@ End Function
 
 Function Validate( filename:String, text:String, failtest:Int=False )
 	Local file:String = LoadFile( filename )
-	Local j:JNode = JSON.Parse( file )
+	Local j:JSON = JSON.Parse( file )
 	If j.isInvalid()
 		Print "FAILURE: "+ filename
-		Print "  ERROR: "+ JSON.errtext + " {"+ JSON.errline+","+JSON.errpos+"}"
+		Print "  ERROR: "+ j.errtext + " {"+ j.errline+","+j.errpos+"}"
 		Print "  FILE:  "+ file
 		Return
-	End Iftail
+	End If
 	
-	Local str:String = JSON.Stringify( j )
+	Local str:String = j.Stringify()
 	If text = str And Not failtest
 		Print "SUCCESS: "+filename
 		Return
@@ -54,4 +58,4 @@ End Function
 'Validate( "success/empty-file.json", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )
 'Validate( "success/empty-object.json", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )
 'Validate( "success/basic.json", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )
-Validate( "initialise.txt", "{ ~qname~q:~qAlice~q,~qAge~q:31 }" )
+Validate( "initialise.txt", "{ ~qname~q:~qAlice~q,~qAge~q:-37000 }" )
