@@ -155,9 +155,11 @@ Type JSON
 		Case "string"
 			text :+ "~q"+String(value)+"~q"
 		Case "keyword"
-			text :+ String(value)		
+			text :+ String(value)
+		Case "invalid"
+			text :+ "#ERR#"
 		Default
-			Publish( "log", "DEBG", "INVALID SYMBOL: '"+class+"'" )
+			Publish( "log", "DEBG", "INVALID SYMBOL: '"+class+"', ''" )
 		End Select
 		Return text
 	End Method
@@ -341,8 +343,12 @@ Type JSON_Parser
     ' ##### PARSER
 
     Const SYM_WHITESPACE:String = " ~t~n~r"
-    Const SYM_ALPHA:String = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghjklmnopqrstuvwxyz"
+	Const SYM_SPACE:String = " "
     Const SYM_NUMBER:String = "0123456789"
+    Const SYM_LOWER:String = "abcdefghijklmnopqrstuvwxyz"
+    Const SYM_UPPER:String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    Const SYM_ALPHA:String = SYM_LOWER+SYM_UPPER
+	Const SYM_7BIT:String = SYM_SPACE+"!#$%&'()*+,-./"+SYM_NUMBER+":;<=>?@"+SYM_UPPER+"[]^_`"+SYM_LOWER+"{|}"
 
     'Global instance:JSON
     Field tokens:TQueue<JToken> = New TQueue<JToken>
@@ -613,14 +619,26 @@ Type JSON_Parser
             Case " ","~t"
                 linepos:+1
                 unparsed = unparsed[1..]
+			Case "\"	' ESCAPE CHARACTER
+				char = unparsed[..2]
+				If char="\u"	'HEX DIGIT
+					char = unparsed[..6]					
+					unparsed = unparsed[6..]
+				Else
+					unparsed = unparsed[2..]
+				End If
             End Select
         Until Not Instr( SYM_WHITESPACE, char )
         Return char
     End Method
 
-    ' Skips leading whitespace and Pops next character
-    Method PopChar:String()
+    ' Pops next character
+    Method PopChar:String( ignoreWhitespace:Int = True )
         Local char:String
+		Local IgnoredSymbols:String = ""
+		'
+		If Not ignoreWhitespace IgnoredSymbols = SYM_WHITESPACE
+		
         Repeat
             If unparsed.length = 0 Return ""
             char = unparsed[..1]
@@ -631,11 +649,19 @@ Type JSON_Parser
                 linenum :+ 1
                 linepos = 1
                 unparsed = unparsed[1..]
+			Case "\"	' ESCAPE CHARACTER
+				char = unparsed[..2]
+				If char="\u"	'HEX DIGIT
+					char = unparsed[..6]					
+					unparsed = unparsed[6..]
+				Else
+					unparsed = unparsed[2..]
+				End If
             Default
                 linepos :+ 1
                 unparsed = unparsed[1..]
             End Select
-        Until Not Instr( SYM_WHITESPACE, char )
+        Until Not Instr( IgnoredSymbols, char )
         Return char
     End Method
 
@@ -650,7 +676,7 @@ Type JSON_Parser
     End Method
 
     Method ExtractNumber:String()
-DebugStop
+'DebugStop
         Local text:String
         Local char:String = peekChar()
 		' Leading "-" (Negative number)
@@ -680,8 +706,26 @@ DebugStop
         Local text:String = popChar()   ' This is the leading Quote
         Local char:String 
         Repeat
-            char = PopChar()
-            text :+ char
+            char = PopChar( False )		' Pop char, but do not ignore whitespace
+			Select char.length
+			Case 1
+				text :+ char
+			Case 2	' ESCAPE CHARACTER?
+				Select char
+				Case "\~q","\\","\/"
+					text :+ char[1..]
+				Case "\n","\r","\t"
+					text :+ "~~"+char[1..]
+				Case "\b"
+					text :+ Chr(08)
+				Case "\f"
+					text :+ Chr(12)
+				End Select
+			Case 6	' HEXCODE
+				Local hexcode:String = "$"+char[2..]
+				Print char + " == " + hexcode
+				text :+ Chr( Int( hexcode ) )
+			End Select
         Until char="~q" Or char=""
         Return text
     End Method

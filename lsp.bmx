@@ -132,9 +132,9 @@ Type TLSP Extends TObserver
             Local content:String = lsp.getRequest()
 
             ' Parse message into a JSON object
-			Publish( "debug", "Parse starting" )
+			'Publish( "debug", "Parse starting" )
             Local J:JSON = JSON.Parse( content )
-			Publish( "debug", "Parse finished" )
+			'Publish( "debug", "Parse finished" )
             ' Report an error to the Client using stdOut
             If Not J Or J.isInvalid()
 				Local errtext:String
@@ -148,7 +148,7 @@ Type TLSP Extends TObserver
                 Publish( "send", Response_Error( ERR_PARSE_ERROR, errtext ) )
                 Continue
             End If
-			Publish( "debug", "Parse successful" )
+			'Publish( "debug", "Parse successful" )
 			
             ' Debugging
             'Local debug:String = JSON.stringify(J)
@@ -192,8 +192,11 @@ Type TLSP Extends TObserver
                 '    request.J = J
                 'End If
 				' V0.2, Save the original J node
-				If request request.J = J
-                If Not request Publish( "debug", "Transpose to '"+typestr+"' failed")
+				If request 
+                    request.J = J
+                    Publish( "debug", "Transposed successfully" )
+                end if
+                'If Not request Publish( "debug", "Transpose to '"+typestr+"' failed")
             Catch exception:String
                 Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))
             End Try
