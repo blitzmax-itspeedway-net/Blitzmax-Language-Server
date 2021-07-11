@@ -9,7 +9,7 @@ Include "TMethod_shutdown.bmx"
 Include "TMethod_dollar_cancelrequest.bmx"
 	
 									'	Server Capabilities
-Include "TTextDocument.bmx"			'	textDocumentSync
+Include "TTextDocument_Handler.bmx"	'	textDocumentSync
 'Include "TCompletionProvider.bmx"	'	completionProvider
 'Include "xxxxxxxxxx.bmx"			'	hoverProvider
 'Include "xxxxxxxxxx.bmx"			'	signatureHelpProvider

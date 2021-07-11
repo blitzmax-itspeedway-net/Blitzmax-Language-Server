@@ -89,7 +89,7 @@ Type TLSP Extends TObserver
     Field queue:TMessageQueue = New TMessageQueue()
 
 	' Create a document manager
-	Field textDocument:TTextDocument	' Do not initialise here: Depends on lsp.
+	Field textDocument:TTextDocument_Handler	' Do not initialise here: Depends on lsp.
 
     ' Threads
     Field Receiver:TThread
@@ -301,7 +301,7 @@ End Type
 ' RESERVED FOR FUTURE EXPANSION
 Type TLSP_TCP Extends TLSP
     Method Run:Int()
-		textDocument = New TTextDocument
+		textDocument = New TTextDocument_Handler
 	End Method
     Method getRequest:String() ; End Method
 End Type
@@ -326,7 +326,7 @@ Type TLSP_Stdio Extends TLSP
     End Method
 
     Method run:Int()
-		textDocument = New TTextDocument
+		textDocument = New TTextDocument_Handler
 
         Local quit:Int = False     ' Local loop state
 

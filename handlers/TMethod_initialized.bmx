@@ -8,7 +8,7 @@
 'https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialized
 
 Type TMethod_initialized Extends TMessage
-    ' Commented out as we don't actually need them
+    ' Commented out as we don't actually need them at the moment
     'Field jsonrpc:String
     'Field methd:String
     'field params:TMap 
