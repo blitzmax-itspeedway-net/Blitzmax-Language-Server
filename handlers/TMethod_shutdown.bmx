@@ -16,7 +16,7 @@ Type TMethod_shutdown Extends TMessage
 
         Local response:JSON = New JSON()
         response.set( "id", id )
-        response.set( "jsonrpc", "2.0" )
+        response.set( "jsonrpc", JSONRPC )
         response.set( "result", "null" )
         'response.set( "error", [["code",0],["message","TTFN"]] )
         Return response.stringify() 

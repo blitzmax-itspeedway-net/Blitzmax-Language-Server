@@ -12,11 +12,11 @@ Type TMethod_exit Extends TMessage
     'Field id:int
     'Field jsonrpc:String
     'Field methd:String
-    Method Run:string()
+    Method Run:String()
         Publish( "lsp.exit.run() " )
         ' Stop LSP application loop
         'LSP.endprocess = True
-        AtomicSwap( LSP.QuitMain, False )
+        AtomicSwap( LSP.QuitMain, False )		' QUIT MAIN LOOP
         ' NO RESPONSE REQUIRED
     End Method
 

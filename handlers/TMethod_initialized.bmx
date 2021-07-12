@@ -13,13 +13,13 @@ Type TMethod_initialized Extends TMessage
     'Field methd:String
     'field params:TMap 
 
-    Method Run:string()
+    Method Run:String()
         Publish( "TMethod_initialized.run()" )
 
         ' Request configuration
         'local request:JNode = JSON.create()
         'request.set( "id", id )
-        'request.set( "jsonrpc", "2.0" )
+        'request.set( "jsonrpc", JSONRPC )
         'request.set( "method", "workspace/configuration" )
         'request.set( "params|items", [["scope","lsp.todo"]] )
         'local message:string = request.stringify()

@@ -2,19 +2,20 @@
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
+'V0.1 Handlers
 Include "TMethod_exit.bmx"
 Include "TMethod_initialize.bmx"
 Include "TMethod_initialized.bmx"
 Include "TMethod_shutdown.bmx"
 Include "TMethod_dollar_cancelrequest.bmx"
 	
-									'	Server Capabilities
-Include "TTextDocument_Handler.bmx"	'	textDocumentSync
+'V0.2 Handlers							Server Capabilities
+Include "TTextDocument_Handler.bmx"	'	textDocumentSync, definitionProvider
 'Include "TCompletionProvider.bmx"	'	completionProvider
 'Include "xxxxxxxxxx.bmx"			'	hoverProvider
 'Include "xxxxxxxxxx.bmx"			'	signatureHelpProvider
 'Include "xxxxxxxxxx.bmx"			'	declarationProvider
-'Include "xxxxxxxxxx.bmx"			'	definitionProvider
+'Include "TDefinitionProvider.bmx"	'	definitionProvider
 'Include "xxxxxxxxxx.bmx"			'	typeDefinitionProvider
 'Include "xxxxxxxxxx.bmx"			'	implementationProvider
 'Include "xxxxxxxxxx.bmx"			'	referencesProvider

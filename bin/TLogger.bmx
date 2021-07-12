@@ -11,6 +11,7 @@ Const LOG_NOTICE:Int    = 5
 Const LOG_INFO:Int      = 6
 Const LOG_DEBUG:Int     = 7
 
+Local Logfile:TLogger = New TLogger()
 Type TLogger Extends TObserver
     Field file:TStream
     Field loglevel:Int = LOG_DEBUG

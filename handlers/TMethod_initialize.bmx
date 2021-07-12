@@ -37,13 +37,17 @@ Type TMethod_initialize Extends TMessage
 		'V0.2, Capabilities are managed by the LSP
 		Local capabilities:JSON = lsp.capabilities
 
+Publish( "log", "DEBG", "Initialize:Capabilities: "+capabilities.stringify() )
         Local response:JSON = New JSON()
         response.set( "id", id )
-        response.set( "jsonrpc", "2.0" )
+        response.set( "jsonrpc", JSONRPC )
         'response.set( "result|capabilities", [["hover","true"]] )
         'response.set( "result|capabilities", [["hoverProvider","true"]] )
+
         response.set( "result|capabilities", capabilities )
+
         response.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
+Publish( "log", "DEBG", "RESULT: "+response.stringify() )
         Return response.stringify()
 
     End Method

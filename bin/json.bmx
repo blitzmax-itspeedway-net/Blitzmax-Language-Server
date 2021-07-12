@@ -290,6 +290,7 @@ Type JSON
 		J.value = node.value
     End Method
 
+	' V0.1
 	Method find:JSON( route:String, createme:Int = False )
         ' Ignore empty route
         route = Trim(route)

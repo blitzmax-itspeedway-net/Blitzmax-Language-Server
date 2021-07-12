@@ -171,7 +171,7 @@ Type JSON
         If class<>"object" Return Null
         Local typeid:TTypeId = TTypeId.ForName( typestr )
         If Not typeid
-            Publish( "log", "DEBG", "Invalid Type: '"+typestr+"'" )
+            Publish( "log", "DEBG", "- '"+typestr+"' is not a Blitzmax Type" )
             Return Null
         End If
         Local invoke:Object = typeid.newObject()
@@ -290,6 +290,16 @@ Type JSON
 		J.value = node.value
     End Method
 
+    Method Set( route:String, value:Object )
+		If value= Null
+			Local J:JSON = find( route, True )	' Find route and create if missing
+			J.set( "null" )
+		Else
+			' Not supported, but might be able to convert object to JSON!
+		End If
+    End Method
+
+	' V0.1
 	Method find:JSON( route:String, createme:Int = False )
         ' Ignore empty route
         route = Trim(route)
@@ -370,9 +380,9 @@ Type JSON_Parser
         ' Tokenise the JSON string
         linenum = 1
         linepos = 1
-		Publish( "debug", "Tokenising..." )
+		'Publish( "debug", "Tokenising..." )
         Tokenise()
-		Publish( "debug", "Tokenising finished" )
+		'Publish( "debug", "Tokenising finished" )
 
 		' Dump the tokens, just for debugging purposes
 		'For Local t:JToken = EachIn tokens
@@ -564,17 +574,17 @@ Type JSON_Parser
 
     ' Tokenise an unparsed string
     Method Tokenise()
-		Publish( "debug", "Tokenise() - START" )
+		'Publish( "debug", "Tokenise() - START" )
         tokens.clear()
         ' Toker the unparsed text
         Local token:JToken = ExtractToken()
-		Publish( "debug", "["+ token.line+","+token.pos+"] "+token.symbol )
+		'Publish( "debug", "["+ token.line+","+token.pos+"] "+token.symbol )
         While token.symbol <> "EOF"
             tokens.enqueue( token )    ' ListAddLast()
             token = ExtractToken()
-			Publish( "debug", "["+ token.line+","+token.pos+"] "+token.symbol )
+			'Publish( "debug", "["+ token.line+","+token.pos+"] "+token.symbol )
         Wend
-		Publish( "debug", "Tokenise() - END" )
+		'Publish( "debug", "Tokenise() - END" )
     End Method
 
     ' Extract the next Token from the string
@@ -637,7 +647,7 @@ Type JSON_Parser
         Local char:String
 		Local IgnoredSymbols:String = ""
 		'
-		If Not ignoreWhitespace IgnoredSymbols = SYM_WHITESPACE
+		If ignoreWhitespace IgnoredSymbols = SYM_WHITESPACE
 		
         Repeat
             If unparsed.length = 0 Return ""
