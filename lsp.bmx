@@ -18,6 +18,8 @@ Import pub.freeprocess
 'debugstop
 '   INCLUDE APPLICATION COMPONENTS
 
+AppTitle = "Language Server for BlitzMax NG"
+
 'DebugStop
 ' Load order - FIRST
 Include "bin/Arguments.bmx"		' Must be before TLSP
@@ -60,7 +62,6 @@ Const JSONRPC:String = "2.0"		' Supported JSON-RPC version
 ?
 
 '   GLOBALS
-AppTitle = "Language Server for BlitzMax NG"
 Global DEBUGGER:Int = True
 
 'Local Logfile:TLogger = New TLogger()         ' Please use Observer

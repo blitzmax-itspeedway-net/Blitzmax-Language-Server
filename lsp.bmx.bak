@@ -111,6 +111,7 @@ Publish( "log", "DEBG", "Starting LSP..." )
 'DebugStop
 
 Try
+	' V0.2, Moved creation into the TLSP file
     'LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )
     exit_( LSP.run() )
     'Publish( "debug", "Exit Gracefully" )
