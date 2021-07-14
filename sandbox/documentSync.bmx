@@ -58,7 +58,7 @@ Type TSourceDocument
 		Print "   text:~q"+text+"~q}]"
 
 		' Apply the change
-		Local line_start:Int = range_start[1]
+		Rem Local line_start:Int = range_start[1]
 		Local line_end:Int = range_end[1]
 		Local textleft:String
 		Local textright:String
@@ -69,6 +69,35 @@ Type TSourceDocument
 		Else
 			' TODO
 		End If
+		End Rem
+		
+		' WARNING --v
+		' This allocates the entire source code every change
+		' It is not efficient
+		' WARNING --^
+		
+		Local start_pos:Int = range_start[0]
+		Local start_line:Int = range_start[1]
+		Local end_pos:Int = range_end[0]
+		Local end_line:Int = range_end[1]
+		
+		sourcecode = ""
+		
+		For Local line:Int = 0 Until lines.length
+			If (line<start_line) Or (line>end_line)
+				sourcecode :+ lines[line]+"~r~n"
+				Continue
+			End If
+			If line=start_line sourcecode :+ lines[line][..start_pos] + text
+			If line=end_line sourcecode :+ lines[line][end_pos..]+"~r~n"
+		Next
+		' Trim additional CRLF from end
+		sourcecode = sourcecode[..(sourcecode.length-2)]
+		
+		' Update self
+		sourcecode = sourcecode.Replace("~t","  ")
+		lines = sourcecode.split( "~r~n" )
+		
 	End Method
 End Type
 
@@ -192,6 +221,8 @@ Repeat
 		range_end = [cx,cy-1]
 		rangelength = 0
 		doc.onChange( range_start, range_end, rangelength, "~r~n" )
+		cx=0
+		cy:+1
 	End If
 	
 	' INSERT
