@@ -3,6 +3,10 @@
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 '	Based on JSON parser for Blitzmax, also by Si Dunford.
 
+Rem ISSUES
+* Line numbers are not consistent
+End Rem
+
 Rem STATUS
 
 * Create extendable Lexer
@@ -48,9 +52,9 @@ Type TLexer
 	Field tokens:TMap = New TMap()
 	
 	' Language specific elements
+	Field include_comments:Int = False
 	Field linecomment_symbol:String = "'"
 	Field valid_symbols:String = ""
-	Field include_comments:Int = False
 	Field compound_symbols:String = ""	' Must be separated by a non-symbol
 	
 	Public
@@ -341,7 +345,7 @@ Type BlitzMaxLexer Extends TLexer
 		Super.New( text:String )
 		linecomment_symbol="'"
 		valid_symbols = "$%()*+,-.:;<=>[]^"
-		compound_symbols = "<> >= <= :+ :- :* :/"
+		compound_symbols = "<> >= <= :+ :- :* :/ .."
 		' For debugging:
 		include_comments = True
 		Print "Starting MAXLexer"
@@ -362,7 +366,7 @@ Type TSymbol
     End Method
 
 	Method reveal:String()
-		Return (line+","+pos)[..9] + class + " := " + value
+		Return (line+","+pos)[..9] + class[..10] + value
 	End Method
 	
 End Type
@@ -398,7 +402,8 @@ Local text:String = loadfile( "example.json" )
 Local reserved:String = Loadfile( "blitzmax-reserved-words.txt" )
 
 ' Load a test file
-lexer = New BlitzmaxLexer( loadfile( "capabilites.bmx" ) )
+'lexer = New BlitzmaxLexer( loadfile( "capabilites.bmx" ) )
+lexer = New BlitzmaxLexer( loadfile( "problematic-code.bmx" ) )
 
 lexer.define( "reserved", reserved )
 lexer.define( "expression", "and,false,mod,new,not,null,or,pi,sar,self,shl,shr,sizeof,super,true,varptr" )
