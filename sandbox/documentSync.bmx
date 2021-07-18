@@ -9,17 +9,9 @@ SuperStrict
 ' YES:	It would be quicker to not load it as lines, join it and then split it here.
 ' 		But the LSP Client sends it as a chunk, so I need to emulate it.
 
-' Load a file into a contiguous string
-Function LoadFile:String( filename:String )
-	Local file:TStream = ReadFile( filename )
-	If Not file Return ""
-	Local text:String
-	While Not Eof(file)
-		text :+ ReadLine(file)+"~r~n"
-	Wend
-	CloseStream file
-	Return text
-End Function 
+Import Text.RegEx
+
+Include "loadfile().bmx"
 
 Type TSourceDocument
 	Field sourcecode:String
@@ -46,6 +38,11 @@ Type TSourceDocument
 		'For Local n:Int = 0 Until lines.length
 		'	Print RSet(n+1,4)+"  "+lines[n]
 		'Next
+		
+' -> VERY INEFFICIENT CODE HERE 
+' -> TO BE REVIEWED LATER
+		PoorMansParser()
+' -^
 
 	End Method
 	
@@ -98,7 +95,107 @@ Type TSourceDocument
 		sourcecode = sourcecode.Replace("~t","  ")
 		lines = sourcecode.split( "~r~n" )
 		
+' -> VERY INEFFICIENT CODE HERE 
+' -> TO BE REVIEWED LATER
+		PoorMansParser()
+' -^
+		
+		
 	End Method
+	
+	Method getDefinition( line:Int, pos:Int )
+		{	"id":11,
+			"jsonrpc":"2.0",
+			"method":"textDocument/definition",
+			"params":{
+				"position":{
+					"character":10,
+					"line":209
+					},
+				"textDocument":{
+					"uri":
+					"file:///home/si/dev/LSP/sandbox/documentSync.bmx"
+					}
+				}
+			}
+			
+		' First we need to get the symbol under the cursor
+		
+		'Local definition:TDefinition = SyAtPosition( line,pos )
+		
+		
+		' Position = {"line":INTEGER,"character":INTEGER}
+		Local originSelectionRange:String	'Range = {"start":Position,"end":Position}'
+		Local targetUri:String				'DocumentUri
+		Local targetRange:String			'Range = {"start":Position,"end":Position}'
+		Local targetSelectionRange:String	'Range = {"start":Position,"end":Position}'
+		
+		' Produce a LocationLink
+		Local locationLink:String = "{<ORIGINSELECTION>,<TARGETURL>,<TARGETRANGE>,<TARGETSELECTION>}"
+		locationLink = locationLink.Replace( "<ORIGINSELECTION>", "~qoriginSelectionRange:~q:<originSelectionRange>" )
+		locationLink = locationLink.Replace( "<TARGETURL>", "~qtargetUri:~q:<targetUri>" )
+		locationLink = locationLink.Replace( "<TARGETRANGE>", "~qtargetRange:~q:<targetRange>" )
+		locationLink = locationLink.Replace( "<TARGETSELECTION>", "~qtargetSelectionRange:~q:<targetSelectionRange>" )
+		'
+		locationLink = locationLink.Replace( "<originSelectionRange>", originSelectionRange )
+		locationLink = locationLink.Replace( "<targetUri>", targetUri )
+		locationLink = locationLink.Replace( "<targetRange>", targetRange )
+		locationLink = locationLink.Replace( "<targetSelectionRange>", targetSelectionRange )
+	End Method
+	
+	' This is not really a parser, but I need something to start me off
+	Method PoorMansParser()
+DebugStop
+		Local symbols:TSymbol[]
+		'Local index:TIntMap = New TIntMap()
+		Local match:TRegExMatch
+		Local rxFunction:TRegEx = TRegEx.Create( "(?i)(\s*)(function\s*([[A-Za-z_][A-Za-z0-9_]*).*\(\s*(.*)\)).*" )
+		Local rxType:TRegEx = TRegEx.Create( "(?i)(\s*)(type\s([A-Za-z][A-Za-z0-9_]*)).*" )
+		Local rxMethod:TRegEx = TRegEx.Create( "(?i)(\s*)(method\s*([A-Za-z_][A-Za-z0-9_]*).*\(\s*(.*)\)).*" )
+		Local rxGlobal:TRegEx = TRegEx.Create( "(?i)(\s*)(global\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z]*).*" )
+		Local rxLocal:TRegEx = TRegEx.Create( "(?i)(\s*)(local\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z]*).*" )
+		Local rxField:TRegEx = TRegEx.Create( "(?i)(\s*)(field\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z]*).*" )
+		'
+		For Local line:Int = 0 Until lines.length
+			If Trim(lines[line])="" Continue
+			match = rxType.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Type", match.subExp(3),match.subExp(0),line,match.subExp(1).length) ]
+			match = rxMethod.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Method", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxFunction.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Function", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxGlobal.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Global", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxLocal.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Local", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxField.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Field", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+		Next
+	
+		' Debug the symbol table
+		For Local symbol:Int = 0 Until symbols.length
+			Local sym:TSymbol=symbols[symbol]
+			Print( (sym.line+","+sym.char)[..7]+"  "+sym.symbol[..10]+"  "+sym.value[..20]+" "+sym.definition )
+		Next
+		
+	End Method
+End Type
+
+Type TSymbol
+	Field symbol:String
+	Field value:String
+	Field definition:String
+	Field line:Int
+	Field char:Int
+
+	Method New( symbol:String, value:String, definition:String, line:Int, character:Int )
+		Self.symbol = symbol
+		Self.value = value
+		Self.definition = definition
+		Self.line = line
+		Self.char = character
+	End Method
+	
 End Type
 
 'DebugStop
@@ -110,6 +207,7 @@ doc.onOpen( loadfile( "capabilites.bmx" ) )
 
 ' Get a word at a specific position
 'Local word:String = doc.wordAt( 3,14 )
+DebugStop
 
 Graphics 800,600
 
@@ -224,6 +322,9 @@ Repeat
 		cx=0
 		cy:+1
 	End If
+	
+	' F12 is DEFINITION
+	If KeyHit( KEY_F12 ) doc.getDefinition( cx, cy )
 	
 	' INSERT
 	Local char:Int = GetChar()

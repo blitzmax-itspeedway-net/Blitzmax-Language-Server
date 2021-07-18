@@ -31,3 +31,11 @@ For Local value:String[] = EachIn values
 		Print( value[0]+"="+value[1] )
 	End If
 Next
+
+Type Example
+	Field abc:Int
+	
+	Method New()
+	End Method
+
+End Type

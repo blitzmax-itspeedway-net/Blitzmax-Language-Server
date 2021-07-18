@@ -13,6 +13,7 @@ Import brl.stringbuilder
 Import brl.system
 Import brl.threads
 Import brl.threadpool
+Import Text.RegEx
 
 Import pub.freeprocess
 'debugstop

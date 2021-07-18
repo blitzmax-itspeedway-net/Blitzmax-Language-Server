@@ -3,7 +3,7 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
 '	Document Manager (Added in V0.2)
-
+' CURRENTLY DISABLED
 'Definition MUST Return "undefined" by Default.
 
 ' Register this component
@@ -131,9 +131,19 @@ Publish( "log", "DEBG", "TextDocument:Capabilities: "+lsp.capabilities.stringify
 		Local uri:String = uriNode.toString() 
 
 		Local document:TTextDocument = TTextDocument( MapValueForKey( documents, uri ) )
-		If document
-			document.change()
-		End If
+		If Not document Return ""
+		
+		Local contentChanges:JSON = message.J.find( "params|contentChanges" )
+		Local changes:JSON[] = contentChanges.toArray()
+		If Not changes Return ""
+		
+		' Loop through all the changes
+		For Local n:Int = 0 Until changes.length
+			Local range:TRange = New TRange( changes[n].find("range" ) )
+			Local rangeLength:Int = changes[n].find("rangeLength").toInt()
+			Local rangeText:String = changes[n].find("text").toString()
+			document.change( range, rangeLength, rangeText )
+		Next
 
 	End Method
 
@@ -192,8 +202,21 @@ Publish( "log", "DEBG", "TextDocument:Capabilities: "+lsp.capabilities.stringify
 
 	Method definition:String( message:TMessage )
 		Rem
-
-		end rem
+		{	"id":11,
+			"jsonrpc":"2.0",
+			"method":"textDocument/definition",
+			"params":{
+				"position":{
+					"character":10,
+					"line":209
+					},
+				"textDocument":{
+					"uri":
+					"file:///home/si/dev/LSP/sandbox/documentSync.bmx"
+					}
+				}
+			}
+		End Rem
 		Publish( "log","debug",message.J.stringify() )
 		
 		' Default response is "null"
@@ -227,19 +250,84 @@ Type TTextDocument
 	Field isopen:Int = False
 	Field ismodified:Int = False
 
+' *****************************
+' ***** DEMO PARSER START *****
+' *****************************
+
+	Field sourcecode:String
+	Field lines:String[]
+	Field symbols:TSymbol[]
+	
+' *****************************
+' ****** DEMO PARSER END ******
+' *****************************
+
 	Method New( text:String )
-		content = text
 		isopen = True
-		ismodified = False
+		setContent( text )
 	End Method
 
 	Method setContent( text:String )
 		content = text
 		ismodified = False
+		
+' *****************************
+' ***** DEMO PARSER START *****
+' *****************************
+
+		sourcecode = text
+		lines = sourcecode.split( "~r~n" )
+
+		' -> VERY INEFFICIENT CODE 
+		' -> TO BE REVIEWED LATER
+		PoorMansParser()
+		' -^	
+		
+' *****************************
+' ****** DEMO PARSER END ******
+' *****************************
+
 	End Method
 
-	Method change()
+	Method change( range:TRange, rangeLength:Int, rangeText:String )
+		
 		ismodified = True
+		
+' *****************************
+' ***** DEMO PARSER START *****
+' *****************************
+		If Not range Or range.inValid() Return
+		
+		Local start_pos:Int = range.rangeStart.character
+		Local start_line:Int = range.rangeStart.line
+		Local end_pos:Int = range.rangeEnd.character
+		Local end_line:Int = range.rangeEnd.line
+		
+		sourcecode = ""
+		
+		For Local line:Int = 0 Until lines.length
+			If (line<start_line) Or (line>end_line)
+				sourcecode :+ lines[line]+"~r~n"
+				Continue
+			End If
+			If line=start_line sourcecode :+ lines[line][..start_pos] + rangeText
+			If line=end_line sourcecode :+ lines[line][end_pos..]+"~r~n"
+		Next
+		' Trim additional CRLF from end
+		sourcecode = sourcecode[..(sourcecode.length-2)]
+		
+		' Update self
+		lines = sourcecode.split( "~r~n" )
+		
+		' -> VERY INEFFICIENT CODE 
+		' -> TO BE REVIEWED LATER
+		PoorMansParser()
+		' -^	
+
+' *****************************
+' ****** DEMO PARSER END ******
+' *****************************
+		
 	End Method
 
 	Method Close()
@@ -249,4 +337,99 @@ Type TTextDocument
 	Method save()
 	End Method
 
+' *****************************
+' ***** DEMO PARSER START *****
+' *****************************
+
+	' This is not really a parser, but I need something to start me off
+	Method PoorMansParser()
+DebugStop
+		symbols = []
+		
+		'Local index:TIntMap = New TIntMap()
+		Local match:TRegExMatch
+		Local rxFunction:TRegEx = TRegEx.Create( "(?i)(\s*)(function\s*([[A-Za-z_][A-Za-z0-9_]*).*\(\s*(.*)\)).*" )
+		Local rxType:TRegEx = TRegEx.Create( "(?i)(\s*)(type\s([A-Za-z][A-Za-z0-9_]*)).*" )
+		Local rxMethod:TRegEx = TRegEx.Create( "(?i)(\s*)(method\s*([A-Za-z_][A-Za-z0-9_]*).*\(\s*(.*)\)).*" )
+		Local rxGlobal:TRegEx = TRegEx.Create( "(?i)(\s*)(global\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z]*).*" )
+		Local rxLocal:TRegEx = TRegEx.Create( "(?i)(\s*)(local\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z]*).*" )
+		Local rxField:TRegEx = TRegEx.Create( "(?i)(\s*)(field\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*[A-Za-z]*).*" )
+		'
+		For Local line:Int = 0 Until lines.length
+			If Trim(lines[line])="" Continue
+			match = rxType.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Type", match.subExp(3),match.subExp(0),line,match.subExp(1).length) ]
+			match = rxMethod.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Method", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxFunction.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Function", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxGlobal.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Global", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxLocal.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Local", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+			match = rxField.find( lines[line] )
+			If match symbols :+ [ New TSymbol( "Field", match.subExp(3),match.subExp(2),line,match.subExp(1).length) ]
+		Next
+	
+		' Debug the symbol table
+		'For Local symbol:Int = 0 Until symbols.length
+		'	Local sym:TSymbol=symbols[symbol]
+		'	Print( (sym.line+","+sym.char)[..7]+"  "+sym.symbol[..10]+"  "+sym.value[..20]+" "+sym.definition )
+		'Next
+		
+	End Method
+	
+' *****************************
+' ****** DEMO PARSER END ******
+' *****************************
+
+
+End Type
+
+Type TSymbol
+	Field symbol:String
+	Field value:String
+	Field definition:String
+	Field line:Int
+	Field char:Int
+
+	Method New( symbol:String, value:String, definition:String, line:Int, character:Int )
+		Self.symbol = symbol
+		Self.value = value
+		Self.definition = definition
+		Self.line = line
+		Self.char = character
+	End Method
+	
+End Type
+
+Type TRange
+	Field rangeStart:TPosition = New TPosition
+	Field rangeEnd:TPosition = New TPosition
+	Field _valid:Int = False
+	
+	Method New( range:JSON )
+		rangeStart = New TPosition( range.find("start") )
+		rangeEnd = New TPosition( range.find("end") )
+		If rangeStart And rangeEnd _valid=True
+	End Method
+	
+	Method invalid:Int()
+		Return Not _valid
+	End Method
+	
+	Method valid:Int()
+		Return _valid
+	End Method
+	
+End Type
+
+Type TPosition
+	Field character:Int
+	Field line:Int
+	
+	Method New( position:JSON )
+		character = position.find("character").toInt()
+		line = position.find("line").toInt()
+	End Method	
 End Type

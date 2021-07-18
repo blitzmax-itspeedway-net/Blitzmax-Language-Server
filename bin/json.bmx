@@ -22,6 +22,7 @@ Rem		CHANGELOG
 		V0.2	Moved parser into JSON_Parser
 				Merged JSON and JNode
 				JNode is now depreciated, but not yet removed
+		V0.3	Added error()
 EndRem
 
 ' JSON Parser and Stringifier
@@ -95,6 +96,10 @@ Type JSON
         Self.value = value
     End Method
 	
+	Method error:String()
+		Return errtext+" ["+errnum+"] at "+errline+":"+errpos
+	End Method
+	
     Method toString:String()
 		Return String(value)
 	End Method
@@ -103,6 +108,12 @@ Type JSON
 		Return Int(String(value))
 	End Method
 
+    Method toArray:JSON[]()
+		Local J:JSON[] = JSON[](value)
+		If J Return J
+		Return [New JSON( "invalid", "Node is not an array" )]
+	End Method
+	
     Method isValid:Int()
 		Return ( class <> "invalid" )
 	End Method
@@ -123,6 +134,18 @@ Type JSON
 		Return ""
 	End Method
 
+	' Get "string" value of a JNode array
+	Method operator []:JSON( key:Int )
+		If class = "array"
+			Local items:JSON[] = JSON[]( value )
+			If items
+				Local J:JSON = items[key]
+				If J Return J
+			End If
+		End If
+		Return Null
+	End Method
+	
     Method Stringify:String()
 	
 		'DebugStop
