@@ -67,8 +67,8 @@ Type TLexer
 		symbols.clear()
 	End Method 
 
-	Method define( class:String, sym:String )
-		Local list:String[] = sym.split(",")
+	Method define( class:String, list:String )
+		'Local list:String[] = sym.split(",")
 		tokens.insert( class, list )
 	End Method
 
@@ -130,7 +130,6 @@ Type TLexer
 		ElseIf Instr( SYM_NUMBER+"-", char )     	' Number
 			Return LexNumber( ExtractNumber(), line, pos )
 		ElseIf Instr( SYM_ALPHA, char )             ' Alphanumeric Identifier
-			' Need to use definition table here...
 			Return LexAlpha( ExtractIdent(), line, pos )
 		Else
 			PopChar()   ' Throw it away!
@@ -312,9 +311,11 @@ Type JSONLexer Extends TLexer
 
 	Method New( text:String )
 		Super.New( text:String )
-		linecomment_symbol=""			' We don't have comments in JSON
-		valid_symbols = "{}[]:,"
 		Print "Starting JSONLexer"
+
+		' Define Lexer options
+		linecomment_symbol = ""			' We don't have comments in JSON
+		valid_symbols      = "{}[]:,"
 	End Method
 
 	Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
@@ -343,14 +344,42 @@ Type BlitzMaxLexer Extends TLexer
 
 	Method New( text:String )
 		Super.New( text:String )
-		linecomment_symbol="'"
-		valid_symbols = "$%()*+,-.:;<=>[]^"
-		compound_symbols = "<> >= <= :+ :- :* :/ .."
+		Print "Starting MAXLexer"
+		
+		' Define Lexer options
+		linecomment_symbol = "'"
+		valid_symbols      = "#$%()*+,-.:;<=>[]^"
+		compound_symbols   = "<> >= <= :+ :- :* :/ .."
+		
+		' Language specific definitions
+		RestoreData bmx_expressions
+		define( "expression", ReadTable() )
+		RestoreData bmx_reservedwords
+		define( "reserved", ReadTable() )
+
 		' For debugging:
 		include_comments = True
-		Print "Starting MAXLexer"
 	End Method
-	
+
+	Method ReadTable:String()
+		Local word:String, words:String = ""
+		ReadData( word )
+		While word<>"#"
+			words :+ "["+word+"]"
+			ReadData( word )
+		Wend	
+		'Print Lower(words).Replace("[","~q").Replace("]","~q,")			' To create lowercase DefData! :)
+		Return words
+	End Method
+
+	Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
+		Local criteria:String = "["+Lower(text)+"]"	' Case insensitive search criteria
+		For Local token:String = EachIn tokens.keys()
+			If Instr( String(tokens[token]), criteria ) Return New TSymbol( token, Lower(text), line, pos )
+		Next
+		Return New TSymbol( "alpha", text, line, pos )
+	End Method
+		
 End Type
 
 
@@ -366,7 +395,7 @@ Type TSymbol
     End Method
 
 	Method reveal:String()
-		Return (line+","+pos)[..9] + class[..10] + value
+		Return (line+","+pos)[..9] + class[..12] + value
 	End Method
 	
 End Type
@@ -398,20 +427,10 @@ Local text:String = loadfile( "example.json" )
 
 ' TEST THE LEXER AGAINST BLITZMAX
 
-' Load language reserved words
-Local reserved:String = Loadfile( "blitzmax-reserved-words.txt" )
-
 ' Load a test file
-'lexer = New BlitzmaxLexer( loadfile( "capabilites.bmx" ) )
-lexer = New BlitzmaxLexer( loadfile( "problematic-code.bmx" ) )
-
-lexer.define( "reserved", reserved )
-lexer.define( "expression", "and,false,mod,new,not,null,or,pi,sar,self,shl,shr,sizeof,super,true,varptr" )
-lexer.define( "symbol", "+-^~~*/" )
-'DebugStop
+'lexer = New BlitzmaxLexer( loadfile( "samples/capabilites.bmx" ) )
+lexer = New BlitzmaxLexer( loadfile( "samples/problematic-code.bmx" ) )
 lexer.run()
-
-' DUMP THE TOKENISED SOURCE CODE
 Print( lexer.reveal() )
 
 ' Load language grammar
@@ -420,6 +439,34 @@ Print( lexer.reveal() )
 'local parser:TParser = new TBlitzMaxParser( lexer, grammar )
 
 Print "COMPLETE"
+
+
+' Blitzmax Tables
+#bmx_expressions
+DefData "and","false","mod","new","not","null","or","pi","sar","self","shl","shr","sizeof","super","true","varptr"
+DefData "#"
+
+#bmx_reservedwords
+DefData "alias","and","asc","assert"
+DefData "byte"
+DefData "case","catch","chr","const","continue"
+DefData "defdata","default","delete","double"
+DefData "eachin","else","elseif","end","endextern","endfunction","endif","endinterface","endmethod","endrem","endselect","endstruct","endtry","endtype","endwhile","exit","export","extends","extern"
+DefData "false","field","final","finally","float","for","forever","framework","function"
+DefData "global","goto"
+DefData "if","implements","import","incbin","incbinlen","incbinptr","include","int","interface"
+DefData "len","local","long"
+DefData "method","mod","module","moduleinfo"
+DefData "new","next","nodebug","not","null"
+DefData "object","operator","or"
+DefData "pi","private","protected","ptr","public"
+DefData "readdata","readonly","release","rem","repeat","restoredata","return"
+DefData "sar","select","self","shl","short","shr","sizeof","size_t","step","strict","string","struct","super","superstrict"
+DefData "then","throw","to","true","try","type"
+DefData "uint","ulong","until"
+DefData "var","varptr"
+DefData "wend","where","while"
+DefData "#"
 
 
 
