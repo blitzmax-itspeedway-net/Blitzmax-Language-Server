@@ -1,0 +1,116 @@
+
+' import Text.RegEx
+
+Type SyntaxTree
+
+	Rem
+	
+	When parser finds an Include:
+		' 
+		
+	
+	
+	
+	End Rem
+	
+End Type
+
+
+
+' A SyntaxNode is a parsed TDocument, although we could probably just use TDocument!
+Type SyntaxNode
+
+	Field root:(TNODE)
+	
+	Field source:TDocument
+	Field filepath:String
+
+	Rem
+	
+	Method New( root:(TNode), source:TDocument, filepath:string )
+		self.root = root
+		self.source = source
+		self.filepath = filepath
+	end method
+	
+	Method New( source:TDocument )
+		' Parse the document into the tree
+		- THis doesn't look right: how will a document know about it's parser?
+		'self.root = source.parse()		' Source needs to now about it's parser!
+		' We only support .bmx files, so use MAX Parser
+		local lexer:TBlitzMaxLexer = new TBlitzMaxLexer( source )
+		local parser:TBlitzMaxParser = new TBlitzMaxParser( lexer )
+		'
+		self.root = parser.run()
+		self.filepath = source.filepath
+	
+	Method getSymbolAt( source:TDocument, position:TPosition )
+		
+	
+	End Rem
+
+End Type
+
+
+Type TextDocumentManager
+
+	Rem
+	Needs To maintain the Current document, the root of the application
+	And all documents within a folder/workspace
+	
+	field currentDocument:string
+	field rootDocument:string
+	
+	Method getCurrentDocument:TDocument()
+		Return currentDocument
+	End Rem
+	
+End Type
+
+
+Type TDocument
+	Rem
+	method isEmpty:int()
+	end method
+	
+	End Rem
+End Type
+
+Rem 
+function HoverProvider( position:TPosition )
+	local source:TDocument = TextDocumentManager.getCurrentDocument()
+	
+	if source.isEmpty() or not source.isPassed()
+		return invalidHover() 
+	end if
+	
+	local symbol:TSymbol = SyntaxTree.getSymbolAt( source, position )
+	if not symbol return invalidHover()
+	
+	select symbol.class
+	case "function"
+		return htmlhelper( HOVER_FUNCTION, symbol )
+	end select
+	
+	return invalidHover()
+	
+end function
+
+const HOVER_FUNCTION:string = "<h1>{TITLE}</h1><h2>Description</h2>{DESCR}<h2>Detail</h2>{DETAIL}"
+
+function htmlhelper:string( template:string, symbol:TSymbol )
+	local html:string = template
+	html = html.replace( "{TITLE}", symbol.value )
+	html = html.replace( "{DESCR}", symbol.descr )
+	html = html.replace( "{DETAIL}", symbol.detail )
+	return html
+end function
+
+function InvalidHover:JSON()
+	local J:JSON = new JSON()
+	J.set( "params|...", null )
+	return J
+end function
+
+End Rem
+

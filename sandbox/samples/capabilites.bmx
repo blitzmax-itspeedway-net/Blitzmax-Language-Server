@@ -4,6 +4,9 @@ SuperStrict
 
 'DebugStop
 
+framework brl.retro
+
+
 Global capabilities:String[]
 
 Function addCapability( capability:String )
