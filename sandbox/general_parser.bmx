@@ -1,6 +1,8 @@
 SuperStrict
 '	GENERAL PARSER
 
+Include "bin/TBlitzMaxLexer.bmx"
+
 Type TGrammarNode
 	Field alt:TGrammarNode
 	Field suc:TGrammarNode
@@ -23,10 +25,10 @@ Type AST
 	Field name:String		' IMPORTANT - THIS IS USED TO CALL THE METHOD
 	Field parent:AST		' Root node when NULL
 	Field children:TList	' Leaf node when NULL
-	Field sym:TSymbol
+	Field symbol:TSymbol
 	
-	Method New( sym:TSymbol )
-		Self.sym = sym
+	Method New( symbol:TSymbol )
+		Self.symbol = symbol
 	End Method
 	
 	Method addChild( child:TSymbol )
@@ -37,17 +39,152 @@ Type AST
 End Type
 
 Type AST_BinaryOperator Extends AST
-	Field lnode:AST	' Left 
-	Field rnode:AST	' Right
+	Field L:AST	' Left 
+	Field R:AST	' Right
 	
-	Method New( L:AST, sym:TSymbol, R:AST )
-		Self.sym = sym
-		Self.lnode = L
-		Self.rnode = R
+	Method New( L:AST, symbol:TSymbol, R:AST )
+		Self.symbol = symbol
+		Self.L = L
+		Self.R = R
 	End Method
 	
 End Type
 
+Type TParser
+
+	Field lexer:TLexer
+	Field token:TSymbol
+	
+	Method New( lexer:TLexer )
+		Self.lexer = lexer
+		Self.token = lexer.getnext()
+	End Method
+	
+	Method parse:AST()
+	
+		ThrowException( "PARSER NOT IMPLEMENTED" )
+
+	End Method
+	
+End Type
+
+' DUMMY LEXER
+
+'Type TLexer
+'
+'	Field index:Int = -1
+'	Field dummy:TSymbol[]
+'
+'	Method New( text:String )
+'		'Self.source = text
+'		dummy :+ [ New TSymbol( "number", "2" ) ]
+'		dummy :+ [ New TSymbol( "symbol", "+" ) ]
+'		dummy :+ [ New TSymbol( "symbol", "(" ) ]
+'		dummy :+ [ New TSymbol( "number", "3" ) ]
+'		dummy :+ [ New TSymbol( "symbol", "*" ) ]
+'		dummy :+ [ New TSymbol( "number", "4" ) ]
+'		dummy :+ [ New TSymbol( "symbol", ")" ) ]
+'	End Method
+'
+'	Method getNext:TSymbol()
+'		index :+ 1
+'		Return dummy[index]
+'	End Method
+'	
+'End Type
+
+Type TException
+	Field line:Int
+	Field pos:Int
+	Field text:String
+	Method New( text:String, line:Int=-1, pos:Int=-1 )
+		Self.text = text
+		Self.line = line
+		Self.pos = pos
+	End Method
+	Method toString:String()
+		Local msg:String = text
+		If line>-1 And pos>-1 msg :+ " at ("+line+","+pos +")"
+		Return msg
+	End Method
+End Type
+
+Function ThrowException( message:String, line:Int=-1, pos:Int=-1 )
+	Throw( New TException( message, line, pos ) )
+End Function
+
+' A Visitor is a process that does something with the data
+' A Compiler or Interpreter are the usual candidates, but
+' you can use then to convert or process data in a natural way
+' Here I am going to use them to build the Syntax and Definition trees
+' but once built, you should be able to easily extend it to re-write "bcc"
+' or generate Java, Javascript or even bytecode!
+
+' The Visitor uses reflection to process the Abstract Syntax Tree
+Type TVisitor
+
+	Method visit( node:AST )
+		DebugStop
+		If Not node ThrowException( "Cannot visit null node" ) 
+		'If node.name = "" invalid()	' Leave this to use "visit_" method
+		
+		' Use Reflection to call the visitor method (or an error)
+		Local this:TTypeId = TTypeId.ForObject( Self )
+		Local methd:TMethod = this.FindMethod( "visit_"+node.name )
+		If Not methd exception( node )
+		methd.invoke( this, [node] )
+	End Method
+	
+	' This is called when node doesn't have a name...
+	Method visit_( node:AST )
+		ThrowException( "Node "+node.symbol.class+" has no name!" )
+	End Method
+	
+	Method exception( node:AST )
+		ThrowException( "Method visit_"+node.name+"() does not exist" )
+	End Method
+	
+End Type
+
+Type TLangServ Extends TVisitor
+
+	Field parser:TParser
+	Field tree:AST
+	
+	Method New( parser:TParser )
+		Self.parser = parser
+	End Method
+	
+	Method run()
+		' Perform the actual Parsing here
+		tree = parser.parse()
+		' Now call the visitor to process the tree
+		visit( tree )
+	End Method
+	
+	' Not sure how to debug this yet...!
+	' Maybe dump the syntax tree and definition table?
+	Method reveal:String()
+	End Method
+	
+	' ABSTRACT METHODS
+	' Not all of them are required by the Language server, but "bcc" will need them
+	
+	Method visit_binaryoperator( node:AST_BinaryOperator )
+		If Not node ThrowException( "Invalid node in binaryoperator" ) 
+		Print "BINARY OPERATION"
+	
+		Select node.symbol.value
+		Case "+"	; 'Local x:Int = visit( node.L ) + visit( node.R )
+		Case "-"	
+		Case "*"
+		Case "/"
+		End Select
+		
+	End Method
+	
+End Type
+		
 'Local symbol:TSymbol = goal.entry
 
 Rem
@@ -83,137 +220,16 @@ Local addnode:AST_BinaryOperator = New AST_BinaryOperator( ..
 
 ' Now lets test parsing 
 
-Local lexer:TLexer( "dummy" )
-Local parser:TParser( lexer )
-Local langserv = TLangServer( parser )
+Try
+	DebugStop
+	Local lexer:TLexer = New TLexer( "dummy" )
+	Local parser:TParser = New TParser( lexer )
+	Local langserv:TLangServ = New TLangServ( parser )
 
-langserv.run()
-Print langserv.reveal()
+	langserv.run()
+	Print langserv.reveal()
 
-Type TParser
+Catch exception:TException
+	Print "## Exception: "+exception.toString()+" ##"
+End Try
 
-	Field lexer:TLexer
-	Field token:TSymbol
-	
-	Method New( lexer:TLexer )
-		Self.lexer = lexer
-		Self.token = lexer.getnext()
-	End Method
-	
-	Method parse:AST()
-	
-' HERE BE DAEMONS
-
-	End Method
-	
-End Type
-
-' DUMMY LEXER
-
-Type TLexer
-
-	Field index:Int = -1
-	Field dummy:TSymbol[]
-
-	Method New( text:String )
-		'Self.source = text
-		dummy :+ [ New TSymbol( "number", "2" ) ]
-		dummy :+ [ New TSymbol( "symbol", "+" ) ]
-		dummy :+ [ New TSymbol( "symbol", "(" ) ]
-		dummy :+ [ New TSymbol( "number", "3" ) ]
-		dummy :+ [ New TSymbol( "symbol", "*" ) ]
-		dummy :+ [ New TSymbol( "number", "4" ) ]
-		dummy :+ [ New TSymbol( "symbol", ")" ) ]
-	End Method
-
-	Method getNext:TSymbol()
-		index :+ 1
-		Return dummy[index]
-	End Method
-	
-End Type
-
-Type TException
-	Field line:Int
-	Field char:Int
-	Field error:Int
-	Field text:String
-	Method New( error:Int, text:String, line:Int=0, pos:Int=0 )
-		Self.error = error
-		Self.text = text
-		Self.line = line
-		Self.pos = pos
-	End Method
-End Type
-
-' A Visitor is a process that does soemthing with the data
-' A Compiler or Interpreter are the usual candidates, but
-' you can use then to convert or process data in a natural way
-' Here I am going to use them to build the Syntax and Definition trees
-' but once built, you should be able to easily extend it to re-write "bcc"
-' or generate Java, Javascript or even bytecode!
-
-' The Visitor uses reflection to process the Abstract Syntax Tree
-Type TVisitor
-
-	Method visit( node:AST )
-		DebugStop
-		If node.name = "" invalid()
-		
-		' Use Reflection to call the visitor method (or an error)
-		Local this:TTypeId = TTypeId.ForObject( Self )
-		Local methd:TMethod = this.FindMethod( "visit_"+node.name )
-		If Not methd exception()
-		methd.invoke( this, [name] )
-	End Method
-	
-	' This is called when node doesn't have a name...
-	Method visit_( node:AST )
-		Local msg:stri
-		Throw( New TException( 0, "Node "+node.symbol.class+" has no name!" ))
-	End Method
-	
-	Method exception( node:AST )
-		Throw( New TException( 0, "Method visit_"+node.name+"() does not exist" ))
-	End Method
-	
-End Type
-
-Type TLangServ Extends TVisitor
-
-	Field parser:TParser
-	Field tree:AST
-	
-	Method New( parser:TParser )
-		Self.parser = parser
-	End Method
-	
-	Method run()
-		' Perform the actual Parsing here
-		tree = parser.parse()
-		' Now call the visitor to process the tree
-		visit( tree )
-	End Method
-	
-	' Not sure how to debug this yet...!
-	' Maybe dump the syntax tree and definition table?
-	Method reveal:String()
-	End Method
-	
-	' ABSTRACT METHODS
-	' Not all of them are required by the Language server, but "bcc" will need them
-	
-	Method visit_binaryoperator( node:AST )
-		Print "BINARY OPERATION"
-	
-		Select node.sym.value
-		Case "+"	; Local x:Int = visit( node.L ) + visit( node.R )
-		Case "-"	
-		Case "*"
-		Case "/"
-		End Case
-		
-	End Method
-	
-End Type
-		
