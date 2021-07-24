@@ -4,7 +4,7 @@
 
 Include "TLexer.bmx"
 
-Type BlitzMaxLexer Extends TLexer
+Type TBlitzMaxLexer Extends TLexer
 
 	Method New( text:String )
 		Super.New( text )
@@ -17,33 +17,36 @@ Type BlitzMaxLexer Extends TLexer
 		
 		' Language specific definitions
 		Local data:String[]
+		DebugStop
 		RestoreData bmx_expressions
-		define( "expression", loadTable() )
+		readSymbols()
+		'define( "expression", loadTable() )
 		RestoreData bmx_reservedwords
-		define( "reserved", loadTable() )
+		readSymbols()
+		'define( "reserved", loadTable() )
 
 		' For debugging:
 		include_comments = True
 	End Method
 
-	Method loadtable:String()
-		Local line:String
+	' Read symbols and add as tokens
+	Method readSymbols()
 		Local word:String 
 		ReadData( word )
 		Repeat
-			line:+ "["+word+"]"
+			tokens.insert( word, word )
 			ReadData( word )
 		Until word = "#"
-		Return word
 	End Method
 
-	Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
-		Local criteria:String = "["+Lower(text)+"]"	' Case insensitive search criteria
-		For Local token:String = EachIn tokens.keys()
-			If Instr( String(tokens[token]), criteria ) Return New TSymbol( token, Lower(text), line, pos )
-		Next
-		Return New TSymbol( "alpha", text, line, pos )
-	End Method
+	'Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
+	'	Local criteria:String = "["+Lower(text)+"]"	' Case insensitive search criteria
+	'	For Local token:String = EachIn tokens.keys()
+'Print( String(tokens[token]) )
+	'		If Instr( String(tokens[token]), criteria ) Return New TSymbol( token, Lower(text), line, pos )
+	'	Next
+	'	Return New TSymbol( "alpha", text, line, pos )
+	'End Method
 		
 End Type
 

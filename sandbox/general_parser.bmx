@@ -1,8 +1,17 @@
 SuperStrict
 '	GENERAL PARSER
 
+Framework brl.retro
+'Import brl.collections
+'Import brl.map
+Import brl.reflection
+'
+Include "bin/loadfile().bmx"
+Include "bin/TException.bmx"
+'
 Include "bin/TSymbol.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
+Include "bin/TBlitzMaxParser.bmx"
 
 Type TGrammarNode
 	Field alt:TGrammarNode
@@ -40,24 +49,6 @@ Type AST_BinaryOperator Extends AST
 	
 End Type
 
-Type TParser
-
-	Field lexer:TLexer
-	Field token:TSymbol
-	
-	Method New( lexer:TLexer )
-		Self.lexer = lexer
-		Self.token = lexer.getnext()
-	End Method
-	
-	Method parse:AST()
-	
-		ThrowException( "PARSER NOT IMPLEMENTED" )
-
-	End Method
-	
-End Type
-
 ' DUMMY LEXER
 
 'Type TLexer
@@ -83,25 +74,7 @@ End Type
 '	
 'End Type
 
-Type TException
-	Field line:Int
-	Field pos:Int
-	Field text:String
-	Method New( text:String, line:Int=-1, pos:Int=-1 )
-		Self.text = text
-		Self.line = line
-		Self.pos = pos
-	End Method
-	Method toString:String()
-		Local msg:String = text
-		If line>-1 And pos>-1 msg :+ " at ("+line+","+pos +")"
-		Return msg
-	End Method
-End Type
 
-Function ThrowException( message:String, line:Int=-1, pos:Int=-1 )
-	Throw( New TException( message, line, pos ) )
-End Function
 
 ' A Visitor is a process that does something with the data
 ' A Compiler or Interpreter are the usual candidates, but
@@ -212,8 +185,9 @@ Local addnode:AST_BinaryOperator = New AST_BinaryOperator( ..
 
 Try
 	DebugStop
-	Local lexer:TLexer = New TLexer( "dummy" )
-	Local parser:TParser = New TParser( lexer )
+	Local source:String = loadFile( "samples/1) Simple Blitzmax.bmx" )
+	Local lexer:TLexer = New TBlitzMaxLexer( source )
+	Local parser:TParser = New TBlitzMaxParser( lexer )
 	Local langserv:TLangServ = New TLangServ( parser )
 
 	langserv.run()

@@ -20,7 +20,7 @@ Type TLexer
 	Field sympos:TLink				' Current symbol cursor
 	
 	Field symbols:TList = New TList()
-	Field tokens:TMap = New TMap()
+	Field tokens:TMap = New TMap()	' List of known tokens. Key is symbol, Value is class
 	
 	' Language specific elements
 	Field include_comments:Int = False
@@ -38,9 +38,8 @@ Type TLexer
 		symbols.clear()
 	End Method 
 
-	Method define( class:String, list:String )
-		'Local list:String[] = sym.split(",")
-		tokens.insert( class, list )
+	Method defineToken( symbol:String, class:String )
+		tokens.insert( symbol, class )
 	End Method
 
 	Method run()
@@ -83,6 +82,18 @@ Type TLexer
 		If expectedclass="" Return TSymbol( sympos.value )
 		Local peek:TSymbol = TSymbol( sympos.value )
 		If peek.class=expectedclass Return peek
+        Return Null
+    End Method
+
+    ' Peeks the top of the symbol Stack
+    Method Peek:TSymbol( expectedclass:String[]=[] )
+        'If symbols.isempty() Return New TSymbol( "EOF","", linenum, linepos)
+        If sympos=Null Return New TSymbol( "EOF","", linenum, linepos)
+		If expectedclass=[] Return TSymbol( sympos.value )
+		Local peek:TSymbol = TSymbol( sympos.value )
+		For Local expected:String = EachIn expectedclass
+			If peek.class=expected Return peek
+		next
         Return Null
     End Method
 
@@ -305,7 +316,12 @@ Type TLexer
 	' EXTENDABLE LEXER METHODS
 	
 	Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "alpha", text, line, pos )
+		Local symbol:String = String( tokens.valueforkey( Lower(text) ))
+		If symbol = ""
+			Return New TSymbol( "alpha", text, line, pos )
+		Else
+			Return New TSymbol( symbol, text, line, pos )
+		End If
 	End Method
 
 	Method LexInvalid:TSymbol( text:String, line:Int, pos:Int )

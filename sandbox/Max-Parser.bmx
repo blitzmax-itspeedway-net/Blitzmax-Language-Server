@@ -28,13 +28,17 @@ Rem STATUS
 End Rem
 
 Framework brl.retro
-Import brl.collections
+'Import brl.collections
+'Import brl.linklist
 Import brl.map
+Import brl.reflection
 
 Include "bin/loadfile().bmx"
+Include "bin/TException.bmx"
 
 Include "bin/TSymbol.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
+Include "bin/TBlitzMaxParser.bmx"
 
 ' Create Blitzmax Tables
 RestoreData bmx_expressions
@@ -88,33 +92,6 @@ Type JSONLexer Extends TLexer
 	
 End Type
 
-
-
-
-Type TParser
-	Field lexer:TLexer
-	
-	Method New( lexer:TLexer )
-		Self.lexer = lexer
-	End Method
-	
-	Method run()	
-	End Method
-	
-	Method reveal:String()
-	End Method
-	
-	Private
-	
-	' Expect the given symbol and if not, raise an exception
-	Method expect( symbol:String )
-		If False
-			Throw "Unexpected symbol"
-		End If
-	End Method
-	
-End Type
-
 Type JSONParser Extends TParser
 	Method New( lexer:TLexer )
 		Super.New( lexer )
@@ -125,85 +102,7 @@ Type JSONParser Extends TParser
 	
 End Type
 
-'	A LANGUAGE SYNTAX IS CURRENTLY UNAVAILABLE
-'	THIS IS THEREFORE HARDCODED AT THE MOMENT
-'	IT WILL BE RE-WRITTEN WHEN SYNTAX IS DONE
-
-Type BlitzMaxParser Extends TParser
-
-	Field strictmode:Int = 0
-
-	Method New( lexer:TLexer )
-		Super.New( lexer )
-		Print "Starting BlitzMaxParser"
-	End Method
-
-	' It all starts, as they say, with a story...	
-	Method run()
-DebugStop
-		Try
-			'Repeat
-			'	Local blockcomments:String = skip( "comment" )
-			
-			
-			Rem
-			Need To:
-			get block comments that preceed the Next block
-			
-			
-			getformalblock
-		
-			' Optional STRICT or SUPERSTRICT
-			Do_Strict_Mode()
-			' Optional Framework
-			Do_Framework()
-			' Optional Imports
-			Do_Import()
-			
-			End Rem
-		Catch Exception:String
-			Print Exception
-		End Try
-		
-	End Method
-	
-	Private
-	
-	Method Do_Strict_Mode()
-		lexer.skip( "comment" )
-		Local sym:TSymbol = lexer.peek( "reserved" )
-		If Not sym Return
-		Select sym.value
-		Case "strict"		;	strictmode = 1
-		Case "superstrict"	;	strictmode = 2
-		End Select
-		If strictmode>0 lexer.getnext()
-	End Method
-	
-	Method Do_Framework()
-		lexer.skip( "comment" )
-		Local sym:TSymbol = lexer.peek( "reserved" )
-		If Not sym Return
-		If sym.value="framework"
-			lexer.getnext()	' framework
-			lexer.expect( "alpha" )
-			lexer.expect( "symbol",".")
-			lexer.expect( "alpha" )
-		End If
-	End Method
-
-	Method Do_Imports()
-		lexer.skip( "comment" )
-		Local sym:TSymbol = lexer.peek( "reserved" )
-		If Not sym Return
-		If sym.value="import"
-			lexer.getnext()	' framework
-			lexer.expect( "alpha" )
-			lexer.expect( "symbol",".")
-			lexer.expect( "alpha" )
-		End If
-	End Method	
-	
+Type AST
 End Type
 
 'DebugStop
@@ -227,7 +126,8 @@ Local lexer:TLexer, parser:TParser
 '	TEST THE LEXER AGAINST BLITZMAX
 
 ' Load a test file
-lexer = New BlitzMaxLexer( loadfile( "samples/capabilites.bmx" ) )
+DebugStop
+lexer = New TBlitzMaxLexer( loadfile( "samples/capabilites.bmx" ) )
 'lexer = New BlitzMaxLexer( loadfile( "samples/problematic-code.bmx" ) )
 lexer.run()
 Print( lexer.reveal() )
@@ -236,9 +136,11 @@ DebugStop
 
 'Create a syntax tree
 'DebugStop
-parser = New BlitzMaxParser( lexer )
-parser.run()
-Print( parser.reveal() )
+parser = New TBlitzMaxParser( lexer )
+parser.parse()
+
+' Dump the Symbol table and Definition Table
+'Print( parser.reveal() )
 
 ' Load language grammar
 'Local grammar:String = Loadfile( "blitzmax-grammar.txt" )
