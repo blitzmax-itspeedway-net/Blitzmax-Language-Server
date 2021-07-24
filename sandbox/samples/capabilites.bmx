@@ -4,7 +4,7 @@ SuperStrict
 
 'DebugStop
 
-framework brl.retro
+Framework brl.retro
 
 
 Global capabilities:String[]
@@ -35,15 +35,4 @@ For Local value:String[] = EachIn values
 	End If
 Next
 
-Type Example
-	Field abc:Int
-	
-    Field example: string = "ABCDEFG"..
-        "HIJKLMN"..
-        "OPQRSTU"..
-        "VWXYZ"
 
-	Method New()
-	End Method
-
-End Type

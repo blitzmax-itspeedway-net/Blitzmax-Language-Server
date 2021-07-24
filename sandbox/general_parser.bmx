@@ -1,6 +1,7 @@
 SuperStrict
 '	GENERAL PARSER
 
+Include "bin/TSymbol.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 
 Type TGrammarNode
@@ -8,17 +9,6 @@ Type TGrammarNode
 	Field suc:TGrammarNode
 	Field terminal:Int
 	Field sym:Int
-End Type
-
-Type TSymbol
-	Field class:String
-	Field value:String
-	
-	Method New( class:String, value:String )
-		Self.class = class
-		Self.value = value
-	End Method
-	
 End Type
 
 Type AST
@@ -205,17 +195,17 @@ End Rem
 ' Lets manually build a tree with the expression 2+(3*4)
 
 ' Create a node for the number symbols (Which would come from the lexer)
-Local Number2:AST = New AST( New TSymbol( "number", "2" ) )
-Local Number3:AST = New AST( New TSymbol( "number", "3" ) )
-Local Number4:AST = New AST( New TSymbol( "number", "4" ) )
+Local Number2:AST = New AST( New TSymbol( "number", "2",0,0 ) )
+Local Number3:AST = New AST( New TSymbol( "number", "3",0,0 ) )
+Local Number4:AST = New AST( New TSymbol( "number", "4",0,0 ) )
 
 ' Built the Abstract Syntax Tree
 Local addnode:AST_BinaryOperator = New AST_BinaryOperator( ..
 	Number2, ..
-	New TSymbol( "symbol","+" ), ..
+	New TSymbol( "symbol","+",0,0 ), ..
 	New AST_BinaryOperator( ..
 		Number3, ..
-		New TSymbol( "symbol", "*" ), ..
+		New TSymbol( "symbol", "*",0,0 ), ..
 		Number4 ))
 
 ' Now lets test parsing 

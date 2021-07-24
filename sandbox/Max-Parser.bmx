@@ -31,8 +31,9 @@ Framework brl.retro
 Import brl.collections
 Import brl.map
 
-Include "loadfile().bmx"
+Include "bin/loadfile().bmx"
 
+Include "bin/TSymbol.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 
 ' Create Blitzmax Tables
@@ -88,22 +89,7 @@ Type JSONLexer Extends TLexer
 End Type
 
 
-Type TSymbol
-	Field class:String, value:String, line:Int, pos:Int
 
-    Method New( class:String, value:String, line:Int, pos:Int )
-        'print( "## "+symbol+", "+value+", "+line+", "+pos )
-        Self.class = class
-        Self.value = value
-        Self.line = line
-        Self.pos = pos 
-    End Method
-
-	Method reveal:String()
-		Return (line+","+pos)[..9] + class[..12] + value
-	End Method
-	
-End Type
 
 Type TParser
 	Field lexer:TLexer
@@ -245,7 +231,7 @@ lexer = New BlitzMaxLexer( loadfile( "samples/capabilites.bmx" ) )
 'lexer = New BlitzMaxLexer( loadfile( "samples/problematic-code.bmx" ) )
 lexer.run()
 Print( lexer.reveal() )
-debugstop
+DebugStop
 '	TEST THE PARSER AGAINST BLITZMAX
 
 'Create a syntax tree
@@ -262,32 +248,7 @@ Print( parser.reveal() )
 Print "COMPLETE"
 
 
-' Blitzmax Tables
-#bmx_expressions
-DefData "and","false","mod","new","not","null","or","pi","sar","self","shl","shr","sizeof","super","true","varptr"
-DefData "#"
 
-#bmx_reservedwords
-DefData "alias","and","asc","assert"
-DefData "byte"
-DefData "case","catch","chr","const","continue"
-DefData "defdata","default","delete","double"
-DefData "eachin","else","elseif","end","endextern","endfunction","endif","endinterface","endmethod","endrem","endselect","endstruct","endtry","endtype","endwhile","exit","export","extends","extern"
-DefData "false","field","final","finally","float","for","forever","framework","function"
-DefData "global","goto"
-DefData "if","implements","import","incbin","incbinlen","incbinptr","include","int","interface"
-DefData "len","local","long"
-DefData "method","mod","module","moduleinfo"
-DefData "new","next","nodebug","not","null"
-DefData "object","operator","or"
-DefData "pi","private","protected","ptr","public"
-DefData "readdata","readonly","release","rem","repeat","restoredata","return"
-DefData "sar","select","self","shl","short","shr","sizeof","size_t","step","strict","string","struct","super","superstrict"
-DefData "then","throw","to","true","try","type"
-DefData "uint","ulong","until"
-DefData "var","varptr"
-DefData "wend","where","while"
-DefData "#"
 
 
 
