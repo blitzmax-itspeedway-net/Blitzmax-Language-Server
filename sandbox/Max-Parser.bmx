@@ -37,6 +37,7 @@ Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
 
 Include "bin/TSymbol.bmx"
+Include "bin/TSymbolTable.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 Include "bin/TBlitzMaxParser.bmx"
 
@@ -132,6 +133,7 @@ lexer = New TBlitzMaxLexer( loadfile( "samples/capabilites.bmx" ) )
 lexer.run()
 Print( lexer.reveal() )
 DebugStop
+
 '	TEST THE PARSER AGAINST BLITZMAX
 
 'Create a syntax tree
@@ -140,7 +142,7 @@ parser = New TBlitzMaxParser( lexer )
 parser.parse()
 
 ' Dump the Symbol table and Definition Table
-'Print( parser.reveal() )
+Print( parser.reveal() )
 
 ' Load language grammar
 'Local grammar:String = Loadfile( "blitzmax-grammar.txt" )

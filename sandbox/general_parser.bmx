@@ -10,6 +10,7 @@ Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
 '
 Include "bin/TSymbol.bmx"
+Include "bin/TSymbolTable.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 Include "bin/TBlitzMaxParser.bmx"
 
@@ -188,10 +189,15 @@ Try
 	Local source:String = loadFile( "samples/1) Simple Blitzmax.bmx" )
 	Local lexer:TLexer = New TBlitzMaxLexer( source )
 	Local parser:TParser = New TBlitzMaxParser( lexer )
-	Local langserv:TLangServ = New TLangServ( parser )
+	
+	lexer.run()
+	Print( lexer.reveal() )
+	parser.parse()
+	Print parser.reveal()
+	'Local langserv:TLangServ = New TLangServ( parser )
 
-	langserv.run()
-	Print langserv.reveal()
+	'langserv.run()
+	'Print langserv.reveal()
 
 Catch exception:TException
 	Print "## Exception: "+exception.toString()+" ##"

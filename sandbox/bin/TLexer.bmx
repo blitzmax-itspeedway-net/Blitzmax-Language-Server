@@ -6,7 +6,7 @@ Type TLexer
 
 	Private
 	
-	Const SYM_WHITESPACE:String = " ~t~n~r"
+	Const SYM_WHITESPACE:String = " ~t~r"
 	Const SYM_SPACE:String = " "
     Const SYM_NUMBER:String = "0123456789"
     Const SYM_LOWER:String = "abcdefghijklmnopqrstuvwxyz"
@@ -78,6 +78,13 @@ Type TLexer
     ' Peeks the top of the symbol Stack
     Method Peek:TSymbol( expectedclass:String="" )
         'If symbols.isempty() Return New TSymbol( "EOF","", linenum, linepos)
+?debug
+If sympos=Null
+	Print "PEEK: Null"
+Else
+	Print "PEEK: "+TSymbol(sympos.value).value+":"+TSymbol(sympos.value).class
+End If
+?
         If sympos=Null Return New TSymbol( "EOF","", linenum, linepos)
 		If expectedclass="" Return TSymbol( sympos.value )
 		Local peek:TSymbol = TSymbol( sympos.value )
@@ -86,24 +93,37 @@ Type TLexer
     End Method
 
     ' Peeks the top of the symbol Stack
-    Method Peek:TSymbol( expectedclass:String[]=[] )
+    Method Peek:TSymbol( expectedclass:String[] )
         'If symbols.isempty() Return New TSymbol( "EOF","", linenum, linepos)
+?debug
+If sympos=Null Print "PEEK: Null"
+?
         If sympos=Null Return New TSymbol( "EOF","", linenum, linepos)
 		If expectedclass=[] Return TSymbol( sympos.value )
 		Local peek:TSymbol = TSymbol( sympos.value )
 		For Local expected:String = EachIn expectedclass
+?debug
+If sympos=Null
+	Print "PEEK: Null"
+Else
+	Print "PEEK: "+TSymbol(sympos.value).value+":"+TSymbol(sympos.value).class
+End If
+?
 			If peek.class=expected Return peek
-		next
+		Next
         Return Null
     End Method
 
     ' Matches the next symbol otherwise throws an error
-    Method Expect( expectedclass:String, expectedvalue:String="" )
+    Method Expect:TSymbol( expectedclass:String, expectedvalue:String="" )
 		Local sym:TSymbol = TSymbol( sympos.value )
 		If sym.class = expectedclass
-			If expectedvalue = "" Or sym.value = expectedvalue Return
+			If expectedvalue = "" Or sym.value = expectedvalue 
+				sympos = sympos.nextlink
+				Return sym
+			End If
 		End If
-		Throw( "Unexpected symbol" )
+		ThrowException( "Unexpected symbol '"+sym.value+"'", sym.line, sym.pos )
     End Method
 
     ' Matches the given symbol and throws it away (Useful for comments)
@@ -118,6 +138,11 @@ Type TLexer
 		Return skipped
     End Method
 
+	' Identifies if we have any symbols remaining
+	Method isAtEnd:Int()
+		Return (sympos = Null )
+	End Method	
+	
 	Private
 	
 	Method tokenise()
@@ -138,13 +163,17 @@ Type TLexer
 'DebugStop
 		'Local name:String
 		'Local symbol:TSymbol
+		Local char:String = PeekChar()
 		' Save the symbol position
 		Local line:Int = linenum
 		Local pos:Int = linepos
-		' Identify the symbol
-		Local char:String = PeekChar()
+'If line>=3 And pos>=14 DebugStop
+		' Identify the symbol		
 		If char=""
 			Return New TSymbol( "EOF", "", line, pos )
+		ElseIf char="~n"
+			popChar()
+			Return New TSymbol( "EOL", "CR", line, pos )
 		ElseIf char = linecomment_symbol						' Line Comment
 			Return New TSymbol( "comment", ExtractLineComment(), line, pos )
 		ElseIf Instr( valid_symbols, char, 1 )               ' Single character symbol
@@ -170,10 +199,12 @@ Type TLexer
     ' Skips leading whitespace and returns next character
     Method PeekChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
 'DebugStop
-        Local char:String
-        Repeat
-            If cursor>=source.length Return ""
-            char = source[cursor..cursor+1]
+		If cursor>=source.length Return ""
+        Local char:String = source[cursor..cursor+1]
+        While Instr( IgnoredSymbols, char )
+		'repeat
+            'If cursor>=source.length Return ""
+            'char = source[cursor..cursor+1]
             Select char
             Case "~r"   ' CR
 				cursor :+1
@@ -193,19 +224,26 @@ Type TLexer
 					cursor :+ 2
 				End If
             End Select
-        Until Not Instr( IgnoredSymbols, char )
+			' Next character:
+			char = source[cursor..cursor+1]
+        'Until Not Instr( IgnoredSymbols, char )
+		Wend
         Return char
     End Method
 
 	' Pops next character moving the cursor forward
     Method PopChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
 'DebugStop
-        Local char:String
+        'Local char:String
+		If cursor>=source.length Return ""
+        Local char:String = source[cursor..cursor+1]
+		' Ignore leading whitespace
+        While Instr( IgnoredSymbols, char )
 		'Local IgnoredSymbols:String = ""
 		'
 		'If ignoreWhitespace IgnoredSymbols = whitespace
 		
-        Repeat
+        'Repeat
             If source.length = 0 Return ""
             char = source[cursor..cursor+1]
             Select char
@@ -223,11 +261,21 @@ Type TLexer
 				Else
 					cursor :+ 2
 				End If
-            Default
-                linepos :+ 1
-                cursor :+ 1
+            'Default
+            '    linepos :+ 1
+            '    cursor :+ 1
             End Select
-        Until Not Instr( IgnoredSymbols, char )
+        'Until Not Instr( IgnoredSymbols, char )
+		Wend
+		' Move the cursor forward
+		If char="~n"
+			linenum :+ 1
+			linepos = 1
+			cursor :+ 1
+		Else
+			linepos :+ 1
+			cursor :+ 1
+		End If
         Return char
     End Method
 
@@ -337,7 +385,12 @@ Type TLexer
 	End Method
 
 	Method LexSymbol:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "symbol", text, line, pos )
+		Local symbol:String = String( tokens.valueforkey( text ))
+		If symbol = ""
+			Return New TSymbol( "symbol", text, line, pos )
+		Else
+			Return New TSymbol( symbol, text, line, pos )
+		End If
 	End Method
 	
 End Type

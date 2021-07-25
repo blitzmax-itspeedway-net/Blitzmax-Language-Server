@@ -17,11 +17,13 @@ Type TBlitzMaxLexer Extends TLexer
 		
 		' Language specific definitions
 		Local data:String[]
-		DebugStop
+		'DebugStop
 		RestoreData bmx_expressions
-		readSymbols()
+		readKeywords()
 		'define( "expression", loadTable() )
 		RestoreData bmx_reservedwords
+		readKeywords()
+		RestoreData bmx_symbols
 		readSymbols()
 		'define( "reserved", loadTable() )
 
@@ -30,15 +32,25 @@ Type TBlitzMaxLexer Extends TLexer
 	End Method
 
 	' Read symbols and add as tokens
-	Method readSymbols()
+	Method readKeywords()
 		Local word:String 
-		ReadData( word )
+		ReadData word 
 		Repeat
 			tokens.insert( word, word )
-			ReadData( word )
+			ReadData word 
 		Until word = "#"
 	End Method
 
+	' Read symbols and add as tokens
+	Method readSymbols()
+		Local symbol:String, class:String
+		ReadData symbol, class
+		Repeat
+			tokens.insert( symbol, class )
+			ReadData symbol, class 
+		Until class = "#"
+	End Method
+	
 	'Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
 	'	Local criteria:String = "["+Lower(text)+"]"	' Case insensitive search criteria
 	'	For Local token:String = EachIn tokens.keys()
@@ -76,3 +88,25 @@ DefData "uint","ulong","until"
 DefData "var","varptr"
 DefData "wend","where","while"
 DefData "#"
+
+#bmx_symbols
+' Single Symbols
+DefData "!","exclamation",		"~q","dquote",		"#","hash"
+DefData "$","dollar", 			"%","percent", 		"&","ampersand"
+DefData "'","apostrope", 		"(","lparen", 		")","rparen"
+DefData "*","asterisk", 		"+","plus", 		",","comma"
+DefData "-","hyphen", 			".","period", 		"/","solidus"
+DefData ":","colon", 			";","semicolon",	 "<","less"
+DefData "=","equals", 			">","greater", 		"?","question"
+DefData "@","atsym", 			"[","lcrotchet", 	"\","backslash"
+DefData "]","rcrotchet", 		"^","circumflex", 	"_","underscore"
+DefData "`","backtick", 		"{","lbrace", 		"|","pipe"
+DefData "}","rbrace", 			"~~","tilde"
+
+' Compound Symbols
+DefData "<=","lessequal",		"<>","inequal",		">=","greaterequal"
+DefData "..","continues",		":+","assignplus",	":-","assignminus"
+DefData ":*","assignmultiply",	":/","assigndivide"
+
+DefData "#","#"
+
