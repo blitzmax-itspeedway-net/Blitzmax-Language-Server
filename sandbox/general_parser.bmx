@@ -9,7 +9,7 @@ Import brl.reflection
 Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
 '
-Include "bin/TSymbol.bmx"
+Include "bin/TToken.bmx"
 Include "bin/TSymbolTable.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 Include "bin/TBlitzMaxParser.bmx"
@@ -25,13 +25,13 @@ Type AST
 	Field name:String		' IMPORTANT - THIS IS USED TO CALL THE METHOD
 	Field parent:AST		' Root node when NULL
 	Field children:TList	' Leaf node when NULL
-	Field symbol:TSymbol
+	Field token:TToken
 	
-	Method New( symbol:TSymbol )
-		Self.symbol = symbol
+	Method New( token:TToken )
+		Self.token = token
 	End Method
 	
-	Method addChild( child:TSymbol )
+	Method addChild( child:TToken )
 		If Not children children = New TList()
 		children.addLast( child )
 	End Method
@@ -42,8 +42,8 @@ Type AST_BinaryOperator Extends AST
 	Field L:AST	' Left 
 	Field R:AST	' Right
 	
-	Method New( L:AST, symbol:TSymbol, R:AST )
-		Self.symbol = symbol
+	Method New( L:AST, token:TToken, R:AST )
+		Self.token = token
 		Self.L = L
 		Self.R = R
 	End Method
@@ -55,20 +55,20 @@ End Type
 'Type TLexer
 '
 '	Field index:Int = -1
-'	Field dummy:TSymbol[]
+'	Field dummy:TToken[]
 '
 '	Method New( text:String )
 '		'Self.source = text
-'		dummy :+ [ New TSymbol( "number", "2" ) ]
-'		dummy :+ [ New TSymbol( "symbol", "+" ) ]
-'		dummy :+ [ New TSymbol( "symbol", "(" ) ]
-'		dummy :+ [ New TSymbol( "number", "3" ) ]
-'		dummy :+ [ New TSymbol( "symbol", "*" ) ]
-'		dummy :+ [ New TSymbol( "number", "4" ) ]
-'		dummy :+ [ New TSymbol( "symbol", ")" ) ]
+'		dummy :+ [ New TToken( "number", "2" ) ]
+'		dummy :+ [ New TToken( "symbol", "+" ) ]
+'		dummy :+ [ New TToken( "symbol", "(" ) ]
+'		dummy :+ [ New TToken( "number", "3" ) ]
+'		dummy :+ [ New TToken( "symbol", "*" ) ]
+'		dummy :+ [ New TToken( "number", "4" ) ]
+'		dummy :+ [ New TToken( "symbol", ")" ) ]
 '	End Method
 '
-'	Method getNext:TSymbol()
+'	Method getNext:TToken()
 '		index :+ 1
 '		Return dummy[index]
 '	End Method
@@ -101,7 +101,7 @@ Type TVisitor
 	
 	' This is called when node doesn't have a name...
 	Method visit_( node:AST )
-		ThrowException( "Node "+node.symbol.class+" has no name!" )
+		ThrowException( "Node "+node.token.class+" has no name!" )
 	End Method
 	
 	Method exception( node:AST )
@@ -138,7 +138,7 @@ Type TLangServ Extends TVisitor
 		If Not node ThrowException( "Invalid node in binaryoperator" ) 
 		Print "BINARY OPERATION"
 	
-		Select node.symbol.value
+		Select node.token.value
 		Case "+"	; 'Local x:Int = visit( node.L ) + visit( node.R )
 		Case "-"	
 		Case "*"
@@ -149,7 +149,7 @@ Type TLangServ Extends TVisitor
 	
 End Type
 		
-'Local symbol:TSymbol = goal.entry
+'Local token:TToken = goal.entry
 
 Rem
 Now we need To read the node tree, obtain symbols from lexer compar To make sure syntax is correct
@@ -168,24 +168,24 @@ End Rem
 
 ' Lets manually build a tree with the expression 2+(3*4)
 
-' Create a node for the number symbols (Which would come from the lexer)
-Local Number2:AST = New AST( New TSymbol( "number", "2",0,0 ) )
-Local Number3:AST = New AST( New TSymbol( "number", "3",0,0 ) )
-Local Number4:AST = New AST( New TSymbol( "number", "4",0,0 ) )
+' Create a node for the number tokens (Which would come from the lexer)
+Local Number2:AST = New AST( New TToken( "number", "2",0,0 ) )
+Local Number3:AST = New AST( New TToken( "number", "3",0,0 ) )
+Local Number4:AST = New AST( New TToken( "number", "4",0,0 ) )
 
 ' Built the Abstract Syntax Tree
 Local addnode:AST_BinaryOperator = New AST_BinaryOperator( ..
 	Number2, ..
-	New TSymbol( "symbol","+",0,0 ), ..
+	New TToken( "symbol","+",0,0 ), ..
 	New AST_BinaryOperator( ..
 		Number3, ..
-		New TSymbol( "symbol", "*",0,0 ), ..
+		New TToken( "symbol", "*",0,0 ), ..
 		Number4 ))
 
 ' Now lets test parsing 
 
 Try
-	DebugStop
+	'DebugStop
 	Local source:String = loadFile( "samples/1) Simple Blitzmax.bmx" )
 	Local lexer:TLexer = New TBlitzMaxLexer( source )
 	Local parser:TParser = New TBlitzMaxParser( lexer )

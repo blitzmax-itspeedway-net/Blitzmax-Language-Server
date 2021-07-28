@@ -36,7 +36,7 @@ Import brl.reflection
 Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
 
-Include "bin/TSymbol.bmx"
+Include "bin/TToken.bmx"
 Include "bin/TSymbolTable.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 Include "bin/TBlitzMaxParser.bmx"
@@ -60,69 +60,13 @@ End Function
 
 
 
-Type JSONLexer Extends TLexer
 
-	Method New( text:String )
-		Super.New( text )
-		Print "Starting JSONLexer"
-
-		' Define Lexer options
-		linecomment_symbol = ""			' We don't have comments in JSON
-		valid_symbols      = "{}[]:,"
-	End Method
-
-	Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "alpha", text, line, pos )
-	End Method
-
-	Method LexInvalid:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "invalid", text, line, pos )
-	End Method
-
-	Method LexNumber:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "number", text, line, pos )
-	End Method
-	
-	Method LexQuotedString:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "string", text, line, pos )
-	End Method
-
-	Method LexSymbol:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( text, text, line, pos )
-	End Method
-	
-End Type
-
-Type JSONParser Extends TParser
-	Method New( lexer:TLexer )
-		Super.New( lexer )
-		Print "Starting JSONParser"
-	End Method
-	
-	
-	
-End Type
 
 Type AST
 End Type
 
 'DebugStop
 Local lexer:TLexer, parser:TParser
-
-'	TEST THE LEXER AGAINST JSON
-
-'lexer = New JSONLexer( loadfile( "samples/example.json" ) )
-'lexer.run()
-'Print( lexer.reveal() )
-'DebugStop
-
-'	TEST THE PARSER AGAINST JSON
-
-'Create a syntax tree
-'parser = New JSONParser( lexer )
-'parser.run()
-'Print( parser.reveal() )
-
 
 '	TEST THE LEXER AGAINST BLITZMAX
 

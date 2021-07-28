@@ -43,9 +43,9 @@ DebugStop
 
 		If lexer.isAtEnd() Return Null 'Completed successfully
 		
-		' Symbols exist past end of file!
-		Local sym:TSymbol = lexer.peek()
-		ThrowException( "Unexpected Symbol", sym.line, sym.pos )
+		' Tokens exist past end of file!
+		Local tok:TToken = lexer.peek()
+		ThrowException( "Unexpected Symbol", tok.line, tok.pos )
 
 	End Method
 
@@ -55,33 +55,33 @@ DebugStop
 	'	CALLED BY REFLECTOR
 
 	' Field = "field" VarDecl *[ "," VarDecl ]
-	Method token_field( token:TSymbol )
+	Method token_field( token:TToken )
 		Parse_VarDeclarations( "field", token )
 	End Method
 	
 	' Framework = "framework" ModuleIdentifier EOL
 	' ModuleIdentifier = Name DOT Name
 	' Name = ALPHA *(ALPHA / DIGIT / UNDERSCORE )
-	Method token_framework( token:TSymbol )
+	Method token_framework( token:TToken )
 		Local moduleIdentifier:String = Parse_ModuleIdentifier()
 		' Add to symbol table
 		symbolTable.add( token, "global", moduleIdentifier ) 
 	End Method
 
 	' Global = "global" VarDecl *[ "," VarDecl ]
-	Method token_global( token:TSymbol )
+	Method token_global( token:TToken )
 		Parse_VarDeclarations( "global", token )
 	End Method
 
 	' Local = "local" VarDecl *[ "," VarDecl ]
-	Method token_local( token:TSymbol )
-DebugStop
+	Method token_local( token:TToken )
+'DebugStop
 		Parse_VarDeclarations( "local", token )
-Print "LOCAL DONE"
+'Print "LOCAL DONE"
 	End Method
 	
 	' StrictMode = "superstrict" / "strict" EOL
-	Method token_strictmode( token:TSymbol )
+	Method token_strictmode( token:TToken )
 		Select token.class
 		Case "strict"		;	strictmode = 1
 		Case "superstrict"	;	strictmode = 2
@@ -94,75 +94,73 @@ Print "LOCAL DONE"
 	
 	' ApplicationBody = Local / Global / Function / Struct / Type / BlockBody
 	Method Parse_Body:String( expected:String[] )
-		Local sym:TSymbol
-		Local found:TSymbol
+		Local token:TToken
+		Local found:TToken
 		Repeat
-			sym = lexer.peek()
-			DebugStop
-			If sym.class="EOF" 
+			token = lexer.peek()
+'DebugStop
+			If token.class="EOF" 
 				lexer.getNext()
 				Exit
 			End If
-			If sym.class="EOL" Or sym.class="comment"
+			If token.class="EOL" Or token.class="comment"
 				lexer.getNext()
 				Continue
 			End If
 			found = Null
 			For Local expect:String = EachIn expected
-				If expect=sym.class 
-					found = sym
+				If expect=token.class 
+					found = token
 					Exit
 				End If
 			Next
 			'
-			If found  ' Expected Symbol
-				' REFLECT IS FAULTY - DO NOT GO THERE
-				'reflect( lexer.getNext() )
+			If found  ' Expected token
+				reflect( lexer.getNext() )
 				' 
-				Local symbol:TSymbol = lexer.getNext()
-				Select symbol.class
-				Case "field"		;	Parse_VarDeclarations( "field", token )
-				Case "global"		;	Parse_VarDeclarations( "global", token )
-				Case "local"		;	Parse_VarDeclarations( "local", token )
-				Default
-					ThrowException( "Unhandled Symbol '"+sym.value+"'", sym.line, sym.pos )
-				End Select
+'				Local token:TToken = lexer.getNext()
+'				Select token.class
+'				Case "field"		;	Parse_VarDeclarations( "field", token )
+'				Case "global"		;	Parse_VarDeclarations( "global", token )
+'				Case "local"		;	Parse_VarDeclarations( "local", token )
+'				Default
+'					ThrowException( "Unhandled token '"+token.value+"'", token.line, token.pos )
+'				End Select
 			Else
-				' Unexpected symbol...
-				ThrowException( "Unexpected Symbol '"+sym.value+"'", sym.line, sym.pos )
+				' Unexpected token...
+				ThrowException( "Unexpected token '"+token.value+"'", token.line, token.pos )
 			End If
 		Forever
 	End Method
 	
 	' ModuleIdentifier = Name DOT Name
 	Method Parse_ModuleIdentifier:String()
-		Local collection:TSymbol = lexer.Expect( "alpha" )
+		Local collection:TToken = lexer.Expect( "alpha" )
 		lexer.Expect( "symbol", "." )
-		Local name:TSymbol = lexer.Expect( "alpha" )
+		Local name:TToken = lexer.Expect( "alpha" )
 		Return collection.value + "." + name.value
 	End Method
 	
 	' VarDeclarations = VarDecl *[ "," VarDecl ]
-	Method Parse_VarDeclarations( scope:String, symbol:TSymbol )
-		Local sym:TSymbol
-DebugStop
-'Print "Did I get here?"
+	Method Parse_VarDeclarations( scope:String, token:TToken )
+		Local tok:TToken
+'DebugStop
 		Repeat
-			Parse_VarDecl( symbol, scope )
-			sym = lexer.peek()
-		Until sym.class = "EOF" Or sym.class<>"comma"		
+			Parse_VarDecl( token, scope )
+			tok = lexer.peek()
+		Until tok.class = "EOF" Or tok.class<>"comma"		
 	End Method
 
 	' VarDecl = Name ":" VarType [ "=" Expression ]
-	Method Parse_VarDecl( definition:TSymbol, scope:String )
-DebugStop
+	Method Parse_VarDecl( definition:TToken, scope:String )
+'DebugStop
 		' Parse Variable defintion
-		Local name:TSymbol = lexer.Expect( "alpha" )
+		Local name:TToken = lexer.Expect( "alpha" )
 		lexer.expect( "colon" )
 		Local varType:String = Parse_VarType()
 		' Parse optional declaration
 		If lexer.peek( "equals" )
-			Local sym:TSymbol
+			Local sym:TToken
 			' Throw away the expression. NOT IMPLEMENTED YET
 			Repeat
 				sym = lexer.getNext()
@@ -175,7 +173,7 @@ DebugStop
 
 	' VarType = "byte" / "int" / "string" / "double" / "float" / "size_t"
 	Method Parse_VarType:String()
-		Local sym:TSymbol = lexer.getNext()
+		Local sym:TToken = lexer.getNext()
 		Return sym.value
 	End Method
 	

@@ -2,31 +2,32 @@
 '	Generic Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
+'	VERSION:	1.3
+'
+'	V1.0  -- JUL 21  Initial version using Queue<TSymbol> and String Tokens. 
+'	V1.1  24 JUL 21  Replaced Queue<TSymbol> with a TList
+'	V1.2  26 JUL 21  TSymbol renamed to TToken as thats what it holds!
+'	V1.3  27 JUL 21  Reworked Tokens to use integer indexes
+
+Include "const-symbols.bmx"
+
 Type TLexer
 
 	Private
-	
-	Const SYM_WHITESPACE:String = " ~t~r"
-	Const SYM_SPACE:String = " "
-    Const SYM_NUMBER:String = "0123456789"
-    Const SYM_LOWER:String = "abcdefghijklmnopqrstuvwxyz"
-    Const SYM_UPPER:String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    Const SYM_ALPHA:String = SYM_LOWER+SYM_UPPER
-	Const SYM_7BIT:String = SYM_SPACE+"!#$%&'()*+,-./"+SYM_NUMBER+":;<=>?@"+SYM_UPPER+"[]^_`"+SYM_LOWER+"{|}"
-		
+			
 	Field source:String, reserved:String
 	Field linenum:Int, linepos:Int	' Source 
 	Field cursor:Int				' Lexer (Char cursor)
-	Field sympos:TLink				' Current symbol cursor
+	Field tokpos:TLink				' Current token cursor
 	
-	Field symbols:TList = New TList()
-	Field tokens:TMap = New TMap()	' List of known tokens. Key is symbol, Value is class
+	Field tokens:TList = New TList()
+	Field defined:TMap = New TMap()	' List of known tokens. Key is token, Value is class
 	
 	' Language specific elements
-	Field include_comments:Int = False
-	Field linecomment_symbol:String = "'"
-	Field valid_symbols:String = ""
-	Field compound_symbols:String = ""	' Must be separated by a non-symbol
+	'Field include_comments:Int = False
+	'Field linecomment_symbol:String = "'"
+	'Field valid_symbols:String = ""
+	'Field compound_symbols:String = ""	' Must be separated by a non-symbol
 	
 	Public
 	
@@ -35,11 +36,11 @@ Type TLexer
 		Self.reserved = reserved
 		cursor = 0
 		linenum = 1 ; linepos = 0
-		symbols.clear()
+		tokens.clear()
 	End Method 
 
-	Method defineToken( symbol:String, class:String )
-		tokens.insert( symbol, class )
+	Method defineToken( token:String, class:String )
+		defined.insert( token, class )
 	End Method
 
 	Method run()
@@ -51,62 +52,62 @@ Type TLexer
 		End Try
 	End Method
 
-	' Produce a symbol table to help debugging
+	' Produce a token table to help debugging
 	Method reveal:String()
-		Local result:String
-		For Local symbol:TSymbol = EachIn symbols
-			result :+ symbol.reveal()+"~n"
+		Local result:String = "POSITION  ID    CLASS       VALUE~n"
+		For Local token:TToken = EachIn tokens
+			result :+ token.reveal()+"~n"
 		Next
 		Return result
 	End Method
 
-    ' Gets the next Symbol from the list
-    Method getNext:TSymbol()	' ignorelist:String="" )
-        'If sympos=Null Or symbols.isempty() Return New TSymbol( "EOF","", linenum, linepos)
-        If sympos=Null Return New TSymbol( "EOF","", linenum, linepos)
-		Local sym:Object = sympos.value
-		sympos = sympos.nextlink
-        Return TSymbol(sym)
+    ' Gets the next token from the list
+    Method getNext:TToken()	' ignorelist:String="" )
+        'If tokpos=Null Or tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
+        If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+		Local tok:Object = tokpos.value
+		tokpos = tokpos.nextlink
+        Return TToken(tok)
     End Method
 
-    ' Pops the first symbol from the stack
-    'Method Pop:TSymbol()	' ignorelist:String="" )
-    '    If symbols.isempty() Return New TSymbol( "EOF","", linenum, linepos)
-    '    Return symbols.dequeue()
+    ' Pops the first token from the stack
+    'Method Pop:TToken()	' ignorelist:String="" )
+    '    If tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
+    '    Return tokens.dequeue()
     'End Method
 
-    ' Peeks the top of the symbol Stack
-    Method Peek:TSymbol( expectedclass:String="" )
-        'If symbols.isempty() Return New TSymbol( "EOF","", linenum, linepos)
+    ' Peeks the top of the token Stack
+    Method Peek:TToken( expectedclass:String="" )
+        'If tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
 ?debug
-If sympos=Null
+If tokpos=Null
 	Print "PEEK: Null"
 Else
-	Print "PEEK: "+TSymbol(sympos.value).value+":"+TSymbol(sympos.value).class
+	Print "PEEK: "+TToken(tokpos.value).value+":"+TToken(tokpos.value).class
 End If
 ?
-        If sympos=Null Return New TSymbol( "EOF","", linenum, linepos)
-		If expectedclass="" Return TSymbol( sympos.value )
-		Local peek:TSymbol = TSymbol( sympos.value )
+        If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+		If expectedclass="" Return TToken( tokpos.value )
+		Local peek:TToken = TToken( tokpos.value )
 		If peek.class=expectedclass Return peek
         Return Null
     End Method
 
-    ' Peeks the top of the symbol Stack
-    Method Peek:TSymbol( expectedclass:String[] )
-        'If symbols.isempty() Return New TSymbol( "EOF","", linenum, linepos)
+    ' Peeks the top of the token Stack
+    Method Peek:TToken( expectedclass:String[] )
+        'If tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
 ?debug
-If sympos=Null Print "PEEK: Null"
+If tokpos=Null Print "PEEK: Null"
 ?
-        If sympos=Null Return New TSymbol( "EOF","", linenum, linepos)
-		If expectedclass=[] Return TSymbol( sympos.value )
-		Local peek:TSymbol = TSymbol( sympos.value )
+        If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+		If expectedclass=[] Return TToken( tokpos.value )
+		Local peek:TToken = TToken( tokpos.value )
 		For Local expected:String = EachIn expectedclass
 ?debug
-If sympos=Null
+If tokpos=Null
 	Print "PEEK: Null"
 Else
-	Print "PEEK: "+TSymbol(sympos.value).value+":"+TSymbol(sympos.value).class
+	Print "PEEK: "+TToken(tokpos.value).value+":"+TToken(tokpos.value).class
 End If
 ?
 			If peek.class=expected Return peek
@@ -114,86 +115,93 @@ End If
         Return Null
     End Method
 
-    ' Matches the next symbol otherwise throws an error
-    Method Expect:TSymbol( expectedclass:String, expectedvalue:String="" )
-		Local sym:TSymbol = TSymbol( sympos.value )
-		If sym.class = expectedclass
-			If expectedvalue = "" Or sym.value = expectedvalue 
-				sympos = sympos.nextlink
-				Return sym
+    ' Matches the next token otherwise throws an error
+    Method Expect:TToken( expectedclass:String, expectedvalue:String="" )
+		Local tok:TToken = TToken( tokpos.value )
+		If tok.class = expectedclass
+			If expectedvalue = "" Or tok.value = expectedvalue 
+				tokpos = tokpos.nextlink
+				Return tok
 			End If
 		End If
-		ThrowException( "Unexpected symbol '"+sym.value+"'", sym.line, sym.pos )
+		ThrowException( "Unexpected token '"+tok.value+"'", tok.line, tok.pos )
     End Method
 
-    ' Matches the given symbol and throws it away (Useful for comments)
+    ' Matches the given token and throws it away (Useful for comments)
     Method skip:String( expectedclass:String )
-		Local sym:TSymbol = TSymbol( sympos.value )
+		Local tok:TToken = TToken( tokpos.value )
 		Local skipped:String
-		While sym.class = expectedclass
-			skipped :+ sym.value
-			sympos = sympos.nextlink
-			sym = TSymbol( sympos.value )
+		While tok.class = expectedclass
+			skipped :+ tok.value
+			tokpos = tokpos.nextlink
+			tok = TToken( tokpos.value )
 		Wend
 		Return skipped
     End Method
 
-	' Identifies if we have any symbols remaining
+	' Identifies if we have any token remaining
 	Method isAtEnd:Int()
-		Return (sympos = Null )
+		Return (tokpos = Null )
 	End Method	
 	
 	Private
 	
 	Method tokenise()
 'DebugStop
-		Local symbol:TSymbol	' = nextSymbol()
+		Local token:TToken	' = nextToken()
 		Repeat
 'DebugStop
-			symbol = nextSymbol()
-			If symbol.class<>"comment" Or include_comments
-				symbols.addlast( symbol )
+			token = nextToken()
+			If token.id <> TK_Comment	'Or include_comments
+				tokens.addlast( token )
 			End If
-		Until symbol.class = "EOF"
-		' Set the symbol cursor to the first element
-		sympos = symbols.firstLink()
+		Until token.class = "EOF"
+		' Set the token cursor to the first element
+		tokpos = tokens.firstLink()
 	End Method
 	
-	Method nextSymbol:TSymbol()
+	Method nextToken:TToken()
 'DebugStop
 		'Local name:String
-		'Local symbol:TSymbol
+		'Local token:TToken
 		Local char:String = PeekChar()
-		' Save the symbol position
+		' Save the token position
 		Local line:Int = linenum
 		Local pos:Int = linepos
 'If line>=3 And pos>=14 DebugStop
-		' Identify the symbol		
-		If char=""
-			Return New TSymbol( "EOF", "", line, pos )
-		ElseIf char="~n"
+		' Identify the token
+		Select True
+		Case char = ""		' End of file
+			Return New TToken( TK_EOF, "", line, pos, "EOF" )
+		Case char = "~n"	' End of line
 			popChar()
-			Return New TSymbol( "EOL", "CR", line, pos )
-		ElseIf char = linecomment_symbol						' Line Comment
-			Return New TSymbol( "comment", ExtractLineComment(), line, pos )
-		ElseIf Instr( valid_symbols, char, 1 )               ' Single character symbol
+			Return New TToken( TK_EOL, "CR", line, pos, "EOL" )
+		Case char = "~q"	' Quote indicates a string
+			Return New TToken( TK_QuotedString, ExtractString(), line, pos, "string" )
+		Case char = SYM_LINECOMMENT				' Line comment
+			Return New TToken( TK_Comment, ExtractLineComment(), line, pos, "comment" )
+		Case Instr( SYM_NUMBER+"-", char ) > 0	' Number
+			Return New TToken( TK_Number, ExtractNumber(), line, pos, "number" )
+		Case Instr( SYM_ALPHA, char )>0       	' Alphanumeric Identifier
+			Local text:String = ExtractIdent()
+			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
+			If symbol Return New TToken( TK_Identifier, text, line, pos, "identifier" )
+			Return New TToken( TK_Alpha, text, line, pos, "alpha" )
+		Case char < " "	Or char > "~~"		' Throw away control codes
+			' Do nothing...
+		'Case Instr( valid_symbols, char, 1 )            ' Single character symbol
+		Default								' A Symbol
 			PopChar()   ' Move to next character
-			' Check for Compound symbols
-			If Instr( compound_symbols, char+peekChar() )
-				Return LexSymbol( char+PopChar(), line, pos )
-			Else
-				Return LexSymbol( char, line, pos )
-			End If
-		ElseIf char="~q"                            ' Quote indicates a string
-			Return LexQuotedString( ExtractString(), line, pos )
-		ElseIf Instr( SYM_NUMBER+"-", char )     	' Number
-			Return LexNumber( ExtractNumber(), line, pos )
-		ElseIf Instr( SYM_ALPHA, char )             ' Alphanumeric Identifier
-			Return LexAlpha( ExtractIdent(), line, pos )
-		Else
-			PopChar()   ' Throw it away!
-			Return LexInvalid( char, line, pos )
-		End If		
+			' Check for Compound symbol
+			Local compound:String = char+peekChar()
+			Local symbol:TSymbol = TSymbol( defined.valueforkey( compound ) )
+			If symbol Return New TToken( symbol.id, compound, line, pos, "symbol" )
+			' Lookup symbol definition
+			symbol = TSymbol( defined.valueforkey( char ) )
+			If symbol Return New TToken( symbol.id, char, line, pos, "symbol" ) 
+			' Default to ASCII code
+			Return New TToken( Asc(char), char, line, pos, "symbol" )
+		EndSelect		
 	End Method
 	
     ' Skips leading whitespace and returns next character
@@ -363,34 +371,47 @@ End If
 	
 	' EXTENDABLE LEXER METHODS
 	
-	Method LexAlpha:TSymbol( text:String, line:Int, pos:Int )
-		Local symbol:String = String( tokens.valueforkey( Lower(text) ))
-		If symbol = ""
-			Return New TSymbol( "alpha", text, line, pos )
-		Else
-			Return New TSymbol( symbol, text, line, pos )
-		End If
-	End Method
+'	Method LexAlpha:TToken( text:String, line:Int, pos:Int )
+'		Local token:String = String( defined.valueforkey( Lower(text) ))
+''		If token = ""
+'			Return New TToken( "alpha", text, line, pos )
+'		Else
+'			Return New TToken( token, text, line, pos )
+'		End If
+'	End Method
 
-	Method LexInvalid:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "invalid", text, line, pos )
-	End Method
+'	Method LexInvalid:TToken( text:String, line:Int, pos:Int )
+'		Return New TToken( TK_Invalid, text, line, pos )
+'	End Method
 
-	Method LexNumber:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "number", text, line, pos )
-	End Method
+'	Method LexNumber:TToken( text:String, line:Int, pos:Int )
+'		Return New TToken( TK_Number, text, line, pos )
+'	End Method
 	
-	Method LexQuotedString:TSymbol( text:String, line:Int, pos:Int )
-		Return New TSymbol( "string", text, line, pos )
-	End Method
+	'Method LexQuotedString:TToken( text:String, line:Int, pos:Int )
+	'	Return New TToken( TK_QuotedString, text, line, pos )
+	'End Method
 
-	Method LexSymbol:TSymbol( text:String, line:Int, pos:Int )
-		Local symbol:String = String( tokens.valueforkey( text ))
-		If symbol = ""
-			Return New TSymbol( "symbol", text, line, pos )
-		Else
-			Return New TSymbol( symbol, text, line, pos )
-		End If
-	End Method
+	'Method LexSymbol:TToken( text:String, line:Int, pos:Int )
+	'	Local token:String = String( defined.valueforkey( text ))
+	'	If token = ""
+	'		Return New TToken( "symbol", text, line, pos )
+	'	Else
+	'		Return New TToken( token, text, line, pos )
+	'	End If
+	'End Method
 	
+End Type
+
+' A Simple Symbol
+Type TSymbol
+	Field id:Int		' Symbol identifier
+	Field name:String	' Symbol name
+	Field text:String	' Actual text from source code
+	
+	Method New( id:Int, name:String, text:String )
+		Self.id = id
+		Self.name = name
+		Self.text = text
+	End Method
 End Type
