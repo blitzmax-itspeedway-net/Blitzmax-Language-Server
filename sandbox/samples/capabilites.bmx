@@ -35,4 +35,8 @@ For Local value:String[] = EachIn values
 	End If
 Next
 
+' Test stuff
+
+local test:int = 34
+if test>= 10 print "YES"
 

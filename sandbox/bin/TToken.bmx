@@ -11,7 +11,7 @@ Type TToken
 	Field pos:Int		' Character position in original source file
 
     Method New( id:Int, value:String, line:Int, pos:Int, class:String )
-        'print( "## "+symbol+", "+value+", "+line+", "+pos )
+        'Print( "## "+id+", "+value+", "+line+", "+pos )
 		Self.id    = id		' Token ID
         Self.class = class	' The type of token
         Self.value = value	' Strign value from source

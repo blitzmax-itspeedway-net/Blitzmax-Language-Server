@@ -17,6 +17,8 @@ Type TBlitzMaxLexer Extends TLexer
 		RestoreData bmx_reservedwords
 		readTokens()
 
+		RestoreData bmx_symbols
+		readSymbols()
 	End Method
 
 	' Read symbols and add as tokens
@@ -29,7 +31,7 @@ Type TBlitzMaxLexer Extends TLexer
 		Until id = 0
 	End Method
 
-	' Read symbols and add as tokens
+	' Read CompoundSymbols and add as tokens
 	Method readCompoundSymbols()
 		Local id:Int, token:String, name:String
 		ReadData id, token, name
@@ -38,25 +40,16 @@ Type TBlitzMaxLexer Extends TLexer
 			ReadData id, token, name
 		Until id = 0
 	End Method
-	
+
 	' Read symbols and add as tokens
-	'Method readSymbols()
-	'	Local id:Int, char:String, name:String
-	'	ReadData char, name
-	'	Repeat
-	'		defined.insert( char, New TSymbol( Asc(char), name, char )
-	'		ReadData char, name
-	'	Until name = "#"
-	'End Method
-	
-	'Method LexAlpha:TToken( text:String, line:Int, pos:Int )
-	'	Local criteria:String = "["+Lower(text)+"]"	' Case insensitive search criteria
-	'	For Local token:String = EachIn tokens.keys()
-'Print( String(tokens[token]) )
-	'		If Instr( String(tokens[token]), criteria ) Return New TToken( token, Lower(text), line, pos )
-	'	Next
-	'	Return New TToken( "alpha", text, line, pos )
-	'End Method
+	Method readSymbols()
+		Local id:Int, char:String, name:String
+		ReadData id, char, name
+		Repeat
+			lookup[Asc(char)]=name
+			ReadData id, char, name
+		Until id = 0
+	End Method
 		
 End Type
 
@@ -189,6 +182,8 @@ DefData TK_BITWISEAND,	":&",	"assignbitwiseand"
 DefData TK_BITWISEOR,	":|",	"assignbitwiseor"
 DefData TK_BITWISEXOR,	":~~",	"assignbitwisexor"
 
+DefData 0,"#","#"
+
 ' Single Symbols
 ' A single symbol uses it's ASCII code unles overwritten here
 #bmx_symbols
@@ -206,7 +201,7 @@ DefData TK_asterisk,	"*",	"asterisk"
 DefData TK_plus,		"+",	"plus"
 DefData TK_comma,		",",	"comma"
 DefData TK_hyphen,		"-",	"hyphen"
-DefData TK_period,		"-",	"period"
+DefData TK_period,		".",	"period"
 DefData TK_solidus,		"/",	"solidus"
 DefData TK_colon,		":",	"colon"		
 DefData TK_semicolon,	";",	"semicolon"	
@@ -227,16 +222,3 @@ DefData TK_rbrace,		"}",	"rbrace"
 DefData TK_tilde,		"~~",	"tilde"
 
 DefData 0,"#","#"
-
-'DefData "!","exclamation",		"~q","dquote",		"#","hash"
-'DefData "$","dollar", 			"%","percent", 		"&","ampersand"
-'DefData "'","apostrope", 		"(","lparen", 		")","rparen"
-'DefData "*","asterisk", 		"+","plus", 		",","comma"
-'DefData "-","hyphen", 			".","period", 		"/","solidus"
-'DefData ":","colon", 			";","semicolon",	"<","lessthan"
-'DefData "=","equals", 			">","greaterthan", 	"?","question"
-'DefData "@","atsym", 			"[","lcrotchet", 	"\","backslash"
-'DefData "]","rcrotchet", 		"^","circumflex", 	"_","underscore"
-'DefData "`","backtick", 		"{","lbrace", 		"|","pipe"
-'DefData "}","rbrace", 			"~~","tilde"
-'DefData "#","#"

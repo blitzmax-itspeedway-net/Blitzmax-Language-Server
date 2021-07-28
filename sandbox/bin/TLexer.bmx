@@ -2,12 +2,16 @@
 '	Generic Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-'	VERSION:	1.3
+'	VERSION:	1.4
 '
 '	V1.0  -- JUL 21  Initial version using Queue<TSymbol> and String Tokens. 
 '	V1.1  24 JUL 21  Replaced Queue<TSymbol> with a TList
 '	V1.2  26 JUL 21  TSymbol renamed to TToken as thats what it holds!
 '	V1.3  27 JUL 21  Reworked Tokens to use integer indexes
+'	V1.4  28 JUL 21  Symbol lookup using string[] instead of TMap
+
+'	TODO:
+'	Speed this up by using a lookup table for single character symbols instead of a TMAP
 
 Include "const-symbols.bmx"
 
@@ -22,6 +26,7 @@ Type TLexer
 	
 	Field tokens:TList = New TList()
 	Field defined:TMap = New TMap()	' List of known tokens. Key is token, Value is class
+	Field lookup:String[128]
 	
 	' Language specific elements
 	'Field include_comments:Int = False
@@ -79,13 +84,7 @@ Type TLexer
     ' Peeks the top of the token Stack
     Method Peek:TToken( expectedclass:String="" )
         'If tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
-?debug
-If tokpos=Null
-	Print "PEEK: Null"
-Else
-	Print "PEEK: "+TToken(tokpos.value).value+":"+TToken(tokpos.value).class
-End If
-?
+
         If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
 		If expectedclass="" Return TToken( tokpos.value )
 		Local peek:TToken = TToken( tokpos.value )
@@ -96,20 +95,10 @@ End If
     ' Peeks the top of the token Stack
     Method Peek:TToken( expectedclass:String[] )
         'If tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
-?debug
-If tokpos=Null Print "PEEK: Null"
-?
         If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
 		If expectedclass=[] Return TToken( tokpos.value )
 		Local peek:TToken = TToken( tokpos.value )
 		For Local expected:String = EachIn expectedclass
-?debug
-If tokpos=Null
-	Print "PEEK: Null"
-Else
-	Print "PEEK: "+TToken(tokpos.value).value+":"+TToken(tokpos.value).class
-End If
-?
 			If peek.class=expected Return peek
 		Next
         Return Null
@@ -152,9 +141,9 @@ End If
 		Repeat
 'DebugStop
 			token = nextToken()
-			If token.id <> TK_Comment	'Or include_comments
-				tokens.addlast( token )
-			End If
+			'If token.id <> TK_Comment	' Line comment
+			tokens.addlast( token )
+			'End If
 		Until token.class = "EOF"
 		' Set the token cursor to the first element
 		tokpos = tokens.firstLink()
@@ -168,7 +157,6 @@ End If
 		' Save the token position
 		Local line:Int = linenum
 		Local pos:Int = linepos
-'If line>=3 And pos>=14 DebugStop
 		' Identify the token
 		Select True
 		Case char = ""		' End of file
@@ -195,12 +183,15 @@ End If
 			' Check for Compound symbol
 			Local compound:String = char+peekChar()
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( compound ) )
-			If symbol Return New TToken( symbol.id, compound, line, pos, "symbol" )
+			If symbol Return New TToken( symbol.id, symbol.name, line, pos, "symbol" )
 			' Lookup symbol definition
-			symbol = TSymbol( defined.valueforkey( char ) )
-			If symbol Return New TToken( symbol.id, char, line, pos, "symbol" ) 
+				'symbol = TSymbol( defined.valueforkey( char ) )
+				'If symbol Return New TToken( symbol.id, char, line, pos, "symbol" ) 
+			Local ascii:Int = Asc(char)
+			'Local name:String = lookup[ascii]
+			'If name<>"" Return New TToken( ascii, name, line, pos, "symbol" ) 
 			' Default to ASCII code
-			Return New TToken( Asc(char), char, line, pos, "symbol" )
+			Return New TToken( ascii, char, line, pos, "symbol" )
 		EndSelect		
 	End Method
 	
@@ -369,45 +360,14 @@ End If
         Return text
     End Method
 	
-	' EXTENDABLE LEXER METHODS
-	
-'	Method LexAlpha:TToken( text:String, line:Int, pos:Int )
-'		Local token:String = String( defined.valueforkey( Lower(text) ))
-''		If token = ""
-'			Return New TToken( "alpha", text, line, pos )
-'		Else
-'			Return New TToken( token, text, line, pos )
-'		End If
-'	End Method
 
-'	Method LexInvalid:TToken( text:String, line:Int, pos:Int )
-'		Return New TToken( TK_Invalid, text, line, pos )
-'	End Method
-
-'	Method LexNumber:TToken( text:String, line:Int, pos:Int )
-'		Return New TToken( TK_Number, text, line, pos )
-'	End Method
-	
-	'Method LexQuotedString:TToken( text:String, line:Int, pos:Int )
-	'	Return New TToken( TK_QuotedString, text, line, pos )
-	'End Method
-
-	'Method LexSymbol:TToken( text:String, line:Int, pos:Int )
-	'	Local token:String = String( defined.valueforkey( text ))
-	'	If token = ""
-	'		Return New TToken( "symbol", text, line, pos )
-	'	Else
-	'		Return New TToken( token, text, line, pos )
-	'	End If
-	'End Method
-	
 End Type
 
 ' A Simple Symbol
 Type TSymbol
 	Field id:Int		' Symbol identifier
 	Field name:String	' Symbol name
-	Field text:String	' Actual text from source code
+	Field text:String	' Actual text from source code (String, comment etc)
 	
 	Method New( id:Int, name:String, text:String )
 		Self.id = id

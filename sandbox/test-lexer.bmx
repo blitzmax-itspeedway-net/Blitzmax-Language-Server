@@ -4,9 +4,10 @@ SuperStrict
 
 '	TIMINGS USING MAXIDE.BMX
 
-'					DEBUG	PROD
-'	Tlist+string	281ms	56
-'	
+'	DEBUG	PROD
+'	281ms	56ms	Tlist+string - Incomplete symbols.
+'	307ms	74ms	Tlist+integer (Symbols in defined:TMap)
+'	269ms	60ms	Tlist+integer (Symbols in string[])
 
 Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
@@ -24,22 +25,15 @@ Try
 	'Local source:String = loadFile( "samples/capabilites.bmx" )
 	Local source:String = loadFile( "samples/maxide.bmx" )
 	Local lexer:TLexer = New TBlitzMaxLexer( source )
-	'Local parser:TParser = New TBlitzMaxParser( lexer )
 	
 	start  = MilliSecs()
 	lexer.run()
 	finish = MilliSecs()
-	Print( lexer.reveal() )
 	
-	'Print start+"-"+finish
 	Print( "LEXER.TIME: "+(finish-start)+"ms" )
 	
-	'parser.parse()
-	'Print parser.reveal()
-	'Local langserv:TLangServ = New TLangServ( parser )
-
-	'langserv.run()
-	'Print langserv.reveal()
+	Print( "Starting debug output...")
+	Print( lexer.reveal() )
 
 Catch exception:TException
 	Print "## Exception: "+exception.toString()+" ##"
