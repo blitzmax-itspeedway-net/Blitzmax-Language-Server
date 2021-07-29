@@ -1,0 +1,6 @@
+
+echo EXEFILE: %exepath% %outfile%
+bmk.sys( 'cp /home/si/dev/LSP/lsp.debug /home/si/BlitzMax/bin/' )
+
+
+

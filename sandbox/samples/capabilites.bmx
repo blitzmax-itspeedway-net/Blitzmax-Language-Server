@@ -6,6 +6,7 @@ SuperStrict
 
 Framework brl.retro
 
+local abc:string = "Quoted string"
 
 Global capabilities:String[]
 
@@ -37,6 +38,8 @@ Next
 
 ' Test stuff
 
-local test:int = 34
-if test>= 10 print "YES"
+local test:float = 34.4
+if test>= 10.6 print "YES"
 
+' TEST
+<> .. <= >= :+ :- :* :/ :& :| :~

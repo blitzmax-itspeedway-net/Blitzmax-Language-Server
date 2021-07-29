@@ -1,31 +1,19 @@
-# Hidden folders
+# Ignore everything and then include folders and files with extensions
+*
+!/**/
+!*.*
+
+# Exclude folders
 .bmx/
 .vscode/
-
-# Hidden Files
-
-# Private files
-post.bmk
-update
-build.txt
-lsp.config
-
-# Executables
-lsp
-lsp.debug
-lsp.exe
-lsp.debug.exe
-
-# Unimportant clutter
-examples/
 notes/
 old/
-testing/
-test.txt
-runlog.txt
+
+# Exclude files
 *.bak
 *.debug
-*.bmx.bak
 *.old
+*.sh
+lsp.config
+runlog.txt
 
-clean
