@@ -4,41 +4,101 @@
 
 '	VERSION:	1.4
 '
-'	V1.0  -- JUL 21  Initial version using Queue<TSymbol> and String Tokens. 
-'	V1.1  24 JUL 21  Replaced Queue<TSymbol> with a TList
-'	V1.2  26 JUL 21  TSymbol renamed to TToken as thats what it holds!
-'	V1.3  27 JUL 21  Reworked Tokens to use integer indexes
-'	V1.4  28 JUL 21  Symbol lookup using string[] instead of TMap
+'	V1.0    -- JUL 21  Initial version using Queue<TSymbol> and String Tokens. 
+'	V1.1    24 JUL 21  Replaced Queue<TSymbol> with a TList
+'	V1.2    26 JUL 21  TSymbol renamed to TToken as thats what it holds!
+'	V1.3    27 JUL 21  Reworked Tokens to use integer indexes
+'	V1.4    28 JUL 21  Symbol lookup using string[] instead of TMap
+'	V1.4.1  29 JUL 21  Removed argument "reserved" from new as it is not required
 
 '	TODO:
-'	Speed this up by using a lookup table for single character symbols instead of a TMAP
+'	Use TStringMap instead of TMap
+'	Re-write PeekChar() to be a field with popChar updating the lookahead.
 
-Include "const-symbols.bmx"
+'	SYMBOLS
+
+Const SYM_WHITESPACE:String  = " ~t~r"
+Const SYM_SPACE:String       = " "
+Const SYM_EOL:String         = "~n"
+Const SYM_DQUOTE:String      = "~q"
+Const SYM_NUMBER:String      = "0123456789"
+Const SYM_HEXDIG:String		 = SYM_NUMBER+"ABCDEF"
+Const SYM_LOWER:String       = "abcdefghijklmnopqrstuvwxyz"
+Const SYM_UPPER:String       = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+Const SYM_ALPHA:String       = SYM_LOWER+SYM_UPPER
+
+'	GENERIC TOKENS
+
+Const TK_TAB:Int 			= 9
+Const TK_LF:Int 			= 10
+Const TK_CR:Int 			= 13
+Const TK_EOL:Int 			= TK_CR
+Const TK_EOF:Int 			= $FFFF
+
+'	SINGLE CHARACTER TOKENS
+
+Const TK_exclamation:Int 	= 33	'	!
+Const TK_dquote:Int 		= 34	'	"
+Const TK_hash:Int 			= 35	'	#
+Const TK_dollar:Int			= 36	'	$
+Const TK_percent:Int		= 37	'	%
+Const TK_ampersand:Int		= 38	'	&	
+Const TK_squote:Int 		= 39	'	'
+Const TK_lparen:Int			= 40	'	(
+Const TK_rparen:Int			= 41	'	)
+Const TK_asterisk:Int		= 42	'	*
+Const TK_plus:Int			= 43	'	+
+Const TK_comma:Int			= 44	'	,
+Const TK_hyphen:Int			= 45	'	-
+Const TK_period:Int			= 46	'	.
+Const TK_solidus:Int		= 47	'	/
+Const TK_colon:Int			= 58	'	:
+Const TK_semicolon:Int		= 59	'	;
+Const TK_lessthan:Int		= 60	'	<
+Const TK_equals:Int			= 61	'	=
+Const TK_greaterthan:Int	= 62	'	>
+Const TK_question:Int		= 63	'	?
+Const TK_at:Int				= 64	'	@
+Const TK_lcrotchet:Int		= 91	'	[
+Const TK_backslash:Int		= 92	'	\
+Const TK_rcrotchet:Int		= 93	'	]
+Const TK_circumflex:Int		= 94	'	^
+Const TK_underscore:Int		= 95	'	_
+Const TK_backtick:Int		= 96	'	`
+Const TK_lbrace:Int			= 123	'	{
+Const TK_pipe:Int			= 124	'	|
+Const TK_rbrace:Int			= 125	'	}
+Const TK_tilde:Int 			= 126	'	~
+
+'	IDENTIFIERS
+
+Const TK_Invalid:Int 		= 600	'	Any token flagged as invalid
+Const TK_Comment:Int 		= 601	'	Comment
+Const TK_Alpha:Int			= 602	'	Unidentified identifier
+Const TK_Identifier:Int		= 603	'	Identifier identifier
+Const TK_QString:Int		= 604	'	Quoted String
+Const TK_Number:Int			= 605	' 	Number
+
+'	BASE LEXER
 
 Type TLexer
 
 	Private
 			
-	Field source:String, reserved:String
+	Field source:String
 	Field linenum:Int, linepos:Int	' Source 
 	Field cursor:Int				' Lexer (Char cursor)
+	'Field lookahead:String			' Next character
 	Field tokpos:TLink				' Current token cursor
 	
 	Field tokens:TList = New TList()
 	Field defined:TMap = New TMap()	' List of known tokens. Key is token, Value is class
 	Field lookup:String[128]
 	
-	' Language specific elements
-	'Field include_comments:Int = False
-	'Field linecomment_symbol:String = "'"
-	'Field valid_symbols:String = ""
-	'Field compound_symbols:String = ""	' Must be separated by a non-symbol
-	
 	Public
 	
-	Method New( source:String, reserved:String="" )
+	Method New( source:String )
 		Self.source = source
-		Self.reserved = reserved
 		cursor = 0
 		linenum = 1 ; linepos = 0
 		tokens.clear()
@@ -68,11 +128,11 @@ Type TLexer
 
     ' Gets the next token from the list
     Method getNext:TToken()	' ignorelist:String="" )
-        'If tokpos=Null Or tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
-        If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+		'If tokpos=Null Or tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
+		If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
 		Local tok:Object = tokpos.value
 		tokpos = tokpos.nextlink
-        Return TToken(tok)
+		Return TToken(tok)
     End Method
 
     ' Pops the first token from the stack
@@ -138,22 +198,18 @@ Type TLexer
 	Method tokenise()
 'DebugStop
 		Local token:TToken	' = nextToken()
+		'nextChar()			' Move to first character
 		Repeat
-'DebugStop
 			token = nextToken()
-			'If token.id <> TK_Comment	' Line comment
 			tokens.addlast( token )
-			'End If
-		Until token.class = "EOF"
+		Until token.id = TK_EOF
 		' Set the token cursor to the first element
 		tokpos = tokens.firstLink()
 	End Method
 	
 	Method nextToken:TToken()
-'DebugStop
-		'Local name:String
-		'Local token:TToken
 		Local char:String = PeekChar()
+'DebugStop
 		' Save the token position
 		Local line:Int = linenum
 		Local pos:Int = linepos
@@ -165,15 +221,15 @@ Type TLexer
 			popChar()
 			Return New TToken( TK_EOL, "CR", line, pos, "EOL" )
 		Case char = "~q"	' Quote indicates a string
-			Return New TToken( TK_QuotedString, ExtractString(), line, pos, "string" )
+			Return New TToken( TK_QString, ExtractString(), line, pos, "qstring" )
 		Case char = SYM_LINECOMMENT				' Line comment
 			Return New TToken( TK_Comment, ExtractLineComment(), line, pos, "comment" )
-		Case Instr( SYM_NUMBER+"-", char ) > 0	' Number
+		Case Instr( SYM_NUMBER, char ) > 0	' Number
 			Return New TToken( TK_Number, ExtractNumber(), line, pos, "number" )
 		Case Instr( SYM_ALPHA, char )>0       	' Alphanumeric Identifier
 			Local text:String = ExtractIdent()
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
-			If symbol Return New TToken( TK_Identifier, text, line, pos, "identifier" )
+			If symbol Return New TToken( TK_Identifier, text, line, pos, symbol.class )
 			Return New TToken( TK_Alpha, text, line, pos, "alpha" )
 		Case char < " "	Or char > "~~"		' Throw away control codes
 			' Do nothing...
@@ -182,14 +238,18 @@ Type TLexer
 			PopChar()   ' Move to next character
 			' Check for Compound symbol
 			Local compound:String = char+peekChar()
+'DebugStop
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( compound ) )
-			If symbol Return New TToken( symbol.id, symbol.name, line, pos, "symbol" )
+			If symbol
+				popChar()
+				Return New TToken( symbol.id, symbol.value, line, pos, symbol.class )
+			End If
 			' Lookup symbol definition
 				'symbol = TSymbol( defined.valueforkey( char ) )
 				'If symbol Return New TToken( symbol.id, char, line, pos, "symbol" ) 
 			Local ascii:Int = Asc(char)
-			'Local name:String = lookup[ascii]
-			'If name<>"" Return New TToken( ascii, name, line, pos, "symbol" ) 
+			Local class:String = lookup[ascii]
+			If class<>"" Return New TToken( ascii, char, line, pos, class ) 
 			' Default to ASCII code
 			Return New TToken( ascii, char, line, pos, "symbol" )
 		EndSelect		
@@ -293,14 +353,13 @@ Type TLexer
 'DebugStop
 		' Line comments extend until CRLF
         Local text:String
-        Local char:String
+        Local char:String, peek:String
 		popChar()   ' Throw away leading comment starting character 
-        Repeat
-            char = PopChar( "~r" )		' Pop char but do not ignore whitespace
-			' We don't need to actually return them... do we?
-			text :+ char
-        Until char="~n" Or char=""
-		'If text.endswith( "~n" ) text = text[..(text.length-1)]
+		peek = peekchar( "~r" )
+        While peek<>"~n" And peek<>""
+			text :+ popchar( "~r" )		' Pop char but do not ignore whitespace
+			peek = peekchar( "~r" )
+		Wend
 		text = Trim( text )
         Return text
 	End Method
@@ -359,19 +418,19 @@ Type TLexer
         Until char="~q" Or char=""
         Return text
     End Method
-	
+
 
 End Type
 
 ' A Simple Symbol
 Type TSymbol
 	Field id:Int		' Symbol identifier
-	Field name:String	' Symbol name
-	Field text:String	' Actual text from source code (String, comment etc)
+	Field class:String	' Symbol name
+	Field value:String	' Actual text from source code (String, comment etc)
 	
-	Method New( id:Int, name:String, text:String )
+	Method New( id:Int, class:String, value:String )
 		Self.id = id
-		Self.name = name
-		Self.text = text
+		Self.class = class
+		Self.value = value
 	End Method
 End Type

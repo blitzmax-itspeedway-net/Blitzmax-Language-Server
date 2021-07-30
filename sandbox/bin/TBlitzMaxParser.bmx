@@ -12,15 +12,95 @@ Type TBlitzMaxParser Extends TParser
 
 	Field strictmode:Int = 0
 	
+	
+	Method New()
+
+		'	We need to follow a grammar rule so until we have a way to
+		'	parse one from a file, we have to create it manually here
+
+		'	RULE:
+		'	program = Application / Module
+		'	application = [Strictmode] [Framework] [*Import] [*Include] Block
+		'	module = [Strictmode] ModuleDef [*Import] [*Include] Block
+		'	strictmode = "strict" / "superstrict"
+debugstop		
+		'	Create "PROGRAM" rule
+		Local _application:TGNode = New TGnode()
+		Local _module:TGNode = New TGnode()
+		
+		' Application has no successor and "Module" as alternative
+		_application.terminal = False
+		_application.alt = _module
+		_application.suc = Null
+		_application.sym = New TSymbol( 0, "application", "" )
+		
+		' Module has no successor and no alternative
+		_module.terminal = False
+		_module.alt = Null
+		_module.suc = Null
+		_module.sym = New TSymbol( 0, "module", "" )
+		
+		' Create rule
+		abnf.add( "program", _application )		
+		
+		'	Create "STRICTMODE" rule
+		Local _strict:TGNode = New TGnode()
+		Local _superstrict:TGNode = New TGnode()
+		Local _strictnull:TGNode = New TGnode()
+
+		' Strictmode can be either "strict" or "superstrict" or null
+		_strict.terminal = True
+		_strict.alt = _superstrict
+		_strict.suc = Null
+		_strict.sym = New TSymbol( 0, "strict", "" )
+		
+		_superstrict.terminal = True
+		_superstrict.alt = _strictnull
+		_superstrict.suc = Null
+		_superstrict.sym = New TSymbol( 0, "superstrict", "" )	
+			
+		_strictnull.terminal = True
+		_strictnull.alt = Null
+		_strictnull.suc = Null
+		_strictnull.sym = New TSymbol( 0, "", "" )		
+		
+		' Create rule
+		abnf.add( "strictmode", _strict )
+		
+		'	Create "Application" rule
+		Local _strictmode:TGNode = New TGnode()
+		Local _framework:TGNode = New TGnode()
+
+		_strictmode.terminal = False
+		_strictmode.alt = Null
+		_strictmode.suc = _framework
+		_strictmode.sym = New TSymbol( 0, "strictmode", "" )
+
+		_framework.terminal = False
+		_framework.alt = Null
+		_framework.suc = Null
+		_framework.sym = New TSymbol( 0, "framework", "" )
+		
+		' Create rule
+		abnf.add( "application", _strictmode )		
+		
+	End Method
+	
 	' The story starts, as they say, with a beginning...
 	Method parse:AST()
 		
 		Rem 	ABNF
-				Program = [ Application | Module ]
+				Program = [Strictmode] | [ Application | Module ]
 				Application = [Strictmode] [Framework] [*Import] [*Include] Block
 				Module = [Strictmode] ModuleDef [*Import] [*Include] Block
 		End Rem
 DebugStop
+
+
+		
+		
+		
+		
 		'	OPTIONAL STRICTMODE
 		'	StrictMode = "superstrict" / "strict" EOL
 		If lexer.peek( ["superstrict","strict"] )
@@ -165,7 +245,7 @@ DebugStop
 			Repeat
 				sym = lexer.getNext()
 				'Print sym.class
-			Until sym.in(["EOL","EOF","comma","comment"])
+			Until sym.in( [TK_EOF,TK_EOL,TK_comma,TK_Comment] )
 		End If
 		' Create Defintion Table
 		symbolTable.add( definition, scope, name.value, vartype )

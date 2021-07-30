@@ -1,28 +1,10 @@
 
-'	SYMBOL CONSTANTS
+'	LEXER CONSTANTS FOR BLITZMAX
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-' Defint Symbols
+' 	DEFINE SYMBOLS
 
-Const SYM_WHITESPACE:String  = " ~t~r"
-Const SYM_SPACE:String       = " "
-Const SYM_EOL:String         = "~n"
-Const SYM_DQUOTE:String      = "~q"
 Const SYM_LINECOMMENT:String = "'"
-Const SYM_NUMBER:String      = "0123456789"
-Const SYM_LOWER:String       = "abcdefghijklmnopqrstuvwxyz"
-Const SYM_UPPER:String       = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-'Const SYM_SYMBOLS:String    = "!#$%&'()*+:Int			= 6-./:;<=>?@[]^_`{|}"
-Const SYM_ALPHA:String       = SYM_LOWER+SYM_UPPER
-'Const SYM_7BIT:String       = SYM_SPACE++SYM_NUMBER+SYM_UPPER+SYM_LOWER+SYM_SYMBOLS
-
-Const TK_EOF:Int = $FFFF
-
-'	CONTROL CHARACTERS
-Const TK_TAB:Int 			= 9
-Const TK_LF:Int 			= 10
-Const TK_CR:Int 			= 13
-Const TK_EOL:Int 			= TK_CR
 
 '	COMPOUND SYMBOLS
 
@@ -38,16 +20,7 @@ Const TK_BITWISEAND:Int		= 519	'	:&
 Const TK_BITWISEOR:Int		= 520	'	:|
 Const TK_BITWISEXOR:Int		= 521	'	:~
 
-'	IDENTIFIERS
-
-Const TK_Invalid:Int 		= 600	'	Any token flagged as invalid
-Const TK_Comment:Int 		= 601	'	' Comment
-Const TK_Alpha:Int			= 602	'	Unidentified identifier
-Const TK_Identifier:Int		= 603	'	Identifier identifier
-Const TK_QuotedString:Int	= 604	'	"String"
-Const TK_Number:Int			= 605	' 	Number
-
-'	KEYWORDS
+'	KEYWORDS (TERMINALS)
 
 Const TK_ALIAS:Int			= 610
 Const TK_AND:Int			= 611
@@ -158,39 +131,7 @@ Const TK_WEND:Int			= 715
 Const TK_WHERE:Int			= 716
 Const TK_WHILE:Int			= 717
 
-'	SINGLE CHARACTER TOKENS
-Const TK_exclamation:Int 	= 33	'	!	(double)
-Const TK_dquote:Int 		= 34	'	"
-Const TK_hash:Int 			= 35	'	#	(float)
-Const TK_dollar:Int			= 36	'	$	(string)
-Const TK_percent:Int		= 37	'	%	(int)
-Const TK_ampersand:Int		= 38	'	&	
-Const TK_squote:Int 		= 39	'	'
-Const TK_lparen:Int			= 40	'	(
-Const TK_rparen:Int			= 41	'	)
-Const TK_asterisk:Int		= 42	'	*
-Const TK_plus:Int			= 43	'	+
-Const TK_comma:Int			= 44	'	,
-Const TK_hyphen:Int			= 45	'	-
-Const TK_period:Int			= 46	'	.
-Const TK_solidus:Int		= 47	'	/
-Const TK_colon:Int			= 58	'	:
-Const TK_semicolon:Int		= 59	'	;
-Const TK_lessthan:Int		= 60	'	<
-Const TK_equals:Int			= 61	'	=
-Const TK_greaterthan:Int	= 62	'	>
-Const TK_question:Int		= 63	'	?
-Const TK_at:Int				= 64	'	@
-Const TK_lcrotchet:Int		= 91	'	[
-Const TK_backslash:Int		= 92	'	\
-Const TK_rcrotchet:Int		= 93	'	]
-Const TK_circumflex:Int		= 94	'	^
-Const TK_underscore:Int		= 95	'	_
-Const TK_backtick:Int		= 96	'	`
-Const TK_lbrace:Int			= 123	'	{
-Const TK_pipe:Int			= 124	'	|
-Const TK_rbrace:Int			= 125	'	}
-Const TK_tilde:Int 			= 126	'	~
+
 
 
 

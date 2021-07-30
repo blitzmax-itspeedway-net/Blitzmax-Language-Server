@@ -2,6 +2,7 @@
 '	BlitzMax Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
+Include "lexer-const-bmx.bmx"
 Include "TLexer.bmx"
 
 Type TBlitzMaxLexer Extends TLexer
@@ -23,31 +24,31 @@ Type TBlitzMaxLexer Extends TLexer
 
 	' Read symbols and add as tokens
 	Method readTokens()
-		Local id:Int, token:String
-		ReadData id, token
+		Local id:Int, class:String
+		ReadData id, class
 		Repeat
-			defined.insert( token, New TSymbol( id, token, token ) )
-			ReadData id, token
+			defined.insert( class, New TSymbol( id, class, class ) )
+			ReadData id, class
 		Until id = 0
 	End Method
 
 	' Read CompoundSymbols and add as tokens
 	Method readCompoundSymbols()
-		Local id:Int, token:String, name:String
-		ReadData id, token, name
+		Local id:Int, value:String, class:String
+		ReadData id, value, class
 		Repeat
-			defined.insert( token, New TSymbol( id, name, token ) )
-			ReadData id, token, name
+			defined.insert( value, New TSymbol( id, class, value ) )
+			ReadData id, value, class
 		Until id = 0
 	End Method
 
 	' Read symbols and add as tokens
 	Method readSymbols()
-		Local id:Int, char:String, name:String
-		ReadData id, char, name
+		Local id:Int, value:String, class:String
+		ReadData id, value, class
 		Repeat
-			lookup[Asc(char)]=name
-			ReadData id, char, name
+			lookup[Asc(value)]=class
+			ReadData id, value, class
 		Until id = 0
 	End Method
 		
@@ -56,6 +57,7 @@ End Type
 ' Blitzmax Tables
 
 #bmx_reservedwords
+'		ID				 CLASS
 DefData TK_ALIAS,        "alias"
 DefData TK_AND,          "and"
 DefData TK_ASC,          "asc"
@@ -170,6 +172,7 @@ DefData 0,"#"
 ' Compound Symbols
 #bmx_compound_symbols
 
+'		ID				VALUE	CLASS
 DefData TK_CONTINUE,    "..",	"continued"
 DefData TK_NOT_EQUAL,   "<>",	"inequal"	
 DefData TK_LT_OR_EQUAL, "<=",	"lessequal"
@@ -188,6 +191,7 @@ DefData 0,"#","#"
 ' A single symbol uses it's ASCII code unles overwritten here
 #bmx_symbols
 
+'		ID				VALUE	CLASS
 DefData TK_exclamation, "!",	"exclamation"	'	(Double)
 DefData TK_dquote,		"~q",	"dquote"
 DefData TK_hash,		"'",	"hash"			'	(Float)

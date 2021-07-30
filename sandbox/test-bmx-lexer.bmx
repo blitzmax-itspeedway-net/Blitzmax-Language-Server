@@ -1,5 +1,5 @@
 SuperStrict
-'	LEXER TEST
+'	BLITZMAX LEXER TEST
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
 '	TIMINGS USING MAXIDE.BMX
@@ -22,10 +22,10 @@ Local start:Int, finish:Int
 
 Try
 	'DebugStop
-	'Local source:String = loadFile( "samples/capabilites.bmx" )
-	Local source:String = loadFile( "samples/maxide.bmx" )
+	Local source:String = loadFile( "samples/capabilites.bmx" )
+	'Local source:String = loadFile( "samples/maxide.bmx" )
 	Local lexer:TLexer = New TBlitzMaxLexer( source )
-	
+'DebugStop
 	start  = MilliSecs()
 	lexer.run()
 	finish = MilliSecs()

@@ -1,6 +1,6 @@
 SuperStrict
 
-' Test add/get capabilities to allow handlers to regisiter themselves
+' Test add/get capabilities to allow handlers to register themselves
 
 'DebugStop
 

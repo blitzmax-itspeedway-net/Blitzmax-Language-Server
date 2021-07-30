@@ -10,6 +10,7 @@ Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
 '
 Include "bin/TToken.bmx"
+Include "bin/TABNF.bmx"
 Include "bin/TSymbolTable.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 Include "bin/TBlitzMaxParser.bmx"
@@ -169,18 +170,18 @@ End Rem
 ' Lets manually build a tree with the expression 2+(3*4)
 
 ' Create a node for the number tokens (Which would come from the lexer)
-Local Number2:AST = New AST( New TToken( "number", "2",0,0 ) )
-Local Number3:AST = New AST( New TToken( "number", "3",0,0 ) )
-Local Number4:AST = New AST( New TToken( "number", "4",0,0 ) )
+'Local Number2:AST = New AST( New TToken( "number", "2",0,0 ) )
+'Local Number3:AST = New AST( New TToken( "number", "3",0,0 ) )
+'Local Number4:AST = New AST( New TToken( "number", "4",0,0 ) )
 
 ' Built the Abstract Syntax Tree
-Local addnode:AST_BinaryOperator = New AST_BinaryOperator( ..
-	Number2, ..
-	New TToken( "symbol","+",0,0 ), ..
-	New AST_BinaryOperator( ..
-		Number3, ..
-		New TToken( "symbol", "*",0,0 ), ..
-		Number4 ))
+'Local addnode:AST_BinaryOperator = New AST_BinaryOperator( ..
+'	Number2, ..
+'	New TToken( "symbol","+",0,0 ), ..
+'	New AST_BinaryOperator( ..
+'		Number3, ..
+'		New TToken( "symbol", "*",0,0 ), ..
+'		Number4 ))
 
 ' Now lets test parsing 
 
@@ -192,6 +193,9 @@ Try
 	
 	lexer.run()
 	Print( lexer.reveal() )
+	
+	parser.testabnf( "program" )
+	
 	parser.parse()
 	Print parser.reveal()
 	'Local langserv:TLangServ = New TLangServ( parser )
@@ -202,4 +206,6 @@ Try
 Catch exception:TException
 	Print "## Exception: "+exception.toString()+" ##"
 End Try
+
+
 

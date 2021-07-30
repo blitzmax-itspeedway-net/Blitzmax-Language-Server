@@ -9,9 +9,37 @@ Type TParser
 	
 	Field symbolTable:TSymbolTable = New TSymbolTable()
 	
+	Field abnf:TABNF = New TABNF			' ANBF Grammar rules
+	
 	Method New( lexer:TLexer )
 		Self.lexer = lexer
 		Self.token = lexer.getnext()
+	End Method
+	
+		Method testabnf:String( rulename:String )
+DebugStop	
+		'Local s:TGNode =
+		Local token:TToken = lexer.peek()
+		' Find rule
+		'Local rule:TGNode = abnf.find( rulename )
+		Local node:TGnode = abnf.find( rulename )
+		Repeat
+			If node.terminal
+				If node.sym.value = token.class
+					'MATCHED
+				Else
+					'GETNEXT SYMBOL
+				EndIf
+			Else
+				Local match:String = testabnf( node.sym.value )
+				If match
+					node=node.suc
+				Else 
+					node=node.alt
+				End If
+			End If
+		Until Not node
+		
 	End Method
 	
 	Method parse:AST()
