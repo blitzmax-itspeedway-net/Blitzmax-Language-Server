@@ -1,5 +1,5 @@
 
-'	Exception handling
+'	EXCEPTION HANDER
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
 Type TException

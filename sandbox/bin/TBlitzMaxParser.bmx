@@ -11,9 +11,10 @@ Include "TParser.bmx"
 Type TBlitzMaxParser Extends TParser
 
 	Field strictmode:Int = 0
+	Field symbolTable:TSymbolTable = New TSymbolTable()	
 	
-	
-	Method New()
+	Method New( lexer:TLexer )
+		Super.New(lexer)
 
 		'	We need to follow a grammar rule so until we have a way to
 		'	parse one from a file, we have to create it manually here
@@ -23,7 +24,7 @@ Type TBlitzMaxParser Extends TParser
 		'	application = [Strictmode] [Framework] [*Import] [*Include] Block
 		'	module = [Strictmode] ModuleDef [*Import] [*Include] Block
 		'	strictmode = "strict" / "superstrict"
-debugstop		
+'DebugStop		
 		'	Create "PROGRAM" rule
 		Local _application:TGNode = New TGnode()
 		Local _module:TGNode = New TGnode()
@@ -128,8 +129,42 @@ DebugStop
 		ThrowException( "Unexpected Symbol", tok.line, tok.pos )
 
 	End Method
+	
+	' Dump the symbol table into a string
+	Method reveal:String()
+		Local report:String = "POSITION  SCOPE     NAME      TYPE~n"
+		For Local row:TSymbolTableRow = EachIn symbolTable.list
+			report :+ (row.line+","+row.pos)[..8]+"  "+row.scope[..8]+"  "+row.name[..8]+"  "+row.class[..8]+"~n"
+		Next
+		Return report
+	End Method
 
 	Private
+	
+	' Recover from syntax errors
+	' Called by parse method during try-catch for TParseError()
+	Method error_recovery()
+		Rem
+		local peek:TToken
+		repeat
+			peek = lexer.peek()
+			select peek.id
+			case TK_End
+				' End marks the end of a block and we dont want the
+				' following token to be mis-interpreted as the start of a new block 
+				' so we have to drop it
+				lexer.getnext()
+				lexer.getnext()
+				continue
+			case TK_Function, TK_Method, TK_Type, TK_Struct, TK_For, TK_Local, TK_Field, TK_If
+				return
+			default
+				' Consume the token as we are uncertain following an error
+				lexer.getnext()
+			end select
+		until peek.id=TK_EOF
+		End Rem
+	End Method
 	
 	'	DYNAMIC METHODS
 	'	CALLED BY REFLECTOR
@@ -256,5 +291,7 @@ DebugStop
 		Local sym:TToken = lexer.getNext()
 		Return sym.value
 	End Method
+	
+
 	
 End Type

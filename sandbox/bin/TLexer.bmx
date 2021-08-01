@@ -119,6 +119,7 @@ Type TLexer
 
 	' Produce a token table to help debugging
 	Method reveal:String()
+		If tokens.isempty() Return "TOKEN STREAM IS EMPTY"
 		Local result:String = "POSITION  ID    CLASS       VALUE~n"
 		For Local token:TToken = EachIn tokens
 			result :+ token.reveal()+"~n"
@@ -165,6 +166,15 @@ Type TLexer
     End Method
 
     ' Matches the next token otherwise throws an error
+	Method Expect( id:Int )
+        If tokpos=Null ThrowException( "Unexpected end of file" )
+		Local tok:TToken = TToken( tokpos.value )
+		tokpos = tokpos.nextlink
+		If tok.id = id Return
+		ThrowException( "Unexpected token '"+tok.value+"'", tok.line, tok.pos )
+	End Method
+		
+Rem
     Method Expect:TToken( expectedclass:String, expectedvalue:String="" )
 		Local tok:TToken = TToken( tokpos.value )
 		If tok.class = expectedclass
@@ -175,6 +185,8 @@ Type TLexer
 		End If
 		ThrowException( "Unexpected token '"+tok.value+"'", tok.line, tok.pos )
     End Method
+End Rem
+
 
     ' Matches the given token and throws it away (Useful for comments)
     Method skip:String( expectedclass:String )

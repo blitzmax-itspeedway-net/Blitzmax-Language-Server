@@ -1,0 +1,14 @@
+; BlitzMax ABNF grammer definition
+; (c) Copyright Si Dunford, July 2021, All Rights Reserved
+
+program = strictmode framework | module
+
+strictmode = "strict" | "superstrict" linecomment | EOL
+
+linecomment = "'" *VCHAR EOL
+
+
+
+
+
+

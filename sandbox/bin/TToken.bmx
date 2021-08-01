@@ -52,5 +52,9 @@ Type TToken
 	'	Next
 	'	Return True
 	'End Method
-	
+
+	' Confirm class ("if token.class = id" )
+	Method is:Int( id:Int )
+		Return (class=id)
+	End Method	
 End Type
