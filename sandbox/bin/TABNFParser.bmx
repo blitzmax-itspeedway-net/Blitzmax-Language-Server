@@ -103,19 +103,23 @@ Type TABNFParser Extends TParser
 
 		Repeat
 			Local peek:TToken = lexer.peek()
-
+			
 			' Skip leading comments and end of line tokens
 			If peek.in( [TK_Comment,TK_EOL] ) 
 				lexer.getnext()
 				Continue
 			End If
-'DebugStop	
+DebugStop	
 			' Parse the rule definition
 			Try
 				' First token will be rule name (ALPHA)
 				If peek.id = TK_ALPHA
-					lexer.getnext()		' Consume rulename token
-					parse_rule( peek.value )
+					Print "RULE: "+peek.value
+					lexer.getnext()				' Consume rulename token
+					lexer.expect( TK_equals )	' Next symbol MUST be a "="
+					' Generate rule definition
+					Local ruledef:TGrammarNode = parse_sequence( [TK_EOF,TK_EOL] )
+					abnf.add( peek.value, ruledef )
 				Else
 					ThrowParseError( "Invalid symbol '"+peek.value+"'", peek.line, peek.pos )
 				End If						
@@ -131,8 +135,11 @@ Type TABNFParser Extends TParser
 				' Recover from syntax error
 				error_recovery()
 			End Try
-			
-		Until token.is( TK_EOF )
+
+			If peek.is( TK_EOF ) Exit
+
+		Forever
+		'Until peek.is( TK_EOF )
 		
 'DebugStop
 
@@ -140,7 +147,10 @@ Type TABNFParser Extends TParser
 	
 	' Dump the AST
 	Method reveal:String()
-		Print "TABNFParser.reveal() has not been implemented"
+'		Print "TABNFParser.reveal() has not been implemented"
+		
+		Local printer:TABNFPrintVisitor = New TABNFPrintVisitor()
+		printer.run()
 	End Method
 
 	Private
@@ -161,94 +171,142 @@ Type TABNFParser Extends TParser
 		lexer.getnext()
 	End Method
 	
-	' PARSE AN INDIVIDUAL RULE
-	Method parse_rule( name:String )
-		Print "RULE: "+name
-'DebugStop		
-'Print lexer.peek().reveal()
-		lexer.expect( TK_equals )	' Next symbol MUST be a "="
+	'	PARSE A SEQUENCE
+	Method parse_sequence:TGrammarNode( exitcondition:Int[]=[] )
 
 		' Create the ABNF linked list pointers
-		Local head:TGrammarNode = New TGrammarNode( False, Null )
-		Local tail:TGrammarNode	= head	' Current node
+		Local root:TGrammarNode		' First in list
+		Local head:TGrammarNode		' Last in list
+		Local node:TGrammarNode		' Currrent node
 		
 		' Create linked list for this rule
+		Local token:TToken
 		Repeat
-			tail = parse_next( tail )
-		Until tail.token.in( [TK_EOL,TK_EOF] )
-
+			token = lexer.getnext()
+			node  = parse_successor( head, token )
+			
+			If Not root
+				If Not node ; throwParseError( "Incomplete defintion", token.line, token.pos )
+				root = node
+				head = node
+			Else
+				head.suc = node
+				head = node
+			End If
+			
+		Until Not node Or lexer.peek().in( exitcondition )
+		
+		Return root
 	End Method
+	
+	'	PARSE A SUCCESSOR
+	Method parse_successor:TGrammarNode( prev:TGrammarNode, token:TToken )
 
-	' Parse next token / group / option / repeat
-	Method parse_next:TGrammarNode( parent:TGrammarNode, alt:TGrammarNode=Null, suc:TGrammarNode=Null )
-		Local token:TToken = lexer.getNext()		
 		Select token.id
-		Case TK_ALPHA		' 	Non-Terminal
-			parent.suc = New TGrammarNode( False, token, alt, suc )
-			Return parent.suc
+		Case TK_EOL, TK_EOF			'	End of line/file
+			Return Null	
+		Case TK_ALPHA		'	Non-Terminal
+			Return New TGrammarNode( False, token )
 		Case TK_QString		' 	Terminal
-			parent.suc = New TGrammarNode( True, token, alt, suc )
-			Return parent.suc
+			Return New TGrammarNode( True, token )
 		Case TK_asterisk	'	* = Repeat
-			Return parse_repeat( parent, alt, suc )
+			Local root:TGrammarNode = New TGrammarNode( False, New TToken( TK_Repeat, "*", token.line, token.pos, "*" ) )
+			root.opt = parse_asterisk( root, lexer.getNext() )
+			Return root
 		Case TK_lparen		'	( = Group
-			Return parse_group( parent, alt, suc )
+			Local root:TGrammarNode = New TGrammarNode( False, New TToken( TK_Group, "()", token.line, token.pos, "()" ) )
+			root.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rparen] )
+			Return root
 		Case TK_lcrotchet	'	[ = Optional
-			Return parse_options( parent, alt, suc )
+			Local root:TGrammarNode = New TGrammarNode( False, New TToken( TK_Optional, "[]", token.line, token.pos, "[]" ) )
+			root.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rcrotchet] )
+			Return root
+		Case TK_solidus,TK_pipe		'	|/ = Alternative
+			' not valid as first symbol
+			If prev = Null ; ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
+			' Parse Alternatives 
+			Local root:TGrammarNode = prev
+			parse_alternate( root, lexer.getNext() )
+			Return parse_successor( prev, lexer.getnext() )
 		Case TK_comment		'	Ignore comment
-			Return parent
+			Return parse_successor( prev, token )
 		Case TK_EOL
-			Return New TGrammarNode( False, token, alt, suc )
+			Return Null
 		Default
 			ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
 		End Select		
 	End Method
 
-	' PARSE REPETITIVE
-	Method parse_repeat:TGrammarNode( tail:TGrammarNode, alt:TGrammarNode, suc:TGrammarNode )
-		' Create empty nodes for start and result
-		Local start:TGrammarNode = New TGrammarNode( False, Null )
-		Local result:TGrammarNode = New TGrammarNode( False, Null, alt, suc )
-		' Connect start to the tail
-		tail.suc = start
-		' Get the next node
-		Local node:TGrammarNode = parse_next( start, start, result )
-		Return node		
+	'	PARSE AN ALTERNATE
+	Method parse_alternate( prev:TGrammarNode, token:TToken )
+		Local node:TGrammarNode
+		
+		Select token.id
+		Case TK_EOL, TK_EOF			'	End of line/file
+			Return	
+		Case TK_ALPHA		'	Non-Terminal
+			node = New TGrammarNode( False, token )
+		Case TK_QString		' 	Terminal
+			node = New TGrammarNode( True, token )
+		Case TK_asterisk	'	* = Repeat
+			node = New TGrammarNode( False, New TToken( TK_Repeat, "*", token.line, token.pos, "*" ) )
+			node.opt = parse_asterisk( node, lexer.getNext() )
+		Case TK_lparen		'	( = Group
+			node = New TGrammarNode( False, New TToken( TK_Group, "()", token.line, token.pos, "()" ) )
+			node.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rparen] )
+		Case TK_lcrotchet	'	[ = Optional
+			node = New TGrammarNode( False, New TToken( TK_Optional, "[]", token.line, token.pos, "[]" ) )
+			node.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rcrotchet] )
+		Default
+			ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
+		End Select
+
+		' Tie node to parent
+		prev.alt = node
+		
+		' Are there more?
+		If lexer.peek().in( [TK_solidus,TK_pipe] )
+			lexer.getNext()	' Drop solidus/pipe
+			parse_alternate( node, lexer.getNext() )
+		EndIf
+
+DebugStop
+	
 	End Method
 	
-	' PARSE GROUP
-	' This is just a sequence.
-	Method parse_group:TGrammarNode( tail:TGrammarNode, alt:TGrammarNode, suc:TGrammarNode )
-		Local token:TToken = lexer.getNext()			
-		Repeat
-			tail = parse_next( tail, alt:TGrammarNode, suc:TGrammarNode )
-		Until tail.token.in( [TK_rparen,TK_EOF] )
-		Return tail	
+	'	REPEATING PATTERN
+	Method parse_asterisk:TGrammarNode( root:TGrammarNode, token:TToken )
+	
+		Select token.id
+		Case TK_EOL
+			ThrowParseError( "Incomplete defintion", token.line, token.pos )
+		Case TK_EOF			'	End of line/file
+			ThrowParseError( "Unexpected end of file", token.line, token.pos )
+		Case TK_ALPHA		'	Non-Terminal
+			Return New TGrammarNode( False, token )
+		Case TK_QString		' 	Terminal
+			Return New TGrammarNode( True, token )
+		Case TK_lparen		'	( = Group
+			Local node:TGrammarNode = New TGrammarNode( False, New TToken( TK_Group, "()", token.line, token.pos, "()" ) )
+			node.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rparen] )
+			Return node
+		Case TK_lcrotchet	'	[ = Optional
+			Local node:TGrammarNode = New TGrammarNode( False, New TToken( TK_Optional, "[]", token.line, token.pos, "[]" ) )
+			node.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rcrotchet] )
+			Return node
+		Default
+			ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
+		End Select		
 	End Method
 
-	' PARSE OPTIONAL
-	' alt points to alternatives
-	' suc points to "success" node
-	Method parse_options:TGrammarNode( parent:TGrammarNode, alt:TGrammarNode, suc:TGrammarNode  )
-		' Create empty nodes for start and result
-		Local start:TGrammarNode = New TGrammarNode( False, Null )
-		Local result:TGrammarNode = New TGrammarNode( False, Null, alt, suc )
-		Local tail:TGrammarNode = start
-		parent.suc = start
-		Repeat
-			Local node:TGrammarNode = parse_next( tail, Null, result )
-			tail.alt = node
-		Until token.in( [TK_rcrotchet,TK_EOF] )
-		Return tail
-	End Method
 		
 End Type
 
 ' This is a "Pretty Print" Visitor used to test the structure of an AST
-' To use it, you muct have first declared visitor methods in your parser to return
+' To use it, you muct have first declared visitor methods to return
 ' the appropriate content
 
-Type TPrettyPrintVisitor Extends TVisitor
+Type TABNFPrintVisitor Extends TVisitor
 
 	Field parser:TParser
 	Field tree:AST
@@ -262,9 +320,9 @@ Type TPrettyPrintVisitor Extends TVisitor
 	Method run()
 		' Perform the actual Parsing here
 		parser.parse( start )
-		tree = parser.AST
+		'tree = parser.abnf
 		' Now call the visitor to process the tree
-		visit( tree )
+		'visit( tree )
 	End Method
 	
 	' Not sure how to debug this yet...!

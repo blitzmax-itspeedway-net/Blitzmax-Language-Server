@@ -13,26 +13,40 @@ Include "bin/TABNFParser.bmx"
 
 Include "bin/TToken.bmx"
 
+Include "bin/TABNFTreeWalker.bmx"
+
 'DebugStop
 Local start:Int, finish:Int
 
 Try
 	'DebugStop
-	Local source:String = loadFile( "samples/abnf.abnf" )
-	'Local source:String = loadFile( "samples/bmx-build.abnf" )
+	'Local source:String = loadFile( "samples/abnf.abnf" )
+	Local source:String = loadFile( "samples/bmx-build.abnf" )
 	Local lexer:TLexer = New TABNFLexer( source )
 	Local parser:TParser = New TABNFParser( lexer )
 	
 	start  = MilliSecs()
-'DebugStop
+DebugStop
 	parser.parse()
 	finish = MilliSecs()
 	
 	Print( "PARSER.TIME: "+(finish-start)+"ms" )
 	
 	Print( "Starting debug output...")
+'DebugStop
 	Local abnf:TABNF = parser.abnf
-	Print( parser.reveal() )
+'DebugStop
+	'Print( abnf.reveal() )
+	
+	' SHOW DEBUG TREE
+	Local printer:TABNFTreeWalker = New TABNFTreeWalker( abnf )
+	printer.show()
+
+
+'DebugStop
+	'Local printer:TVisitor = New TABNFPrintVisitor( parser )
+	'printer.run()
+
 
 Catch exception:TException
 	Print "## Exception: "+exception.toString()+" ##"

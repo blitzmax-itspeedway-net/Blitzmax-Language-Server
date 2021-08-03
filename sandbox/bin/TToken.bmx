@@ -55,6 +55,7 @@ Type TToken
 
 	' Confirm class ("if token.class = id" )
 	Method is:Int( id:Int )
-		Return (class=id)
+'DebugStop
+		Return (Self.id=id)
 	End Method	
 End Type

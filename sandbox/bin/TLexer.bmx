@@ -354,7 +354,7 @@ End Rem
 'DebugStop
         Local text:String
         Local char:String = peekChar()
-        While Instr( SYM_ALPHA, char ) And char<>""
+        While Instr( SYM_ALPHA+SYM_ALPHAEXTRA, char ) And char<>""
             text :+ popChar()
             char = PeekChar("")
         Wend
