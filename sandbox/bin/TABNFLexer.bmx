@@ -2,10 +2,20 @@
 '	ABNF Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-Include "lexer-const-abnf.bmx"
-Include "TLexer.bmx"
+'	COMPOUND SYMBOLS
+
+Const TK_HEXDIGIT:Int		= 512	'	%x
+
+'	IDENTIFIERS
+
+Const TK_Group:Int 			= 610	'	()
+Const TK_Optional:Int 		= 611	'	[]
+Const TK_Repeater:Int 		= 612	'	*
 
 Type TABNFLexer Extends TLexer
+
+	Field SYM_LINECOMMENT:String = ";"
+	Field SYM_ALPHAEXTRA:String  = "-"	' Additional Characters allowed in ALPHA
 
 	Method New( text:String )
 		Super.New( text )

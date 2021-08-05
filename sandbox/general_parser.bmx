@@ -8,13 +8,26 @@ Import brl.reflection
 '
 Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
-'
-Include "bin/TToken.bmx"
-Include "bin/TABNF.bmx"
 
-Include "bin/TSymbolTable.bmx"
+'	GENERIC LEXER AND PARSER
+Include "bin/TToken.bmx"
+Include "bin/TLexer.bmx"
+Include "bin/TParser.bmx"
+
+' 	ABNF GRAMMAR PARSER
+Include "bin/TABNF.bmx"
+Include "bin/TABNFLexer.bmx"
+Include "bin/TABNFParser.bmx"
+
+'	BLITZMAX PARSER
+Include "bin/lexer-const-bmx.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
 Include "bin/TBlitzMaxParser.bmx"
+
+'	DELIVERABLES
+Include "bin/AbstractSyntaxTree.bmx"
+Include "bin/TSymbolTable.bmx"
+
 
 Type AST_BinaryOperator Extends AST
 	Field L:AST	' Left 
@@ -29,6 +42,11 @@ Type AST_BinaryOperator Extends AST
 End Type
 
 
+Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
+    Print "---> "+event
+End Function
+
+
 
 Type TLangServ Extends TVisitor
 
@@ -41,7 +59,8 @@ Type TLangServ Extends TVisitor
 	
 	Method run()
 		' Perform the actual Parsing here
-		tree = parser.parse()
+		parser.parse()
+		tree = parser.ast
 		' Now call the visitor to process the tree
 		visit( tree )
 	End Method
@@ -104,20 +123,41 @@ End Rem
 
 ' Now lets test parsing 
 
+Local source:String, lexer:TLexer, parser:TParser
+Local start:Int, finish:Int
+Local abnf:TABNF, tree:AST
 Try
-	'DebugStop
-	Local source:String = loadFile( "samples/1) Simple Blitzmax.bmx" )
-	'Local source:String = loadFile( "samples/1) Simple Blitzmax.bmx" )
-	Local lexer:TLexer = New TBlitzMaxLexer( source )
+	
+	'	First we load and parse BlitzMax Grammar into abnf
+	source = loadFile( "samples/bmx-build.abnf" )
+	lexer  = New TABNFLexer( source )
+	parser = New TABNFParser( lexer )	
+	start  = MilliSecs()
+	abnf   = TABNF( parser.parse() )
+	finish = MilliSecs()
+	Print( "ABNF LEXER+PARSE TIME: "+(finish-start)+"ms" )
+	
+	'	Save the Grammar Definition
+	'abnf = parser.abnf
+'DebugStop
+	Print "~nABNF:"
+	Print abnf.reveal()
+	
+	'	Next we load and parse BlitzMax
+	source = loadFile( "samples/1) Simple Blitzmax.bmx" )
+	'source = loadFile( "samples/1) Simple Blitzmax.bmx" )
+	lexer  = New TBlitzMaxLexer( source )
+'DebugStop
+	parser = New TBlitzMaxParser( lexer, abnf )		' NOTE LANGUAGE DEFINITION ARGUMENT HERE
+	start  = MilliSecs()
 DebugStop
-	Local parser:TParser = New TBlitzMaxParser( lexer )
+	tree   = AST(parser.parse())
+	finish = MilliSecs()
+	Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )
 	
-	lexer.run()
-	Print( lexer.reveal() )
+'	parser.testabnf( "program" )
 	
-	parser.testabnf( "program" )
-	
-	parser.parse()
+	'parser.parse()
 	Print parser.reveal()
 	'Local langserv:TLangServ = New TLangServ( parser )
 

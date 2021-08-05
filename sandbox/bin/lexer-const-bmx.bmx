@@ -4,8 +4,8 @@
 
 ' 	DEFINE SYMBOLS
 
-Const SYM_LINECOMMENT:String = "'"
-Const SYM_ALPHAEXTRA:String  = "_"	' Additional Characters allowed in ALPHA
+'Const SYM_LINECOMMENT:String = "'"
+'Const SYM_ALPHAEXTRA:String  = "_"	' Additional Characters allowed in ALPHA
 
 '	COMPOUND SYMBOLS
 

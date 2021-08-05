@@ -2,10 +2,10 @@
 '	BlitzMax Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-Include "lexer-const-bmx.bmx"
-Include "TLexer.bmx"
-
 Type TBlitzMaxLexer Extends TLexer
+
+	Field SYM_LINECOMMENT:String = "'"
+	Field SYM_ALPHAEXTRA:String  = "_"	' Additional Characters allowed in ALPHA
 
 	Method New( text:String )
 		Super.New( text )

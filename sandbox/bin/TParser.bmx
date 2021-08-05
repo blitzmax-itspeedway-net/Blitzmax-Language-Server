@@ -2,8 +2,6 @@
 '	Generic Parser
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-Include "AbstractSyntaxTree.bmx"
-
 ' Exception handler for Parse errors
 Type TParseError Extends TException
 End Type
@@ -22,15 +20,16 @@ Type TParser
 	Field abnf:TABNF			' ANBF Grammar rules
 	Field ast:AST				' Abstract Syntax Tree
 	
-	Method New( lexer:TLexer )
+	Method New( lexer:TLexer, abnf:TABNF=Null )
 'DebugStop
 		Self.lexer = lexer
 		Self.token = lexer.getnext()
+		Self.abnf  = abnf
 	End Method
 	
-	Method parse( rulename:String = "" )
+	Method parse:Object( rulename:String = "" )
 '	Method testabnf:Int( rulename:String, path:String="" )
-DebugStop
+'DebugStop
 		' First order of the day is to run the lexer...
 		Local start:Int, finish:Int
 		start = MilliSecs()
@@ -40,69 +39,135 @@ DebugStop
 	
 		Print( "Starting debug output...")
 		Print( lexer.reveal() )
-DebugStop
+'DebugStop
 		' If no rulename passed, then use first rule in ANBF
+		Publish( "PARSE-START", Null )
+		
 		If rulename="" rulename = abnf.first()
-		If rulename="" Return ' No starting node (Empty ABNF?)
+		If rulename="" Return Null' No starting node (Empty ABNF?)
 		ast = walk( rulename )
+
+		Publish( "PARSE-FINISH", Null )
 		
 	End Method
 	
 	' Generic ABNF tree walker that generates AST
 	Method walk:AST( rulename:String, path:String="" )
 DebugStop	
+		Local token:TToken
 		Local match:AST = Null
 		Local column:String = (path+rulename)[..30]
 		
+		Print "# RULE: "+rulename
 		Local node:TGrammarNode = abnf.find( rulename )
 		If Not node
-			Print column+"-Rule '"+rulename+"' Not found"
+			Print column+" - Rule '"+rulename+"' Not found"
 			Return Null
-		End If		
+		End If
 
 		' Find rule
 		'Local rule:TGNode = abnf.find( rulename )
 		Repeat
-			If node.terminal
-				Print column+"-Node '"+rulename+"' is a terminal"
+		Print "# NODE: "+node.token.value
 
-				Local token:TToken = lexer.peek()
-				Print column+"-Comparing token '"+token.class+"' with '"+node.token.class+"'"
-				
-				If node.token.class = token.class
-					'MATCHED
-					Print column+"-MATCHED"
+DebugStop
+			If node.terminal
+				Print column+"- Node '"+rulename+"' is a terminal"
+
+				token = lexer.peek()
+				Print "# TOKEN: "+node.token.value
+				Print column+"- Comparing tokens"
+DebugStop
+				match = Null
+				If compare( node.token, token )
 					match = New AST( token )
 					lexer.getnext()
-					Print column+"-CALLING rule_"+rulename+"()"
-				Else
-					'GETNEXT SYMBOL
-					Print column+"-NO MATCH"
-					match = Null
-				EndIf
+				End If
+Rem				
+				Select True
+				Case (node.token.id=TK_QString) And (token.id=TK_Identifier)
+'DebugStop
+					If node.token.value = token.class
+						Print column+"- MATCHED"
+						match = New AST( token )
+						lexer.getnext()
+						'Print column+"-CALLING rule_"+rulename+"()"
+				'	Else
+				'		match = Null
+					End If
+				'Case TK_QString
+'DebugStop
+				'	If node.token.value = "~q"+token.class+"~q"
+				'		Print column+"- QSTRING MATCHED"
+				'		match = New AST( token )
+				'		lexer.getnext()
+						'Print column+"-CALLING rule_"+rulename+"()"
+				'	Else
+				'		match = Null
+				'	End If
+				Default
+					Print column+"- Unable to compare different token types"
+				'	match = Null
+				End Select
+				
+				If Not match Print column+"- NO MATCH"
+End Rem
 			Else
-				Print column+"-Node '"+rulename+"' is a non-terminal"
-				match = walk( node.token.class, rulename+"|" )
-				Print column+"-Returned to '"+rulename+"'"
+				Print column+"- Node '"+node.token.value+"' is a non-terminal"
+				match = walk( node.token.value, rulename+"|" )
+				Print column+"- Returned to '"+rulename+"'"
 			End If
 			'
+			' Do we have a no-match but alternatives?
+			If Not match And node.alt ; match = walk_alternate( node.alt, token )
+			'
 			If match
+				Print "- MATCHED"
 				node=node.suc
 				If node 
-					Print column+"-Moving To successor ("+node.token.class+")"
+					Print column+"-Moving To successor ("+node.token.value+")"
+					lexer.getnext()
+WHEN LINECOMMENT IS READ HERE, WE MUST COMPARE THE TOKENS Not THE
+RULE
 				Else
 					Print column+"-No successor"
+					Return match
 				End If
 			Else 
-				node=node.alt
-				If node 
-					Print column+"-Moving To alternate ("+node.token.class+")"
-				Else
-					Print column+"-No alternate"
-				End If
+				Print "- UNMATCHED"
+				Publish( "DIAGNOSTIC", "Unexpected token", token )
+				Print "###> DIAGNOSTIC : Unexpected token '"+ token.value + "' at "+token.line+","+token.pos
+				Return Null
 			End If
-		Until Not node
+		Until Not node Or node.token.id=TK_EOF
 		Return match
+	End Method
+	
+	Method walk_alternate:AST( node:TGrammarNode, token:TToken )
+		Local match:AST = Null
+'DebugStop
+
+		While node
+			If compare( node.token, token )
+				match = New AST( token )
+				Exit
+			End If
+			node = node.alt
+		Wend
+	
+		Return match
+	End Method
+
+	Method compare:Int( this:TToken, that:TToken )
+		Print "- Comparing ["+this.id+"/"+this.class+"/"+this.value+"] to ["+that.id+"/"+that.class+"/"+that.value+"]"
+		Select True
+		Case ( this.id=TK_QString ) And ( that.id=TK_Identifier )
+			If this.value = that.class ; Return True
+		Default
+			Print "- Unable to compare different token types"
+		End Select
+		Print "- NO MATCH"
+		Return False
 	End Method
 	
 	Method OLDparse:AST()

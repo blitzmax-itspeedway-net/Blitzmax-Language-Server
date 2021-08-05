@@ -70,7 +70,7 @@ Const TK_pipe:Int			= 124	'	|
 Const TK_rbrace:Int			= 125	'	}
 Const TK_tilde:Int 			= 126	'	~
 
-'	IDENTIFIERS
+'	STANDARD IDENTIFIERS
 
 Const TK_Invalid:Int 		= 600	'	Any token flagged as invalid
 Const TK_Comment:Int 		= 601	'	Comment
@@ -82,6 +82,9 @@ Const TK_Number:Int			= 605	' 	Number
 '	BASE LEXER
 
 Type TLexer
+
+	Field SYM_LINECOMMENT:String = ""
+	Field SYM_ALPHAEXTRA:String  = ""	' Additional Characters allowed in ALPHA
 
 	Private
 			
@@ -404,8 +407,39 @@ End Rem
 
     Method ExtractString:String()
 'DebugStop
+        Local text:String
+        Local char:String
+		char = popChar()   ' This is the leading Quote (Skip that)
+		char = popChar()	' This is the first character (The one we want)
+        While char<>"~q" And char<>""
+			Select char.length
+			Case 1
+				text :+ char
+			Case 2	' ESCAPE CHARACTER?
+				Select char
+				Case "\~q","\\","\/"
+					text :+ char[1..]
+				Case "\n","\r","\t"
+					text :+ "~~"+char[1..]
+				Case "\b"
+					text :+ Chr(08)
+				Case "\f"
+					text :+ Chr(12)
+				End Select
+			Case 6	' HEXCODE
+				Local hexcode:String = "$"+char[2..]
+				Print char + " == " + hexcode
+				text :+ Chr( Int( hexcode ) )
+			End Select
+            char = PopChar( "" )		' Pop char, but do not ignore whitespace
+        Wend
+        Return text
+    End Method
+Rem
+    Method ExtractString:String()
+'DebugStop
         Local text:String = popChar()   ' This is the leading Quote
-        Local char:String 
+        Local char:String
         Repeat
             char = PopChar( "" )		' Pop char, but do not ignore whitespace
 			Select char.length
@@ -430,8 +464,7 @@ End Rem
         Until char="~q" Or char=""
         Return text
     End Method
-
-
+End Rem
 End Type
 
 ' A Simple Symbol

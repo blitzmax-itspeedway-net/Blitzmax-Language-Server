@@ -2,8 +2,6 @@
 '	BlitzMax Parser
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-Include "TParser.bmx"
-
 '	A LANGUAGE SYNTAX IS CURRENTLY UNAVAILABLE
 '	THIS IS THEREFORE HARDCODED AT THE MOMENT
 '	IT WILL BE RE-WRITTEN WHEN SYNTAX IS DONE
@@ -13,9 +11,10 @@ Type TBlitzMaxParser Extends TParser
 	Field strictmode:Int = 0
 	Field symbolTable:TSymbolTable = New TSymbolTable()	
 	
-	Method New( lexer:TLexer )
-		Super.New(lexer)
+	Method New( lexer:TLexer, abnf:TABNF = Null )
+		Super.New(lexer, abnf)
 
+Rem
 		'	We need to follow a grammar rule so until we have a way to
 		'	parse one from a file, we have to create it manually here
 
@@ -84,17 +83,19 @@ Type TBlitzMaxParser Extends TParser
 		
 		' Create rule
 		abnf.add( "application", _strictmode )		
-		
+End Rem	
+
 	End Method
-	
+
+Rem	
 	' The story starts, as they say, with a beginning...
-	Method parse:AST()
+	Method parse_OLD:AST()
 		
-		Rem 	ABNF
-				Program = [Strictmode] | [ Application | Module ]
-				Application = [Strictmode] [Framework] [*Import] [*Include] Block
-				Module = [Strictmode] ModuleDef [*Import] [*Include] Block
-		End Rem
+		' 	ABNF
+		'		Program = [Strictmode] | [ Application | Module ]
+		'		Application = [Strictmode] [Framework] [*Import] [*Include] Block
+		'		Module = [Strictmode] ModuleDef [*Import] [*Include] Block
+		'
 DebugStop
 
 
@@ -129,7 +130,8 @@ DebugStop
 		ThrowException( "Unexpected Symbol", tok.line, tok.pos )
 
 	End Method
-	
+End Rem	
+
 	' Dump the symbol table into a string
 	Method reveal:String()
 		Local report:String = "POSITION  SCOPE     NAME      TYPE~n"
@@ -168,7 +170,7 @@ DebugStop
 	
 	'	DYNAMIC METHODS
 	'	CALLED BY REFLECTOR
-
+Rem
 	' Field = "field" VarDecl *[ "," VarDecl ]
 	Method token_field( token:TToken )
 		Parse_VarDeclarations( "field", token )
@@ -247,7 +249,7 @@ DebugStop
 			End If
 		Forever
 	End Method
-	
+
 	' ModuleIdentifier = Name DOT Name
 	Method Parse_ModuleIdentifier:String()
 		Local collection:TToken = lexer.Expect( "alpha" )
@@ -291,7 +293,7 @@ DebugStop
 		Local sym:TToken = lexer.getNext()
 		Return sym.value
 	End Method
-	
+End Rem
 
 	
 End Type

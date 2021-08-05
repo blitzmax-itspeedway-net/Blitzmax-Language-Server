@@ -2,92 +2,12 @@
 '	ABNF Parser
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-Include "TParser.bmx"
-
 '	This parser generates an ABNF Rule Tree
 
 Type TABNFParser Extends TParser
-
-	Rem
-	Method New( lexer:TLexer )
-		Super.New(lexer)
-
-		' DEFINE AB
-
-		'	We need to follow a grammar rule so until we have a way to
-		'	parse one from a file, we have to create it manually here
-
-		'	RULE:
-		'	program = Application / Module
-		'	application = [Strictmode] [Framework] [*Import] [*Include] Block
-		'	module = [Strictmode] ModuleDef [*Import] [*Include] Block
-		'	strictmode = "strict" / "superstrict"
-'DebugStop		
-		'	Create "PROGRAM" rule
-		Local _application:TGNode = New TGnode()
-		Local _module:TGNode = New TGnode()
-		
-		' Application has no successor and "Module" as alternative
-		_application.terminal = False
-		_application.alt = _module
-		_application.suc = Null
-		_application.sym = New TSymbol( 0, "application", "" )
-		
-		' Module has no successor and no alternative
-		_module.terminal = False
-		_module.alt = Null
-		_module.suc = Null
-		_module.sym = New TSymbol( 0, "module", "" )
-		
-		' Create rule
-		abnf.add( "program", _application )		
-		
-		'	Create "STRICTMODE" rule
-		Local _strict:TGNode = New TGnode()
-		Local _superstrict:TGNode = New TGnode()
-		Local _strictnull:TGNode = New TGnode()
-
-		' Strictmode can be either "strict" or "superstrict" or null
-		_strict.terminal = True
-		_strict.alt = _superstrict
-		_strict.suc = Null
-		_strict.sym = New TSymbol( 0, "strict", "" )
-		
-		_superstrict.terminal = True
-		_superstrict.alt = _strictnull
-		_superstrict.suc = Null
-		_superstrict.sym = New TSymbol( 0, "superstrict", "" )	
-			
-		_strictnull.terminal = True
-		_strictnull.alt = Null
-		_strictnull.suc = Null
-		_strictnull.sym = New TSymbol( 0, "", "" )		
-		
-		' Create rule
-		abnf.add( "strictmode", _strict )
-		
-		'	Create "Application" rule
-		Local _strictmode:TGNode = New TGnode()
-		Local _framework:TGNode = New TGnode()
-
-		_strictmode.terminal = False
-		_strictmode.alt = Null
-		_strictmode.suc = _framework
-		_strictmode.sym = New TSymbol( 0, "strictmode", "" )
-
-		_framework.terminal = False
-		_framework.alt = Null
-		_framework.suc = Null
-		_framework.sym = New TSymbol( 0, "framework", "" )
-		
-		' Create rule
-		abnf.add( "application", _strictmode )		
-		
-	End Method
-	End Rem
 	
 	' The story starts, as they say, with a beginning...
-	Method parse( rulename:String = "" )
+	Method parse:Object( rulename:String = "" )
 'DebugStop
 		' First order of the day is to run the lexer...
 		Local start:Int, finish:Int
@@ -99,7 +19,8 @@ Type TABNFParser Extends TParser
 '		Print( lexer.reveal() )
 
 		' Define where we are going to put the results...
-		abnf = New TABNF
+		Local abnf:TABNF = New TABNF
+		'abnf = New TABNF
 
 		Repeat
 			Local peek:TToken = lexer.peek()
@@ -109,7 +30,7 @@ Type TABNFParser Extends TParser
 				lexer.getnext()
 				Continue
 			End If
-DebugStop	
+'DebugStop	
 			' Parse the rule definition
 			Try
 				' First token will be rule name (ALPHA)
@@ -142,6 +63,7 @@ DebugStop
 		'Until peek.is( TK_EOF )
 		
 'DebugStop
+		Return abnf
 
 	End Method
 	
@@ -210,7 +132,7 @@ DebugStop
 		Case TK_QString		' 	Terminal
 			Return New TGrammarNode( True, token )
 		Case TK_asterisk	'	* = Repeat
-			Local root:TGrammarNode = New TGrammarNode( False, New TToken( TK_Repeat, "*", token.line, token.pos, "*" ) )
+			Local root:TGrammarNode = New TGrammarNode( False, New TToken( TK_Repeater, "*", token.line, token.pos, "*" ) )
 			root.opt = parse_asterisk( root, lexer.getNext() )
 			Return root
 		Case TK_lparen		'	( = Group
@@ -222,6 +144,7 @@ DebugStop
 			root.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rcrotchet] )
 			Return root
 		Case TK_solidus,TK_pipe		'	|/ = Alternative
+'DebugStop
 			' not valid as first symbol
 			If prev = Null ; ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
 			' Parse Alternatives 
@@ -249,7 +172,7 @@ DebugStop
 		Case TK_QString		' 	Terminal
 			node = New TGrammarNode( True, token )
 		Case TK_asterisk	'	* = Repeat
-			node = New TGrammarNode( False, New TToken( TK_Repeat, "*", token.line, token.pos, "*" ) )
+			node = New TGrammarNode( False, New TToken( TK_Repeater, "*", token.line, token.pos, "*" ) )
 			node.opt = parse_asterisk( node, lexer.getNext() )
 		Case TK_lparen		'	( = Group
 			node = New TGrammarNode( False, New TToken( TK_Group, "()", token.line, token.pos, "()" ) )
@@ -270,7 +193,7 @@ DebugStop
 			parse_alternate( node, lexer.getNext() )
 		EndIf
 
-DebugStop
+'DebugStop
 	
 	End Method
 	

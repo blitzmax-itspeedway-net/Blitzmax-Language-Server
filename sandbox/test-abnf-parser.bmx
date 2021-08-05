@@ -7,11 +7,15 @@ SuperStrict
 Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
 
+Include "bin/TToken.bmx"
+Include "bin/TLexer.bmx"
+Include "bin/TParser.bmx"
+
 Include "bin/TABNF.bmx"
 Include "bin/TABNFLexer.bmx"
 Include "bin/TABNFParser.bmx"
 
-Include "bin/TToken.bmx"
+Include "bin/AbstractSyntaxTree.bmx"
 
 Include "bin/TABNFTreeWalker.bmx"
 
@@ -26,17 +30,17 @@ Try
 	Local parser:TParser = New TABNFParser( lexer )
 	
 	start  = MilliSecs()
-DebugStop
+'DebugStop
 	parser.parse()
 	finish = MilliSecs()
 	
-	Print( "PARSER.TIME: "+(finish-start)+"ms" )
+	Print( "ABNF LEXER+PARSER TIME: "+(finish-start)+"ms" )
 	
 	Print( "Starting debug output...")
 'DebugStop
 	Local abnf:TABNF = parser.abnf
-'DebugStop
-	'Print( abnf.reveal() )
+DebugStop
+	Print( abnf.reveal() )
 	
 	' SHOW DEBUG TREE
 	Local printer:TABNFTreeWalker = New TABNFTreeWalker( abnf )
