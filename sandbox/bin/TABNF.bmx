@@ -71,10 +71,10 @@ Type TGrammarNode
 		'	Previously repeat was put in alt, but this statement then failed:
 		'		rule = THIS / *THAT / ANOTHER
 		'	It failed because *THAT put the option into alt, but ANOTHER overwrote it
-	Field terminal:Int = False		' True for node referencing another rule.
+	Field terminal:Int = False		' False for node referencing another rule.
 		' NOTE:
-		'	A Terminal (True) is a node referencing another rule
-		'	A Non-Terminal (False) is usually a constant like "(" or "Function"
+		'	A Terminal (True) is usually a constant like "(" or "Function"
+		'	A Non-Terminal (False) is a node referencing another rule
 	Field token:TToken				' The token within the node
 
 	' These fields are used for debugging the tree

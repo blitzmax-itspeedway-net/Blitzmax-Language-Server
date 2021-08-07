@@ -20,7 +20,7 @@ Type TToken
     End Method
 
 	Method reveal:String()
-		Return RSet(line,4)+","+LSet(pos,4)+" " + String(id)[..6] + class[..12] + value
+		Return RSet(line,4)+","+LSet(pos,4)+" " + String(id)[..6] + class[..14] + value
 	End Method
 
 	' Confirm if symbol is in a given set

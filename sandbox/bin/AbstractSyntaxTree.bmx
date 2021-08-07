@@ -8,15 +8,20 @@ Type AST
 	Field children:TList	' Leaf node when NULL
 	Field token:TToken
 	
-	Method New( token:TToken )
+	Method New( name:String, token:TToken )
+		Self.name = name
 		Self.token = token
 	End Method
 	
-	Method addChild( child:TToken )
+	Method addChild( child:AST )
 		If Not children children = New TList()
 		children.addLast( child )
 	End Method
-	
+
+	Method addChild( name:String, token:TToken )
+		addchild( New AST( name, token ) )
+	End Method
+
 End Type
 
 ' A Visitor is a process that does something with the data

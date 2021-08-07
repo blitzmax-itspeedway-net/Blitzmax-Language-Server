@@ -2,6 +2,9 @@
 '	Generic Parser
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
+'	TERMINAL		- Token that defines a constant or optional string
+'	NON-TERMINAL	- Token that defines the rules (usually leading to another rule)
+
 ' Exception handler for Parse errors
 Type TParseError Extends TException
 End Type
@@ -30,6 +33,7 @@ Type TParser
 	Method parse:Object( rulename:String = "" )
 '	Method testabnf:Int( rulename:String, path:String="" )
 'DebugStop
+		Print "~nSTARTING LEXER:"
 		' First order of the day is to run the lexer...
 		Local start:Int, finish:Int
 		start = MilliSecs()
@@ -37,22 +41,185 @@ Type TParser
 		finish = MilliSecs()
 		Print( "LEXER.TIME: "+(finish-start)+"ms" )
 	
-		Print( "Starting debug output...")
+		Print( "STARTING LEXER DEBUG:")
 		Print( lexer.reveal() )
 'DebugStop
-		' If no rulename passed, then use first rule in ANBF
-		Publish( "PARSE-START", Null )
-		
+		' If no rulename passed, then use first rule in ANBF		
 		If rulename="" rulename = abnf.first()
-		If rulename="" Return Null' No starting node (Empty ABNF?)
-		ast = walk( rulename )
-
+		'If rulename="" Return Null' No starting node (Empty ABNF?)
+		'ast = walk_rule( rulename )
+DebugStop
+		Print "~nSTARTING PARSER:"
+		Publish( "PARSE-START", Null )
+		lexer.reset()
+		
+		Local program:AST = parse_rule( rulename )
+		
+		''Local token:TToken = lexer.getnext()
+		'While token And token.id<>TK_EOF
+	'	'	program.addChild( parse_token( token ) )
+		'Wend
+		'Print ast.reveal()
 		Publish( "PARSE-FINISH", Null )
 		
 	End Method
 	
+	Method parse_rule:AST( rulename:String, indent:String="" )
+		Local result:AST = New AST
+		
+		' Get grammar node
+		If rulename = "" Return Null	' Rule cannot be empty!
+		Local node:TGrammarNode = abnf.find( rulename )
+		If Not node Return Null			' Missing rule
+
+DebugStop
+Print indent+"RULE: "+rulename
+indent :+ "  "
+		' Walk the successor until node complete
+		While node And node.token.id<>TK_EOF
+'Print indent+"WALKING: "+node.token.reveal()
+			Local response:AST = parse_node( node, indent )
+			If response
+				Print indent+"- Success"
+				If response.token.id <> TK_EOL ; result.addchild( response )
+			Else
+				Print indent+"- Failed"
+				Return Null
+			End If
+			node = node.suc
+		Wend
+		
+		Print indent+"REFLECT: parse_"+Lower(rulename)+"()"
+		Return result
+	End Method
+	
+	Method parse_node:AST( node:TGrammarNode, indent:String )
+DebugStop	
+		If node.terminal
+			Local token:TToken = lexer.peek()
+			'Print "TERMINAL"
+			'Print indent+node.token.value+":"+node.token.class+" ("+node.token.id+") - TERMINAL"
+			'Print indent+"- Comparing with "+token.reveal()
+			' Try alternatives until we get a match (or not)
+			While node
+				Print indent+node.token.value+" (TERMINAL) =='"+token.class+"'?"
+				'Print indent+"- Comparing "+token.class+" with "+node.token.value
+				If node.token.value = token.class
+					Print indent+"- MATCH"
+					lexer.getnext()	' Consume the token
+					Return New AST( "TERMINAL", token )
+				End If
+				node = node.alt
+			Wend
+			Print "- NO MATCHES"
+			Return Null
+		Else
+			Print indent+node.token.value+" (NON-TERMINAL)"
+			Return parse_rule( node.token.value, indent )
+		End If
+	
+	End Method
+	
+'/// BAD PARSING ATTEMPTS PAST HERE
+	Method parse_token:AST( token:TToken )
+		Select token.id
+		Case TK_Alpha
+			Return parse_alpha( token )
+		End Select
+	End Method
+	
+	Method parse_alpha:AST( token:TToken )
+		Return New AST( "alpha", token )
+	End Method
+	
+	Method walk_rule:AST( rulename:String, path:String="" )
+	
+		Local token:TToken
+		Local match:AST = Null
+		Local column:String = (path+rulename)[..30]
+		
+		Print "# RULE: "+rulename
+		Local node:TGrammarNode = abnf.find( rulename )
+		If Not node
+			Print column+" - Rule '"+rulename+"' Not found"
+			
+			' NEED TO CHECK FOR IN-BUILT LIKE ALPHA/COMMENT ETC
+			' MAYBE EXTEND ABNF TO MAKE THESE <linecomment> or <alpha> SYMBOLS
+			
+			Return Null
+		End If
+		
+		Local rule_ast:AST = New AST( rulename, New TToken( 0, rulename, 0,0, "rulename" ) )
+		
+		
+		While node And node.token.id<>TK_EOF
+			Local result:AST = walk_node( node, token )
+			node = node.suc
+		Wend
+		
+		'Rule will either be success (AST) or fail (NULL)
+		Repeat
+			' If the node is a non-terminal, parse that rule
+			' If it has options or alternatives, make sure those are checked
+			Local result:AST = walk_node( node, token )
+		
+		Until Not node Or node.token.id=TK_EOF
+		Return match		
+	End Method
+	
+	Method walk_node:AST( node:TGrammarNode, token:TToken )
+	
+		Select node.token.id
+		Case TK_Group
+			token = lexer.getNext()
+			Return walk_node( node.alt, token )
+		Case TK_Optional
+			token = lexer.getNext()
+			Return walk_node( node.opt, token )
+		Case TK_Repeater
+			token = lexer.getNext()
+			Local result:AST
+			Repeat
+				result = walk_node( node.opt, token )
+			Until Not result
+			Return ast
+		Default
+			While node And node.token.id<>TK_EOF
+				' Move to alternative
+				node = node.alt			
+			Wend
+			Return Null	' No match
+		End Select
+		
+	End Method
+	
+	Method walk_alt:AST( node:TGrammarNode, token:TToken )
+		While node And node.token.id<>TK_EOF		
+			If node.terminal
+				If node.token.id = TK_lessthan
+					' Token compare
+					' THIS IS A TOKEN COMPARE NOT A VALUE COMPARE
+				Else
+					' Value compare
+					' ALSO NEED TO CHECK FOR "EMPTY" WHICH IS ALWAYS TRUE
+					If compare( node.token, token )
+						' We have a match, so return an AST node
+						Return New AST( "", token )
+					End If
+					' Move to alternative
+					node = node.alt
+				End If
+			Else
+				Local result:AST = walkxxx( node.token.value )
+			End If
+		Wend
+		Return Null	' No match
+	End Method
+	
+	
+	
 	' Generic ABNF tree walker that generates AST
-	Method walk:AST( rulename:String, path:String="" )
+	Method walkxxx:AST( rulename:String, path:String="" )
 DebugStop	
 		Local token:TToken
 		Local match:AST = Null
@@ -70,6 +237,7 @@ DebugStop
 		Repeat
 		Print "# NODE: "+node.token.value
 
+If node.token.value = "linecomment" DebugStop
 DebugStop
 			If node.terminal
 				Print column+"- Node '"+rulename+"' is a terminal"
@@ -80,41 +248,12 @@ DebugStop
 DebugStop
 				match = Null
 				If compare( node.token, token )
-					match = New AST( token )
+					match = New AST( "",token )
 					lexer.getnext()
 				End If
-Rem				
-				Select True
-				Case (node.token.id=TK_QString) And (token.id=TK_Identifier)
-'DebugStop
-					If node.token.value = token.class
-						Print column+"- MATCHED"
-						match = New AST( token )
-						lexer.getnext()
-						'Print column+"-CALLING rule_"+rulename+"()"
-				'	Else
-				'		match = Null
-					End If
-				'Case TK_QString
-'DebugStop
-				'	If node.token.value = "~q"+token.class+"~q"
-				'		Print column+"- QSTRING MATCHED"
-				'		match = New AST( token )
-				'		lexer.getnext()
-						'Print column+"-CALLING rule_"+rulename+"()"
-				'	Else
-				'		match = Null
-				'	End If
-				Default
-					Print column+"- Unable to compare different token types"
-				'	match = Null
-				End Select
-				
-				If Not match Print column+"- NO MATCH"
-End Rem
 			Else
 				Print column+"- Node '"+node.token.value+"' is a non-terminal"
-				match = walk( node.token.value, rulename+"|" )
+				match = walkxxx( node.token.value, rulename+"|" )
 				Print column+"- Returned to '"+rulename+"'"
 			End If
 			'
@@ -127,16 +266,14 @@ End Rem
 				If node 
 					Print column+"-Moving To successor ("+node.token.value+")"
 					lexer.getnext()
-WHEN LINECOMMENT IS READ HERE, WE MUST COMPARE THE TOKENS Not THE
-RULE
 				Else
 					Print column+"-No successor"
 					Return match
 				End If
 			Else 
 				Print "- UNMATCHED"
-				Publish( "DIAGNOSTIC", "Unexpected token", token )
-				Print "###> DIAGNOSTIC : Unexpected token '"+ token.value + "' at "+token.line+","+token.pos
+				'Publish( "DIAGNOSTIC", "Unexpected token", token )
+				'Print "###> DIAGNOSTIC : Unexpected token '"+ token.value + "' at "+token.line+","+token.pos
 				Return Null
 			End If
 		Until Not node Or node.token.id=TK_EOF
@@ -149,7 +286,7 @@ RULE
 
 		While node
 			If compare( node.token, token )
-				match = New AST( token )
+				match = New AST( "",token )
 				Exit
 			End If
 			node = node.alt

@@ -9,6 +9,8 @@ Import brl.reflection
 Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
 
+'Include "../bin/json.bmx"
+
 '	GENERIC LEXER AND PARSER
 Include "bin/TToken.bmx"
 Include "bin/TLexer.bmx"
@@ -129,6 +131,7 @@ Local abnf:TABNF, tree:AST
 Try
 	
 	'	First we load and parse BlitzMax Grammar into abnf
+	Print "STARTING BNF GRAMMAR PARSER:"
 	source = loadFile( "samples/bmx-build.abnf" )
 	lexer  = New TABNFLexer( source )
 	parser = New TABNFParser( lexer )	
@@ -140,17 +143,18 @@ Try
 	'	Save the Grammar Definition
 	'abnf = parser.abnf
 'DebugStop
-	Print "~nABNF:"
+	Print "~nABNF STRUCTURE:"
 	Print abnf.reveal()
 	
 	'	Next we load and parse BlitzMax
+	Print "STARTING BLITZMAX PARSER:"
 	source = loadFile( "samples/1) Simple Blitzmax.bmx" )
 	'source = loadFile( "samples/1) Simple Blitzmax.bmx" )
 	lexer  = New TBlitzMaxLexer( source )
 'DebugStop
 	parser = New TBlitzMaxParser( lexer, abnf )		' NOTE LANGUAGE DEFINITION ARGUMENT HERE
 	start  = MilliSecs()
-DebugStop
+'DebugStop
 	tree   = AST(parser.parse())
 	finish = MilliSecs()
 	Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )
@@ -158,8 +162,19 @@ DebugStop
 '	parser.testabnf( "program" )
 	
 	'parser.parse()
-	Print parser.reveal()
+	'Print parser.reveal()
 	'Local langserv:TLangServ = New TLangServ( parser )
+
+	' LASTLY: Pretty print the AST back into BlitzMax
+	Print "~nTRANSPILE AST TO BLITZMAX:"
+	If tree
+		'Local transpiler:TBlitzMaxCompiler = New TBlitzMaxCompiler( tree )
+		'Local blitzmax:String = transpiler.run()
+		Print "~nTRANSPILER:"
+		'Print blitzmax
+	Else
+		Print "Cannot transpile until syntax corrected"
+	End If
 
 	'langserv.run()
 	'Print langserv.reveal()

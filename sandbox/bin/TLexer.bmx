@@ -2,7 +2,7 @@
 '	Generic Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-'	VERSION:	1.4
+'	VERSION:	1.5
 '
 '	V1.0    -- JUL 21  Initial version using Queue<TSymbol> and String Tokens. 
 '	V1.1    24 JUL 21  Replaced Queue<TSymbol> with a TList
@@ -10,6 +10,7 @@
 '	V1.3    27 JUL 21  Reworked Tokens to use integer indexes
 '	V1.4    28 JUL 21  Symbol lookup using string[] instead of TMap
 '	V1.4.1  29 JUL 21  Removed argument "reserved" from new as it is not required
+'	V1.5	 7 AUG 21  Added support for language specific tokeniser
 
 '	TODO:
 '	Use TStringMap instead of TMap
@@ -83,8 +84,8 @@ Const TK_Number:Int			= 605	' 	Number
 
 Type TLexer
 
-	Field SYM_LINECOMMENT:String = ""
-	Field SYM_ALPHAEXTRA:String  = ""	' Additional Characters allowed in ALPHA
+	'Field SYM_LINECOMMENT:String = ""
+	'Field SYM_ALPHAEXTRA:String  = ""	' Additional Characters allowed in ALPHA
 
 	Private
 			
@@ -97,6 +98,7 @@ Type TLexer
 	Field tokens:TList = New TList()
 	Field defined:TMap = New TMap()	' List of known tokens. Key is token, Value is class
 	Field lookup:String[128]
+	'Field tokentable:TStringMap = New TStringMap()
 	
 	Public
 	
@@ -130,6 +132,11 @@ Type TLexer
 		Return result
 	End Method
 
+	' Set the token cursor to the first element
+	Method reset()
+		tokpos = tokens.firstLink()
+	End Method
+	
     ' Gets the next token from the list
     Method getNext:TToken()	' ignorelist:String="" )
 		'If tokpos=Null Or tokens.isempty() Return New TToken( "EOF","", linenum, linepos)
@@ -222,13 +229,38 @@ End Rem
 		tokpos = tokens.firstLink()
 	End Method
 	
+	' Get the next available token
+	' Updated in V1.5
 	Method nextToken:TToken()
+		' Save the token position
+		'Local line:Int = linenum
+		'Local pos:Int = linepos
+		
+		' Catch end of file, end of line and control codes
+		' Pass everything else to language specific tokeniser
 		Local char:String = PeekChar()
-'DebugStop
+		Select True
+		Case char = ""		' End of file
+			Return New TToken( TK_EOF, "", linenum, linepos, "EOF" )
+		Case char = "~n"	' End of line
+			popChar()
+			Return New TToken( TK_EOL, "CR", linenum, linepos, "EOL" )
+		Case char < " "	Or char > "~~"		' Throw away control codes
+			' Do nothing...
+		Default
+			Return getNextToken() ' char, linenum, linepos )
+		End Select	
+	End Method
+	
+			
+Rem
+	' V1.4 nextToken - DEPRECIATED IN 1.5
+	Method nextToken14:TToken( char:String )
+		Local char:String = PeekChar()
 		' Save the token position
 		Local line:Int = linenum
 		Local pos:Int = linepos
-		' Identify the token
+		'
 		Select True
 		Case char = ""		' End of file
 			Return New TToken( TK_EOF, "", line, pos, "EOF" )
@@ -269,6 +301,10 @@ End Rem
 			Return New TToken( ascii, char, line, pos, "symbol" )
 		EndSelect		
 	End Method
+End Rem
+	
+	' Langage specific tokeniser
+	Method getNextToken:TToken() Abstract
 	
     ' Skips leading whitespace and returns next character
     Method PeekChar:String( IgnoredSymbols:String = SYM_WHITESPACE )
@@ -353,11 +389,11 @@ End Rem
         Return char
     End Method
 
-    Method ExtractIdent:String()
+    Method ExtractIdent:String( bodySymbols:String = SYM_ALPHA )
 'DebugStop
         Local text:String
         Local char:String = peekChar()
-        While Instr( SYM_ALPHA+SYM_ALPHAEXTRA, char ) And char<>""
+        While Instr( bodySymbols, char ) And char<>""
             text :+ popChar()
             char = PeekChar("")
         Wend

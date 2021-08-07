@@ -11,17 +11,17 @@ Const TK_HEXDIGIT:Int		= 512	'	%x
 Const TK_Group:Int 			= 610	'	()
 Const TK_Optional:Int 		= 611	'	[]
 Const TK_Repeater:Int 		= 612	'	*
+Const TK_NonTerminal:Int	= 613	'	<NAME>
 
 Type TABNFLexer Extends TLexer
-
-	Field SYM_LINECOMMENT:String = ";"
-	Field SYM_ALPHAEXTRA:String  = "-"	' Additional Characters allowed in ALPHA
 
 	Method New( text:String )
 		Super.New( text )
 		Print "Starting ABNF XLexer"
 		
-		'DebugStop
+		' Define internal symbols
+		'SYM_LINECOMMENT	= ";"
+		'SYM_ALPHAEXTRA	= "-"	' Additional Characters allowed in ALPHA
 
 		' Add compound symbols to definition
 		RestoreData abnf_compound_symbols
@@ -30,9 +30,6 @@ Type TABNFLexer Extends TLexer
 		' Add tokens to definition
 		RestoreData abnf_symbols
 		readSymbols()
-
-		'RestoreData abnf_terminals
-		'readTokens()
 
 	End Method
 
@@ -65,7 +62,55 @@ Type TABNFLexer Extends TLexer
 			ReadData id, value, class
 		Until id = 0
 	End Method
-		
+	
+	' Language specific tokeniser
+	Method GetNextToken:TToken()
+		Local char:String = peekchar()
+		Local line:Int = linenum
+		Local pos:Int = linepos
+		'
+		Select True
+		Case char = "~q"	' Quote indicates a string
+			Return New TToken( TK_QString, ExtractString(), line, pos, "qstring" )
+		Case char = "<"		' indicates start of an identifier
+'DebugStop
+			PopChar()	' Skip LTH symbol
+			Local text:String = ExtractIdent()
+			char = peekchar()
+			If char <> ">" Return New TToken( TK_Invalid, char, line, pos, "invalid" )
+			popchar()	' Skip GTH symbol
+			Return New TToken( TK_NonTerminal, text, line, pos, "non-terminal" )
+		Case char = ";"			' Line comment
+			Return New TToken( TK_Comment, ExtractLineComment(), line, pos, "comment" )
+		Case Instr( SYM_NUMBER, char ) > 0	' Number
+			Return New TToken( TK_Number, ExtractNumber(), line, pos, "number" )
+		Case Instr( SYM_ALPHA, char )>0       	' Alphanumeric Identifier
+			Local text:String = ExtractIdent( SYM_ALPHA+"-" )
+			' Check if this is a named-token or just an alpha
+			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
+			If symbol Return New TToken( TK_Identifier, text, line, pos, symbol.class )
+			Return New TToken( TK_Alpha, text, line, pos, "alpha" )
+		'Case Instr( valid_symbols, char, 1 )            ' Single character symbol
+		Default								' A Symbol
+			PopChar()   ' Move to next character
+			' Check for Compound symbol
+			Local compound:String = char+peekChar()
+'DebugStop
+			Local symbol:TSymbol = TSymbol( defined.valueforkey( compound ) )
+			If symbol
+				popChar()
+				Return New TToken( symbol.id, symbol.value, line, pos, symbol.class )
+			End If
+			' Lookup symbol definition
+				'symbol = TSymbol( defined.valueforkey( char ) )
+				'If symbol Return New TToken( symbol.id, char, line, pos, "symbol" ) 
+			Local ascii:Int = Asc(char)
+			Local class:String = lookup[ascii]
+			If class<>"" Return New TToken( ascii, char, line, pos, class ) 
+			' Default to ASCII code
+			Return New TToken( ascii, char, line, pos, "symbol" )
+		EndSelect
+	End Method
 End Type
 
 ' ABNF Tables
