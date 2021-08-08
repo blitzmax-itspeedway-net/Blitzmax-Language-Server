@@ -117,16 +117,40 @@ DebugStop
 			'Print indent+"- Comparing with "+token.reveal()
 			' Try alternatives until we get a match (or not)
 			While node
-				Print indent+node.token.value+" (TERMINAL) == ("+token.id+") '"+token.value+":"+token.class+"'?"
-				'Print indent+"- Comparing "+token.class+" with "+node.token.value
-				If node.token.value = token.class
-					Print indent+"- MATCHED"
-					lexer.getnext()	' Consume the token
-					Return New AST( "TERMINAL", token )
-				End If
+				Select node.token.id
+				Case TK_Group
+					Assert node.opt, "GROUP IS INVALID - THIS SHOULD NEVER HAPPEN"
+					Return parse_node( node.opt, indent+"  ")
+				Case TK_Optional
+					Assert node.opt, "OPTIONAL IS INVALID - THIS SHOULD NEVER HAPPEN"
+Print "Matching optional"
+DebugStop
+					Local result:AST = parse_node( node.opt, indent+"  " )
+If Not result 
+	Print "Failed to match optional"
+Else
+	Print "Matched optional"
+End If
+'HERE
+
+					' If no match was found, return an empty node
+					If Not result ; result = New AST( "EMPTY", token ) 
+					Return result
+				Case TK_Repeater
+					Assert False, "TK_Repeater is not implemented"
+				Default
+					Print indent+node.token.value+" (TERMINAL) == ("+token.id+") '"+token.value+":"+token.class+"'?"
+					'Print indent+"- Comparing "+token.class+" with "+node.token.value
+					If node.token.value = token.class
+						Print indent+"- MATCHED"
+						lexer.getnext()	' Consume the token
+						Return New AST( "TERMINAL", token )
+					End If
+				End Select
 				node = node.alt
 			Wend
 			Print "- NO MATCHES"
+			'ThrowParseError( "'"+token.value+"' was unexpected at this time", token.line,token.pos)
 			Return Null
 		Else
 			Print indent+node.token.value+" (NON-TERMINAL)"

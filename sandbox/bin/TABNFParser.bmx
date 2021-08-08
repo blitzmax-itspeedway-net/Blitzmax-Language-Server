@@ -141,10 +141,13 @@ Type TABNFParser Extends TParser
 		Case TK_lparen		'	( = Group
 			Local root:TGrammarNode = New TGrammarNode( True, New TToken( TK_Group, "()", token.line, token.pos, "()" ) )
 			root.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rparen] )
+			lexer.getnext()		' Consume closing paren
 			Return root
 		Case TK_lcrotchet	'	[ = Optional
+'DebugStop
 			Local root:TGrammarNode = New TGrammarNode( True, New TToken( TK_Optional, "[]", token.line, token.pos, "[]" ) )
 			root.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rcrotchet] )
+			lexer.getnext()		' Consume closing crochet
 			Return root
 		Case TK_solidus,TK_pipe		'	|/ = Alternative
 'DebugStop
@@ -183,9 +186,11 @@ Type TABNFParser Extends TParser
 		Case TK_lparen		'	( = Group
 			node = New TGrammarNode( True, New TToken( TK_Group, "()", token.line, token.pos, "()" ) )
 			node.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rparen] )
+			lexer.getnext()		' Consume closing paren
 		Case TK_lcrotchet	'	[ = Optional
 			node = New TGrammarNode( True, New TToken( TK_Optional, "[]", token.line, token.pos, "[]" ) )
 			node.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rcrotchet] )
+			lexer.getnext()		' Consume closing crochet
 		Default
 			ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
 		End Select

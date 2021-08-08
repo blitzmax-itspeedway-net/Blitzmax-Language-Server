@@ -1,13 +1,13 @@
 ; BlitzMax ABNF grammer definition
 ; (c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-program = <c-eol> <programbody> <c-eol>
+program = <strictmode> <programbody> <c-eol>
 
 testprogram = <strictmode> <framework> | <module> <programbody>
 
 c-eol = comment | EOL
 
-strictmode = "strict" | "superstrict" COMMENT EOL
+strictmode = "strict" | "superstrict" [COMMENT] EOL
 
 framework = "framework" ALPHA "." ALPHA
 
