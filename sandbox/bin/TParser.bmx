@@ -62,10 +62,22 @@ DebugStop
 		'Print ast.reveal()
 		Publish( "PARSE-FINISH", Null )
 		
+		' Check that file parsing has completed successfully
+		Local after:TToken = lexer.peek()
+		If after.isnot( TK_EOF ) ; ThrowParseError( "Unexpected symbol", after.line, after.pos )
+		
+		' Print state and return value
+		If program
+			Print "SUCCESS"
+			Return program
+		Else
+			Print "FAILURE"
+			Return Null
+		End If
 	End Method
 	
 	Method parse_rule:AST( rulename:String, indent:String="" )
-		Local result:AST = New AST
+		Local result:AST = New AST()
 		
 		' Get grammar node
 		If rulename = "" Return Null	' Rule cannot be empty!
@@ -81,7 +93,10 @@ indent :+ "  "
 			Local response:AST = parse_node( node, indent )
 			If response
 				Print indent+"- Success"
-				If response.token.id <> TK_EOL ; result.addchild( response )
+'DebugStop
+				If response.token And response.token.id <> TK_EOL 
+					result.addchild( response )
+				End If
 			Else
 				Print indent+"- Failed"
 				Return Null
@@ -89,7 +104,7 @@ indent :+ "  "
 			node = node.suc
 		Wend
 		
-		Print indent+"REFLECT: parse_"+Lower(rulename)+"()"
+		Print indent+"REFLECT: parse_"+Replace(Lower(rulename),"-","")+"()"
 		Return result
 	End Method
 	
@@ -102,10 +117,10 @@ DebugStop
 			'Print indent+"- Comparing with "+token.reveal()
 			' Try alternatives until we get a match (or not)
 			While node
-				Print indent+node.token.value+" (TERMINAL) =='"+token.class+"'?"
+				Print indent+node.token.value+" (TERMINAL) == ("+token.id+") '"+token.value+":"+token.class+"'?"
 				'Print indent+"- Comparing "+token.class+" with "+node.token.value
 				If node.token.value = token.class
-					Print indent+"- MATCH"
+					Print indent+"- MATCHED"
 					lexer.getnext()	' Consume the token
 					Return New AST( "TERMINAL", token )
 				End If

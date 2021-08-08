@@ -14,11 +14,13 @@ Type AST
 	End Method
 	
 	Method addChild( child:AST )
+'DebugStop
 		If Not children children = New TList()
 		children.addLast( child )
 	End Method
 
 	Method addChild( name:String, token:TToken )
+'DebugStop
 		addchild( New AST( name, token ) )
 	End Method
 

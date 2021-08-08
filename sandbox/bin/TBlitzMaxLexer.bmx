@@ -61,17 +61,17 @@ Type TBlitzMaxLexer Extends TLexer
 		'
 		Select True
 		Case char = "~q"	' Quote indicates a string
-			Return New TToken( TK_QString, ExtractString(), line, pos, "qstring" )
+			Return New TToken( TK_QString, ExtractString(), line, pos, "QSTRING" )
 		Case char = "'"		' Line comment
-			Return New TToken( TK_Comment, ExtractLineComment(), line, pos, "comment" )
+			Return New TToken( TK_Comment, ExtractLineComment(), line, pos, "COMMENT" )
 		Case Instr( SYM_NUMBER, char ) > 0	' Number
-			Return New TToken( TK_Number, ExtractNumber(), line, pos, "number" )
+			Return New TToken( TK_Number, ExtractNumber(), line, pos, "NUMBER" )
 		Case Instr( SYM_ALPHA, char )>0       	' Alphanumeric Identifier
 			Local text:String = ExtractIdent( SYM_ALPHA+"_" )
 			' Check if this is a named-token or just an alpha
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
 			If symbol Return New TToken( TK_Identifier, text, line, pos, symbol.class )
-			Return New TToken( TK_Alpha, text, line, pos, "alpha" )
+			Return New TToken( TK_Alpha, text, line, pos, "ALPHA" )
 		'Case Instr( valid_symbols, char, 1 )            ' Single character symbol
 		Default								' A Symbol
 			PopChar()   ' Move to next character

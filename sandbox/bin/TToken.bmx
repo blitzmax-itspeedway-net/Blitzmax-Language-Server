@@ -58,4 +58,10 @@ Type TToken
 'DebugStop
 		Return (Self.id=id)
 	End Method	
+	
+	' Confirm class ("if token.class <> id" )
+	Method isnot:Int( id:Int )
+'DebugStop
+		Return Not(Self.id=id)
+	End Method	
 End Type

@@ -194,9 +194,9 @@ Function test_folder:Int( folder:String, grammar:TABNF, state:Int, verbose:Int=F
 		If FileType(folder+"/"+filepath)=FILETYPE_FILE And ExtractExt(folder+"/"+filepath)="bmx"
 			Print StripDir(filepath)+" - TESTING"
 			If test_file( folder+"/"+filepath, grammar, state, verbose )
-				Print " - SUCCESS"
+				Print StripDir(filepath)+" - SUCCESS"
 			Else
-				Print " - FAILURE"
+				Print StripDir(filepath)+" - FAILURE"
 			End If
 		Else
 			Print StripDir(filepath)+" - SKIPPED"
@@ -244,7 +244,7 @@ Local verbose:Int = True
 
 '	LOAD BLITZMAX GRAMMER
 
-Local grammar:TABNF = load_grammar( "samples/bmx-build.abnf", true )
+Local grammar:TABNF = load_grammar( "samples/bmx-build.abnf", True )
 Assert grammar, "Failed to load grammar definition"
 
 ' 	MAIN TESTING APPLICATION
