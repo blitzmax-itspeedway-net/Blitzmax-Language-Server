@@ -17,7 +17,8 @@ Type TABNFParser Extends TParser
 		lexer.run()
 		finish = MilliSecs()
 		Print( "LEXER.TIME: "+(finish-start)+"ms" )
-		Print( lexer.reveal() )
+		
+		'Print( lexer.reveal() )
 
 		' Define where we are going to put the results...
 		Local abnf:TABNF = New TABNF

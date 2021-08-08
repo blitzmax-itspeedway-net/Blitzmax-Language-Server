@@ -1,7 +1,11 @@
 ; BlitzMax ABNF grammer definition
 ; (c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-program = <strictmode> <framework> | <module> <programbody>
+program = <c-eol> <programbody>
+
+testprogram = <strictmode> <framework> | <module> <programbody>
+
+c-eol = comment | EOL
 
 strictmode = "strict" | "superstrict" comment EOL
 
@@ -9,6 +13,6 @@ framework = "framework" ALPHA "." ALPHA
 
 programbody = <print> ; Will also have functiondef, typedef etc!
 
-print = "print" QSTRING
+print = "print" QSTRING EOL
 
 

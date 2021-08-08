@@ -125,7 +125,7 @@ Type TLexer
 	' Produce a token table to help debugging
 	Method reveal:String()
 		If tokens.isempty() Return "TOKEN STREAM IS EMPTY"
-		Local result:String = "POSITION  ID    CLASS       VALUE~n"
+		Local result:String = "POSITION  ID    CLASS         VALUE~n"
 		For Local token:TToken = EachIn tokens
 			result :+ token.reveal()+"~n"
 		Next

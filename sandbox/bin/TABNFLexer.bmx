@@ -75,7 +75,7 @@ Type TABNFLexer Extends TLexer
 		Case char = "<"		' indicates start of an identifier
 'DebugStop
 			PopChar()	' Skip LTH symbol
-			Local text:String = ExtractIdent()
+			Local text:String = ExtractIdent( )
 			char = peekchar()
 			If char <> ">" Return New TToken( TK_Invalid, char, line, pos, "invalid" )
 			popchar()	' Skip GTH symbol
