@@ -16,6 +16,7 @@ End Function
 Type TParseResult
 	Field tree:AST
 	Field syntax:TToken[] = []
+	'Field success:Int = false
 	Method New( syntax:TToken )
 		Self.syntax :+ [syntax]
 	End Method
@@ -78,7 +79,7 @@ Type TParser
 		
 		' Check that file parsing has completed successfully
 		Local after:TToken = lexer.peek()
-		If after.isnot( TK_EOF ) ; ThrowParseError( "Unexpected symbol past end", after.line, after.pos )
+		If after.isnot( TK_EOF ) ; ThrowParseError( after.value+" unexpected past end", after.line, after.pos )
 		
 		' Print state and return value
 		If program
@@ -91,7 +92,7 @@ Type TParser
 	End Method
 	
 	Method parse_rule:TParseResult( rulename:String, indent:String="" )
-		Local result:TParseResult = New TParseResult()
+		Local result:TParseResult '= New TParseResult()
 		
 		' Get grammar node
 		If rulename = "" Return Null	' Rule cannot be empty!
@@ -99,37 +100,52 @@ Type TParser
 		If Not node Return Null			' Missing rule
 
 'DebugStop
+'If rulename="optseq" DebugStop
+
 		Print indent+"RULE: "+rulename
 		indent :+ "  "
+		result = parse_sequence( node, indent )
+		
+		If result
+			Print indent+"REFLECT: parse_"+Replace(Lower(rulename),"-","")+"()"
+			'result.ast = reflect( rulename, result.syntax )
+			
+			' DEBUG THE MATCH
+			Local line:String = rulename+"="
+			For Local rule:TToken = EachIn result.syntax
+				line :+ "["+rule.value+":"+rule.class+"]"
+			Next
+			Print indent+line
+		Else
+			Print indent+rulename+" failed"
+		End If
+		
+		Return result
+	End Method
+
+	' Parse a sequence. 
+	'	Returns Syntax=[] if that sequence fails
+	Method parse_sequence:TParseResult( node:TGrammarNode, indent:String )
+		Local sequence:TParseResult = New TParseResult()
+'DebugStop		
 		' Walk the successor until node complete
 		While node And node.token.id<>TK_EOF
 'Print indent+"WALKING: "+node.token.reveal()
-			Local response:TParseResult = parse_node( node, indent )
-			If response
+			Local result:TParseResult = parse_node( node, indent )
+			If result
 				Print indent+node.token.value+" is Success"
 'DebugStop
 '				If response.token And response.token.id <> TK_EOL 
 '					result.add( response.syntax )
 '				End If
-				result.add( response.syntax )
+				sequence.add( result.syntax )
 			Else
 				Print indent+node.token.value+" is Fail"
-				Return Null
+				Return sequence
 			End If
 			node = node.suc
 		Wend
-		
-		Print indent+"REFLECT: parse_"+Replace(Lower(rulename),"-","")+"()"
-		'result.ast = reflect( rulename, result.syntax )
-		
-		' DEBUG THE MATCH
-		Local line:String = rulename+"="
-		For Local rule:TToken = EachIn result.syntax
-			line :+ "["+rule.value+":"+rule.class+"]"
-		Next
-		Print indent+line
-		
-		Return result
+		Return sequence
 	End Method
 	
 	Method parse_node:TParseResult( node:TGrammarNode, indent:String )
@@ -144,13 +160,13 @@ Type TParser
 			While node
 				Select node.token.id
 				Case TK_Group
-					Assert node.opt, "GROUP IS INVALID - THIS SHOULD NEVER HAPPEN"
+					
 					Return parse_node( node.opt, indent+"  ")
 				Case TK_Optional
-					Assert node.opt, "OPTIONAL IS INVALID - THIS SHOULD NEVER HAPPEN"
+					
 					Print indent+"Matching optional"
 'DebugStop
-					Local result:TParseResult = parse_node( node.opt, indent+"  " )
+					Local result:TParseResult = parse_sequence( node.opt, indent+"  " )
 					If Not result 
 						Print indent+"No optional matches"
 					Else
