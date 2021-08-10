@@ -2,9 +2,9 @@
 '	ABSTRACT SYNTAX TREE (AST)
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-Type AST
+Type TAbSynTree
 	Field name:String		' IMPORTANT - THIS IS USED TO CALL THE METHOD
-	Field parent:AST		' Root node when NULL
+	Field parent:TAbSynTree		' Root node when NULL
 	Field children:TList	' Leaf node when NULL
 	Field token:TToken
 	
@@ -13,15 +13,16 @@ Type AST
 		Self.token = token
 	End Method
 	
-	Method addChild( child:AST )
+	Method addChild:TAbSynTree( child:TAbSynTree )
 'DebugStop
 		If Not children children = New TList()
 		children.addLast( child )
+		Return child
 	End Method
 
-	Method addChild( name:String, token:TToken )
+	Method addChild:TAbSynTree( name:String, token:TToken )
 'DebugStop
-		addchild( New AST( name, token ) )
+		Return addchild( New TAbSynTree( name, token ) )
 	End Method
 
 End Type
@@ -33,7 +34,7 @@ End Type
 ' The Visitor uses reflection to process the Abstract Syntax Tree
 Type TVisitor
 
-	Method visit( node:AST )
+	Method visit( node:TAbSynTree )
 		DebugStop
 		If Not node ThrowException( "Cannot visit null node" ) 
 		'If node.name = "" invalid()	' Leave this to use "visit_" method
@@ -46,11 +47,11 @@ Type TVisitor
 	End Method
 	
 	' This is called when node doesn't have a name...
-	Method visit_( node:AST )
+	Method visit_( node:TAbSynTree )
 		ThrowException( "Node "+node.token.class+" has no name!" )
 	End Method
 	
-	Method exception( node:AST )
+	Method exception( node:TAbSynTree )
 		ThrowException( "Method visit_"+node.name+"() does not exist" )
 	End Method
 	

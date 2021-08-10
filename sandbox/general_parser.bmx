@@ -32,11 +32,11 @@ Include "bin/TSymbolTable.bmx"
 
 '	TYPES AND FUNCTIONS
 
-Type AST_BinaryOperator Extends AST
-	Field L:AST	' Left 
-	Field R:AST	' Right
+Type AST_BinaryOperator Extends TAbSynTree
+	Field L:TAbSynTree	' Left 
+	Field R:TAbSynTree	' Right
 	
-	Method New( L:AST, token:TToken, R:AST )
+	Method New( L:TAbSynTree, token:TToken, R:TAbSynTree )
 		Self.token = token
 		Self.L = L
 		Self.R = R
@@ -54,7 +54,7 @@ End Function
 Type TLangServ Extends TVisitor
 
 	Field parser:TParser
-	Field tree:AST
+	Field tree:TAbSynTree
 	
 	Method New( parser:TParser )
 		Self.parser = parser
@@ -131,7 +131,7 @@ End Function
 Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=False )
 	Local source:String, lexer:TLexer, parser:TParser
 	Local start:Int, finish:Int
-	Local tree:AST
+	Local ast:TAbSynTree
 	Local transpile:String = StripExt( filepath ) + ".transpile"
 
 	Try		
@@ -147,11 +147,11 @@ Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=F
 		parser = New TBlitzMaxParser( lexer, grammar )		' NOTE LANGUAGE DEFINITION ARGUMENT HERE
 		start  = MilliSecs()
 	'DebugStop
-		tree   = AST(parser.parse())
+		ast    = TAbSynTree( parser.parse() )
 		finish = MilliSecs()
 		Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )
 
-		If Not tree
+		If Not ast
 			Print "Cannot transpile until syntax corrected"
 			Return False
 		End If
@@ -178,8 +178,16 @@ Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=F
 		
 		Return True
 		
-	Catch exception:TException
-		Print "## Exception: "+exception.toString()+" ##"
+	Catch e:Object
+		Local exception:TException = TException( e )
+		Local runtime:TRuntimeException = TRuntimeException( e )
+		Local text:String = String( e )
+		Local typ:TTypeId = TTypeId.ForObject( e )
+	DebugStop
+		If exception Print "## Exception: "+exception.toString()+" ##"
+		If runtime Print "## Exception: "+runtime.toString()+" ##"
+		If text Print "## Exception: '"+text+"' ##"
+		Print "TYPE: "+typ.name
 		Return False
 	End Try
 

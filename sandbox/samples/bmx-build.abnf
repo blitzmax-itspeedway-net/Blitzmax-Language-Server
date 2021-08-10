@@ -11,10 +11,10 @@
 ;               *.  - One or more "." in sequence
 ;               *(EOL)
 
-program = [<strictmode>] <optseq> <optalt> <c-eol>
+program = [<strictmode>] (<optseq> <optalt>) <c-eol>
 
 optseq = ["THIS" "THAT"]
-optalt = ["THIS"/"THAT"]
+optalt = ["MORE"/"LESS"]
 
 strictmode = strict | superstrict <c-eol>
 

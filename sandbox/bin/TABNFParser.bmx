@@ -260,7 +260,7 @@ End Type
 Type TABNFPrintVisitor Extends TVisitor
 
 	Field parser:TParser
-	Field tree:AST
+	Field tree:TAbSynTree
 	Field start:String		' Starting point in ABNF notation
 	
 	Method New( parser:TParser, start:String="" )

@@ -170,6 +170,20 @@ End Rem
 	
 	'	DYNAMIC METHODS
 	'	CALLED BY REFLECTOR
+	
+	Method rule_strictmode:TAbSynTree( syntax:TToken[] )
+		' strictmode = (strict | superstrict) [comment] EOL
+		Print "RULE STRICTMODE"
+		Assert syntax.length=3, "rule_strictmode() FAILED"
+
+		' SET PARSER STATE TO SELECTED STRICT MODE
+		strictmode = syntax[0].id
+
+		' CREATE AST
+		Return New TAbSynTree( "strictmode", syntax[0] )
+	End Method
+	
+	
 Rem
 	' Field = "field" VarDecl *[ "," VarDecl ]
 	Method token_field( token:TToken )
@@ -296,4 +310,13 @@ Rem
 End Rem
 
 	
+End Type
+
+Type AST_strictmode Extends TAbSynTree
+	Field comment:String
+	Field strictmode:Int
+	Method New( strictmode:TToken, comment:TToken )
+		Self.strictmode = strictmode.id
+		If comment Self.comment = comment.value
+	End Method
 End Type

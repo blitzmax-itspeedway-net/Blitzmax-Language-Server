@@ -14,7 +14,7 @@ Function ThrowParseError( message:String, line:Int=-1, pos:Int=-1 )
 End Function
 
 Type TParseResult
-	Field tree:AST
+	Field ast:TAbSynTree
 	Field syntax:TToken[] = []
 	'Field success:Int = false
 	Method New( syntax:TToken )
@@ -36,7 +36,7 @@ Type TParser
 	Field token:TToken
 	
 	Field abnf:TABNF			' ANBF Grammar rules
-	Field ast:AST				' Abstract Syntax Tree
+	Field ast:TAbSynTree		' Abstract Syntax Tree
 	
 	Method New( lexer:TLexer, abnf:TABNF=Null )
 'DebugStop
@@ -84,7 +84,7 @@ Type TParser
 		' Print state and return value
 		If program
 			Print "PARSING SUCCESS"
-			Return program
+			Return program.ast
 		Else
 			Print "PARSING FAILURE"
 			Return Null
@@ -108,7 +108,6 @@ Type TParser
 		
 		If result
 			Print indent+"REFLECT: parse_"+Replace(Lower(rulename),"-","")+"()"
-			'result.ast = reflect( rulename, result.syntax )
 			
 			' DEBUG THE MATCH
 			Local line:String = rulename+"="
@@ -116,6 +115,10 @@ Type TParser
 				line :+ "["+rule.value+":"+rule.class+"]"
 			Next
 			Print indent+line
+			
+			' Parse into AST
+'DebugStop
+			result.ast = reflect( rulename, result.syntax )
 		Else
 			Print indent+rulename+" failed"
 		End If
@@ -141,7 +144,8 @@ Type TParser
 				sequence.add( result.syntax )
 			Else
 				Print indent+node.token.value+" is Fail"
-				Return sequence
+' 10/8/21, Chnaged return type from sequence to null on failure
+				Return Null
 			End If
 			node = node.suc
 		Wend
@@ -160,8 +164,16 @@ Type TParser
 			While node
 				Select node.token.id
 				Case TK_Group
-					
-					Return parse_node( node.opt, indent+"  ")
+DebugStop					
+					Print indent+"Matching group"
+					Local result:TParseResult = parse_sequence( node.opt, indent+"  " )
+					If Not result 
+						Print indent+"No match"
+					Else
+						Print indent+"Matched"
+					End If
+
+					Return result
 				Case TK_Optional
 					
 					Print indent+"Matching optional"
@@ -403,19 +415,29 @@ End Rem
 	Method error_recovery() Abstract
 	
 	' Use Reflection to call the token method
-	Method reflect( token:TToken )
+	Rem 
+	Method reflects:Object( token:TToken, argumentspre:String="token", defaultMethod:Int=True )
 		Local this:TTypeId = TTypeId.ForObject( Self )
-		Local methd:TMethod = this.FindMethod( "token_"+token.class )
+		Local methd:TMethod = this.FindMethod( pre+token.class )
 		If methd 
 			methd.invoke( Self, [token] )
-		Else
+		ElseIf defaultMethod
 			token_(token)
 		End If
 	End Method
+	End Rem
 	
-	' Null Token handler
-	Method token_( token:TToken )
-		ThrowException( "No method implemented for token '"+token.class+"'", token.line, token.pos )
+	Method reflect:TAbSynTree( rule:String, arguments:TToken[] )
+		Local this:TTypeId = TTypeId.ForObject( Self )
+		Local methd:TMethod = this.FindMethod( "rule_"+rule )
+'DebugStop
+		If methd Return TAbSynTree( methd.invoke( Self, [arguments] ))
+		'Return Null
 	End Method
 	
+	' Null Token handler
+	'Method token_( token:TToken )
+	'	ThrowException( "No method implemented for token '"+token.class+"'", token.line, token.pos )
+	'End Method
+
 End Type
