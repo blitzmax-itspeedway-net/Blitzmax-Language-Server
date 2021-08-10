@@ -249,7 +249,10 @@ Assert grammar, "Failed to load grammar definition"
 
 ' 	MAIN TESTING APPLICATION
 
-test_file( "samples/positive/hello world strict.bmx", grammar, True, verbose )
+test_file( "samples/positive/test.bmx", grammar, True, verbose )
+'test_file( "samples/positive/hello world strict.bmx", grammar, True, verbose )
+'test_file( "samples/positive/hello world.bmx", grammar, True, verbose )
+'test_file( "samples/positive/function.bmx", grammar, True, verbose )
 'test_folder( "samples/positive", grammar, True, verbose )
 'test_folder( "samples/negative", grammar, False, verbose )
 

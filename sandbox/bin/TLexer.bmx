@@ -241,10 +241,10 @@ End Rem
 		Local char:String = PeekChar()
 		Select True
 		Case char = ""		' End of file
-			Return New TToken( TK_EOF, "", linenum, linepos, "EOF" )
+			Return New TToken( TK_EOF, "EOF", linenum, linepos, "EOF" )
 		Case char = "~n"	' End of line
 			popChar()
-			Return New TToken( TK_EOL, "CR", linenum, linepos, "EOL" )
+			Return New TToken( TK_EOL, "EOL", linenum, linepos, "EOL" )
 		Case char < " "	Or char > "~~"		' Throw away control codes
 			' Do nothing...
 		Default
@@ -263,10 +263,10 @@ Rem
 		'
 		Select True
 		Case char = ""		' End of file
-			Return New TToken( TK_EOF, "", line, pos, "EOF" )
+			Return New TToken( TK_EOF, "EOF", line, pos, "EOF" )
 		Case char = "~n"	' End of line
 			popChar()
-			Return New TToken( TK_EOL, "CR", line, pos, "EOL" )
+			Return New TToken( TK_EOL, "EOL", line, pos, "EOL" )
 		Case char = "~q"	' Quote indicates a string
 			Return New TToken( TK_QString, ExtractString(), line, pos, "qstring" )
 		Case char = SYM_LINECOMMENT				' Line comment

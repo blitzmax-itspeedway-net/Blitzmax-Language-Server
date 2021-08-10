@@ -100,22 +100,35 @@ Type TABNFParser Extends TParser
 		' Create the ABNF linked list pointers
 		Local root:TGrammarNode		' First in list
 		Local head:TGrammarNode		' Last in list
-		Local node:TGrammarNode		' Currrent node
+		Local node:TGrammarNode		' Current node
+		Local prev:TGrammarNode		' Previous node (When creating lists)
 		
 		' Create linked list for this rule
 		Local token:TToken
 		Repeat
 			token = lexer.getnext()
 'DebugStop
-			node  = parse_successor( head, token )		
-			If Not root
-				If Not node ; throwParseError( "Incomplete defintion", token.line, token.pos )
-				root = node
+			Select token.id
+			Case TK_solidus,TK_pipe		'	|/ = Alternative
+				' not valid as first symbol
+				If Not root ; ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
+				'If Not prev ; prev = head
+				' Parse Alternatives 
+				'Local root:TGrammarNode = prev
+				parse_alternate( prev, lexer.getNext() )
+'DebugStop
+			Default
+				node  = parse_successor( head, token )
+				'If Not node Continue	' Empty node consumed		
+				If Not root
+					If Not node ; throwParseError( "Incomplete defintion", token.line, token.pos )
+					root = node
+				Else
+					head.suc = node
+				End If
 				head = node
-			Else
-				head.suc = node
-				head = node
-			End If
+				prev = node
+			End Select
 			
 		Until Not node Or lexer.peek().in( exitcondition )
 		
@@ -140,23 +153,27 @@ Type TABNFParser Extends TParser
 			Return root
 		Case TK_lparen		'	( = Group
 			Local root:TGrammarNode = New TGrammarNode( True, New TToken( TK_Group, "()", token.line, token.pos, "()" ) )
-			root.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rparen] )
+			root.opt = parse_sequence( [TK_EOF,TK_rparen] )
 			lexer.getnext()		' Consume closing paren
 			Return root
 		Case TK_lcrotchet	'	[ = Optional
-'DebugStop
 			Local root:TGrammarNode = New TGrammarNode( True, New TToken( TK_Optional, "[]", token.line, token.pos, "[]" ) )
-			root.opt = parse_sequence( [TK_EOF,TK_EOL,TK_rcrotchet] )
-			lexer.getnext()		' Consume closing crochet
+			'lexer.getnext()
+'DebugStop
+			root.opt = parse_sequence( [TK_EOF,TK_rcrotchet] )
+			Local debug:TToken = lexer.getnext()		' Consume closing crochet
+			debug = lexer.peek()
 			Return root
-		Case TK_solidus,TK_pipe		'	|/ = Alternative
+'		Case TK_solidus,TK_pipe		'	|/ = Alternative
 'DebugStop
 			' not valid as first symbol
-			If prev = Null ; ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
-			' Parse Alternatives 
-			Local root:TGrammarNode = prev
-			parse_alternate( root, lexer.getNext() )
-			Return parse_successor( prev, lexer.getnext() )
+'			If prev = Null ; ThrowParseError( "Unexpected symbol '"+token.value+"'", token.line, token.pos )
+'			' Parse Alternatives 
+'			Local root:TGrammarNode = prev
+'			parse_alternate( root, lexer.getNext() )
+'DebugStop
+'			Return root
+			'Return parse_successor( prev, lexer.getnext() )
 		Case TK_comment		'	Ignore comment
 'If token.line=12 DebugStop
 			Return parse_successor( prev, lexer.getnext() )

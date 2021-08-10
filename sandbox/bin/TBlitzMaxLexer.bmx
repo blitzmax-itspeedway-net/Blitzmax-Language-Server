@@ -2,6 +2,8 @@
 '	BlitzMax Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
+Const TK_EMPTY:Int = $FFFE		' Used to represent optional token matches
+
 Type TBlitzMaxLexer Extends TLexer
 
 	Method New( text:String )

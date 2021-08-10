@@ -13,6 +13,20 @@ Function ThrowParseError( message:String, line:Int=-1, pos:Int=-1 )
 	Throw( New TParseError( message, line, pos ) )
 End Function
 
+Type TParseResult
+	Field tree:AST
+	Field syntax:TToken[] = []
+	Method New( syntax:TToken )
+		Self.syntax :+ [syntax]
+	End Method
+	Method add( token:TToken )
+		syntax :+ [token]
+	End Method
+	Method add( tokens:TToken[] )
+		syntax :+ tokens
+	End Method
+End Type
+
 ' Generic Parser
 
 Type TParser
@@ -48,12 +62,12 @@ Type TParser
 		If rulename="" rulename = abnf.first()
 		'If rulename="" Return Null' No starting node (Empty ABNF?)
 		'ast = walk_rule( rulename )
-DebugStop
+'DebugStop
 		Print "~nSTARTING PARSER:"
 		Publish( "PARSE-START", Null )
 		lexer.reset()
 		
-		Local program:AST = parse_rule( rulename )
+		Local program:TParseResult = parse_rule( rulename )
 		
 		''Local token:TToken = lexer.getnext()
 		'While token And token.id<>TK_EOF
@@ -64,54 +78,65 @@ DebugStop
 		
 		' Check that file parsing has completed successfully
 		Local after:TToken = lexer.peek()
-		If after.isnot( TK_EOF ) ; ThrowParseError( "Unexpected symbol", after.line, after.pos )
+		If after.isnot( TK_EOF ) ; ThrowParseError( "Unexpected symbol past end", after.line, after.pos )
 		
 		' Print state and return value
 		If program
-			Print "SUCCESS"
+			Print "PARSING SUCCESS"
 			Return program
 		Else
-			Print "FAILURE"
+			Print "PARSING FAILURE"
 			Return Null
 		End If
 	End Method
 	
-	Method parse_rule:AST( rulename:String, indent:String="" )
-		Local result:AST = New AST()
+	Method parse_rule:TParseResult( rulename:String, indent:String="" )
+		Local result:TParseResult = New TParseResult()
 		
 		' Get grammar node
 		If rulename = "" Return Null	' Rule cannot be empty!
 		Local node:TGrammarNode = abnf.find( rulename )
 		If Not node Return Null			' Missing rule
 
-DebugStop
-Print indent+"RULE: "+rulename
-indent :+ "  "
+'DebugStop
+		Print indent+"RULE: "+rulename
+		indent :+ "  "
 		' Walk the successor until node complete
 		While node And node.token.id<>TK_EOF
 'Print indent+"WALKING: "+node.token.reveal()
-			Local response:AST = parse_node( node, indent )
+			Local response:TParseResult = parse_node( node, indent )
 			If response
-				Print indent+"- Success"
+				Print indent+node.token.value+" is Success"
 'DebugStop
-				If response.token And response.token.id <> TK_EOL 
-					result.addchild( response )
-				End If
+'				If response.token And response.token.id <> TK_EOL 
+'					result.add( response.syntax )
+'				End If
+				result.add( response.syntax )
 			Else
-				Print indent+"- Failed"
+				Print indent+node.token.value+" is Fail"
 				Return Null
 			End If
 			node = node.suc
 		Wend
 		
 		Print indent+"REFLECT: parse_"+Replace(Lower(rulename),"-","")+"()"
+		'result.ast = reflect( rulename, result.syntax )
+		
+		' DEBUG THE MATCH
+		Local line:String = rulename+"="
+		For Local rule:TToken = EachIn result.syntax
+			line :+ "["+rule.value+":"+rule.class+"]"
+		Next
+		Print indent+line
+		
 		Return result
 	End Method
 	
-	Method parse_node:AST( node:TGrammarNode, indent:String )
-DebugStop	
+	Method parse_node:TParseResult( node:TGrammarNode, indent:String )
+'DebugStop	
 		If node.terminal
 			Local token:TToken = lexer.peek()
+			Print indent+"GOAL: ("+token.id+") "+token.class+"="+token.value
 			'Print "TERMINAL"
 			'Print indent+node.token.value+":"+node.token.class+" ("+node.token.id+") - TERMINAL"
 			'Print indent+"- Comparing with "+token.reveal()
@@ -123,33 +148,32 @@ DebugStop
 					Return parse_node( node.opt, indent+"  ")
 				Case TK_Optional
 					Assert node.opt, "OPTIONAL IS INVALID - THIS SHOULD NEVER HAPPEN"
-Print "Matching optional"
-DebugStop
-					Local result:AST = parse_node( node.opt, indent+"  " )
-If Not result 
-	Print "Failed to match optional"
-Else
-	Print "Matched optional"
-End If
-'HERE
-
+					Print indent+"Matching optional"
+'DebugStop
+					Local result:TParseResult = parse_node( node.opt, indent+"  " )
+					If Not result 
+						Print indent+"No optional matches"
+					Else
+						Print indent+"Matched optional"
+					End If
+'
 					' If no match was found, return an empty node
-					If Not result ; result = New AST( "EMPTY", token ) 
+					If Not result ; result = New TParseResult( New TToken( TK_Empty, "EMPTY",0,0,"EMPTY") ) 
 					Return result
 				Case TK_Repeater
 					Assert False, "TK_Repeater is not implemented"
 				Default
-					Print indent+node.token.value+" (TERMINAL) == ("+token.id+") '"+token.value+":"+token.class+"'?"
-					'Print indent+"- Comparing "+token.class+" with "+node.token.value
-					If node.token.value = token.class
-						Print indent+"- MATCHED"
+					'Print indent+node.token.value+" (TERMINAL)"
+					Print indent+"Comparing ("+token.id+") '"+token.value+":"+token.class+"' with "+node.token.value
+					If node.token.value = token.value
+						Print indent+"MATCHED"
 						lexer.getnext()	' Consume the token
-						Return New AST( "TERMINAL", token )
+						Return New TParseResult( token )
 					End If
 				End Select
 				node = node.alt
 			Wend
-			Print "- NO MATCHES"
+			Print indent+"NO MATCHES"
 			'ThrowParseError( "'"+token.value+"' was unexpected at this time", token.line,token.pos)
 			Return Null
 		Else
@@ -160,6 +184,7 @@ End If
 	End Method
 	
 '/// BAD PARSING ATTEMPTS PAST HERE
+Rem
 	Method parse_token:AST( token:TToken )
 		Select token.id
 		Case TK_Alpha
@@ -349,6 +374,7 @@ DebugStop
 	Method OLDparse:AST()
 		ThrowException( "PARSER NOT IMPLEMENTED" )
 	End Method
+End Rem
 
 	' Used for debugging purposes.
 	Method reveal:String()

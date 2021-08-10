@@ -1,18 +1,35 @@
 ; BlitzMax ABNF grammer definition
 ; (c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-program = <strictmode> <programbody> <c-eol>
+;   <NAME>  These matches to another rule in the definition
+;   "TEXT"  This matches to specific text in the source (CASE SENSITIVE)
+;   alpha   Matches a symbol or keyword defined by the parser (CASE SENSITIVE)
+;               Some examples would be EOL, ALPHA, QSTRING
+;   [ ]     Optional match
+;   ( )     Grouped matching
+;   *"-"    Repeats the following node or group, for example:
+;               *.  - One or more "." in sequence
+;               *(EOL)
 
-testprogram = <strictmode> <framework> | <module> <programbody>
+program = [<strictmode>] <optseq> <optalt> <c-eol>
 
-c-eol = comment | EOL
+optseq = ["THIS" "THAT"]
+optalt = ["THIS"/"THAT"]
 
-strictmode = "strict" | "superstrict" [COMMENT] EOL
+strictmode = strict | superstrict <c-eol>
 
-framework = "framework" ALPHA "." ALPHA
+c-eol = [COMMENT] EOL
 
-programbody = <functioncall> ; Will also have functiondef, typedef etc!
+;function = "function" ALPHA "(" ")" EOL ("end" "function"|"endfunction")
 
-functioncall = ALPHA QSTRING EOL
+;testprogram = <strictmode> <framework> | <module> <programbody>
+
+
+
+;framework = "framework" ALPHA "." ALPHA
+
+;programbody = <functioncall> ; Will also have functiondef, typedef etc!
+
+;functioncall = ALPHA QSTRING EOL
 
 
