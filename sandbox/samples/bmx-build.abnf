@@ -11,14 +11,11 @@
 ;               *.  - One or more "." in sequence
 ;               *(EOL)
 
-program = [<strictmode>] (<optseq> <optalt>) <c-eol>
-
-optseq = ["THIS" "THAT"]
-optalt = ["MORE"/"LESS"]
+program = *<c-eol> [<strictmode>] <c-eol>
 
 strictmode = strict | superstrict <c-eol>
 
-c-eol = [COMMENT] EOL
+c-eol = (COMMENT EOL) | EOL
 
 ;function = "function" ALPHA "(" ")" EOL ("end" "function"|"endfunction")
 

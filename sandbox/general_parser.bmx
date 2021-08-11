@@ -183,7 +183,7 @@ Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=F
 		Local runtime:TRuntimeException = TRuntimeException( e )
 		Local text:String = String( e )
 		Local typ:TTypeId = TTypeId.ForObject( e )
-	DebugStop
+	'DebugStop
 		If exception Print "## Exception: "+exception.toString()+" ##"
 		If runtime Print "## Exception: "+runtime.toString()+" ##"
 		If text Print "## Exception: '"+text+"' ##"

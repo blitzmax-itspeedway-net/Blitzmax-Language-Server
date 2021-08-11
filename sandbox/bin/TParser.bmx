@@ -17,12 +17,19 @@ Type TParseResult
 	Field ast:TAbSynTree
 	Field syntax:TToken[] = []
 	'Field success:Int = false
+	
 	Method New( syntax:TToken )
 		Self.syntax :+ [syntax]
 	End Method
+	
+	Method New( syntax:TToken[] )
+		Self.syntax = syntax
+	End Method
+	
 	Method add( token:TToken )
 		syntax :+ [token]
 	End Method
+	
 	Method add( tokens:TToken[] )
 		syntax :+ tokens
 	End Method
@@ -134,6 +141,7 @@ Type TParser
 		' Walk the successor until node complete
 		While node And node.token.id<>TK_EOF
 'Print indent+"WALKING: "+node.token.reveal()
+'DebugStop
 			Local result:TParseResult = parse_node( node, indent )
 			If result
 				Print indent+node.token.value+" is Success"
@@ -164,7 +172,7 @@ Type TParser
 			While node
 				Select node.token.id
 				Case TK_Group
-DebugStop					
+'DebugStop					
 					Print indent+"Matching group"
 					Local result:TParseResult = parse_sequence( node.opt, indent+"  " )
 					If Not result 
@@ -173,7 +181,7 @@ DebugStop
 						Print indent+"Matched"
 					End If
 
-					Return result
+					'Return result
 				Case TK_Optional
 					
 					Print indent+"Matching optional"
@@ -187,9 +195,26 @@ DebugStop
 '
 					' If no match was found, return an empty node
 					If Not result ; result = New TParseResult( New TToken( TK_Empty, "EMPTY",0,0,"EMPTY") ) 
-					Return result
+					'Return result
 				Case TK_Repeater
-					Assert False, "TK_Repeater is not implemented"
+					' The next token or sequence is repeated
+					Print indent+"Matching Repeating Pattern"
+'DebugStop
+					Local repeater:TToken[]
+					Local result:TParseResult
+					Repeat
+						result = parse_sequence( node.opt, indent+"  " )
+						If result 
+							Print indent+"Matched"
+							repeater :+ result.syntax
+						Else
+							Print indent+"No match"
+						End If
+					Until Not result
+					
+'DebugStop
+					
+					Return New TParseResult( repeater )
 				Default
 					'Print indent+node.token.value+" (TERMINAL)"
 					Print indent+"Comparing ("+token.id+") '"+token.value+":"+token.class+"' with "+node.token.value
@@ -205,6 +230,7 @@ DebugStop
 			'ThrowParseError( "'"+token.value+"' was unexpected at this time", token.line,token.pos)
 			Return Null
 		Else
+'DebugStop
 			Print indent+node.token.value+" (NON-TERMINAL)"
 			Return parse_rule( node.token.value, indent )
 		End If

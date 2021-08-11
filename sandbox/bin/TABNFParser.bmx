@@ -227,14 +227,16 @@ Type TABNFParser Extends TParser
 	
 	'	REPEATING PATTERN
 	Method parse_asterisk:TGrammarNode( root:TGrammarNode, token:TToken )
-	
+'DebugStop	
 		Select token.id
 		Case TK_EOL
 			ThrowParseError( "Incomplete defintion", token.line, token.pos )
 		Case TK_EOF			'	End of line/file
 			ThrowParseError( "Unexpected end of file", token.line, token.pos )
-		Case TK_ALPHA		'	Non-Terminal
-			Return New TGrammarNode( False, token )
+		Case TK_NonTerminal		'	Non-Terminal (Link to another rule)
+			Return New TGrammarNode( False, token )			
+		Case TK_ALPHA		'	Terminal
+			Return New TGrammarNode( True, token )
 		Case TK_QString		' 	Terminal
 			Return New TGrammarNode( True, token )
 		Case TK_lparen		'	( = Group

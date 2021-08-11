@@ -12,6 +12,7 @@ Const TK_Group:Int 			= 610	'	()
 Const TK_Optional:Int 		= 611	'	[]
 Const TK_Repeater:Int 		= 612	'	*
 Const TK_NonTerminal:Int	= 613	'	<NAME>
+'Const TK_EOLSYM:Int 		= 614	'	EOL
 
 Type TABNFLexer Extends TLexer
 
@@ -23,12 +24,15 @@ Type TABNFLexer Extends TLexer
 		'SYM_LINECOMMENT	= ";"
 		'SYM_ALPHAEXTRA	= "-"	' Additional Characters allowed in ALPHA
 
+'		RestoreData bnf_reservedwords
+'		readTokens()
+		
 		' Add compound symbols to definition
-		RestoreData abnf_compound_symbols
+		RestoreData bnf_compound_symbols
 		readCompoundSymbols()
 		
 		' Add tokens to definition
-		RestoreData abnf_symbols
+		RestoreData bnf_symbols
 		readSymbols()
 
 	End Method
@@ -113,17 +117,22 @@ Type TABNFLexer Extends TLexer
 	End Method
 End Type
 
-' ABNF Tables
+' BNF Tables
+
+'#bnf_reservedwords
+'		ID				CLASS
+'DefData TK_EOLSYM,		"EOL"
+'DefData 0,"#"
 
 ' Compound Symbols
-#abnf_compound_symbols
+#bnf_compound_symbols
 '		ID				VALUE	CLASS
 DefData TK_HEXDIGIT,    "%x",	"hexdigit"
 DefData 0,"#","#"
 
 ' Single Symbols
 ' A single symbol uses it's ASCII code unles overwritten here
-#abnf_symbols
+#bnf_symbols
 '		ID				VALUE	CLASS
 DefData TK_dquote,		"~q",	"dquote"
 DefData TK_percent,		"%",	"percent"
