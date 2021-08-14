@@ -2,22 +2,24 @@
 '	BLITZMAX PRETTY PRINTER
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-Type TLangServ Extends TVisitor
+Type TBlitzMaxPrettyPrint Extends TVisitor
 
-	Field parser:TParser
-	Field tree:TAbSynTree
+	Field ast:TASTNode
 	
-	Method New( parser:TParser )
-		Self.parser = parser
+	Method New( ast:TASTNode )
+		Self.ast = ast
 	End Method
 	
-	Method run()
-		' Perform the actual Parsing here
-		parser.parse()
-		tree = parser.ast
-		' Now call the visitor to process the tree
-		visit( tree )
+	' Create source code from the AST
+	Method run:String()
+		'Local start:TASTNode = ast.walkfirst()
+'DebugStop
+		'Local code:String
+		Local text:String = visit( ast )
+		Return text
 	End Method
+	
+	'Method walk:String( node:TASTNode )
 	
 	' Not sure how to debug this yet...!
 	' Maybe dump the syntax tree and definition table?
@@ -26,17 +28,27 @@ Type TLangServ Extends TVisitor
 	
 	' ABSTRACT METHODS
 	' Not all of them are required by the Language server, but "bcc" will need them
+
+	Method visit_program:String( node:TASTCompound )
+'DebugStop
+		Local text:String
+		For Local child:TASTNode = EachIn node.children
+			text :+ visit( child )
+		Next
+		Return text
+	End Method
 	
-	Method visit_strictmode:String( node:TAST_strictmode )
-		'If Not node ThrowException( "Invalid node in strictmode" ) 
-		Local line:String = node.token.class
-		If node.comment line :+ "' "+comment
-		Return line
+	Method visit_strictmode:String( node:TASTNode )
+'DebugStop
+		If Not node ThrowException( "Invalid node in strictmode" ) 
+		Local text:String = node.token.class
+		If node.descr text :+ " ' "+node.descr
+		Return text + "~n"
 	End Method
 
-	Method visit_comment:String( node:TAbSynTree )
-		'If Not node ThrowException( "Invalid node in strictmode" ) 
-		Print "' "+node.token.value
+	Method visit_linecomment:String( node:TASTNode )
+'DebugStop
+		Return "' "+node.descr+"~n"
 	End Method
 
 Rem	Method visit_binop node:TAbSynTree )

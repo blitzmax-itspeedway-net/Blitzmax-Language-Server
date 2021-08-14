@@ -11,7 +11,7 @@
 ;               *.  - One or more "." in sequence
 ;               *(EOL)
 
-program = *<c-eol> [<strictmode>] <c-eol>
+program = [*<c-eol>] [<strictmode>] [*<c-eol>]
 
 strictmode = strict | superstrict <c-eol>
 

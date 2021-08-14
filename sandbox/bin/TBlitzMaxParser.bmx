@@ -171,16 +171,56 @@ End Rem
 	'	DYNAMIC METHODS
 	'	CALLED BY REFLECTOR
 	
-	Method rule_strictmode:TAbSynTree( syntax:TToken[] )
-		' strictmode = (strict | superstrict) <c-eol>
+	Method rule_program:TASTNode( syntax:TASTNode[] )
+'DebugStop
+		Local tree:TASTCompound = New TASTCompound( "PROGRAM" )
+		For Local ast:TASTNode = EachIn syntax
+			If ast.token.id <> TK_EOL ; tree.add( ast )
+		Next
+		Return tree
+	End Method
+
+	Method rule_ceol:TASTNode( syntax:TASTNode[] )
+		' EOL is ignored, but comments are added to the tree
+		'	Create an AST for this statement
+'DebugStop
+		Select syntax.length
+		Case 1	' 	c-eol = EOL
+			'syntax[0].name = "EOL"
+			Return syntax[0]
+		Case 2	'	c-eol = COMMENT EOL
+			' We will recycle the comment
+			syntax[0].name = "linecomment"
+			syntax[0].descr = syntax[0].token.value
+			'Return New TASTNode( "comment", syntax[0] )
+			Return syntax[0]
+		Default
+			Throw "rule_ceol(), FAILED, Invalid arguments"
+		End Select
+	End Method
+
+	Method rule_strictmode:TASTNode( syntax:TASTNode[] )		
 		Print "RULE STRICTMODE"
-		Assert syntax.length=2, "rule_strictmode() FAILED"
+'DebugStop
+		'	Set Parser state to selected strict mode
+		strictmode = syntax[0].token.id
 
-		' SET PARSER STATE TO SELECTED STRICT MODE
-		strictmode = syntax[0].id
+		'	Create an AST for this statement
+		Select syntax.length
+		Case 1	' 	strictmode = MODE EOL
+			syntax[0].name = "strictmode"
+			'Return New TASTNode( "strictmode", syntax[0] )
+			Return syntax[0]
+		Case 2	' 	strictmode = MODE COMMENT EOL
+'DebugStop
+			syntax[0].name = "strictmode"
+			syntax[0].descr = syntax[1].token.value
+			'Return New TASTNode( "strictmode", syntax[0], syntax[1].value )
+			Return syntax[0]
+		Default
+			Throw "rule_strictmode(), FAILED, Invalid arguments"
+		End Select
 
-		' CREATE AST
-		Return New TAbSynTree( "strictmode", syntax[0] )
 	End Method
 	
 	
@@ -312,11 +352,11 @@ End Rem
 	
 End Type
 
-Type AST_strictmode Extends TAbSynTree
-	Field comment:String
-	Field strictmode:Int
-	Method New( strictmode:TToken, comment:TToken )
-		Self.strictmode = strictmode.id
-		If comment Self.comment = comment.value
-	End Method
-End Type
+'Type AST_strictmode Extends TAbSynTree
+'	Field comment:String
+'	Field strictmode:Int
+'	Method New( strictmode:TToken, comment:TToken )
+'		Self.strictmode = strictmode.id
+'		If comment Self.comment = comment.value
+'	End Method
+'End Type

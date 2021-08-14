@@ -5,7 +5,7 @@
 '
 Type TToken
 	Field id:Int		' Token type as an integer
-	Field class:String	' Token type as a string (Depreciated)
+	Field class:String	' Token type as a string (Used by parser comparison with BNF)
 	Field value:String	' Actual value of symbol or identifier
 	Field line:Int		' Line number in original source file
 	Field pos:Int		' Character position in original source file

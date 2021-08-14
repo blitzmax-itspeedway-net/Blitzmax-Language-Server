@@ -75,10 +75,8 @@ Type TParser
 		Publish( "PARSE-START", Null )
 		lexer.reset()
 		
-'DebugStop
-		' Create the seed from which the AST tree will grow
-
-		Local program:TASTNode = parse_rule( rulename )
+DebugStop
+		Local program:TParseResult = parse_rule( rulename )
 		
 		''Local token:TToken = lexer.getnext()
 		'While token And token.id<>TK_EOF
@@ -92,18 +90,17 @@ Type TParser
 		If after.isnot( TK_EOF ) ; ThrowParseError( after.value+" unexpected past end", after.line, after.pos )
 		
 		' Print state and return value
-'DebugStop
 		If program
 			Print "PARSING SUCCESS"
-			Return program
+			Return program.ast
 		Else
 			Print "PARSING FAILURE"
 			Return Null
 		End If
 	End Method
 	
-	Method parse_rule:TASTNode( rulename:String, indent:String="" )
-		Local result:TASTnode[] '= New TParseResult()
+	Method parse_rule:TParseResult( rulename:String, indent:String="" )
+		Local result:TParseResult '= New TParseResult()
 		
 		' Get grammar node
 		If rulename = "" Return Null	' Rule cannot be empty!
@@ -116,46 +113,47 @@ Type TParser
 		Print indent+"RULE: "+rulename
 		indent :+ "  "
 		result = parse_sequence( node, indent )
-		Local tree:TASTNode
 		
-		If result And result[0]
+		If result
 			Print indent+"REFLECT: rule_"+Replace(Lower(rulename),"-","")+"()"
 			
 			' DEBUG THE MATCH
 			Local line:String = rulename+"="
-			For Local node:TASTNode = EachIn result
-				line :+ "["+node.token.value+":"+node.token.class+"]"
+			For Local rule:TToken = EachIn result.syntax
+				line :+ "["+rule.value+":"+rule.class+"]"
 			Next
 			Print indent+line
 			
 			' Parse into AST
 'DebugStop
-			tree = reflect( Replace(Lower(rulename),"-",""), result )
+			result.ast = reflect( Replace(Lower(rulename),"-",""), result.syntax )
 		Else
 			Print indent+rulename+" failed"
-			Return Null
 		End If
 		
-		Return tree
+		Return result
 	End Method
 
 	' Parse a sequence. 
 	'	Returns Syntax=[] if that sequence fails
-	Method parse_sequence:TASTNode[]( node:TGrammarNode, indent:String )
-		Local sequence:TASTNode[] = []
+	Method parse_sequence:TParseResult( node:TGrammarNode, indent:String )
+		Local sequence:TParseResult = New TParseResult()
 'DebugStop		
 		' Walk the successor until node complete
-		While node And node.token.id<>TK_EOF
+		While node And node.token.token<>TK_EOF
 'Print indent+"WALKING: "+node.token.reveal()
 'DebugStop
-			Local result:TASTNode[] = parse_node( node, indent )
-			If result And result[0]
+			Local result:TParseResult = parse_node( node, indent )
+			If result
 				Print indent+node.token.value+" is Success"
 'DebugStop
-				sequence :+ result
+'				If response.token And response.token.id <> TK_EOL 
+'					result.add( response.syntax )
+'				End If
+				sequence.add( result )
 			Else
 				Print indent+node.token.value+" is Fail"
-' 10/8/21, Changed return type from sequence to null on failure
+' 10/8/21, Chnaged return type from sequence to null on failure
 				Return Null
 			End If
 			node = node.suc
@@ -163,29 +161,28 @@ Type TParser
 		Return sequence
 	End Method
 	
-	Method parse_node:TASTNode[]( node:TGrammarNode, indent:String )
+	Method parse_node:TParseResult( node:TGrammarNode, indent:String )
 'DebugStop
-		Local result:TASTNode[] = []
+		Local result:TParseResult
 		If node.terminal
 			Local token:TToken = lexer.peek()
-'If token.id=603 DebugStop
-			Print indent+"GOAL: ("+token.id+") "+token.class+"="+token.value
+			Print indent+"GOAL: ("+token.token+") "+token.class+"="+token.value
 			'Print "TERMINAL"
-			'Print indent+node.token.value+":"+node.token.class+" ("+node.token.id+") - TERMINAL"
+			'Print indent+node.token.value+":"+node.token.class+" ("+node.token.token+") - TERMINAL"
 			'Print indent+"- Comparing with "+token.reveal()
 			' Try alternatives until we get a match (or not)
 			While node
-				Select node.token.id
+				Select node.token.token
 				Case TK_Group
-'DebugStop					
+DebugStop					
 					Print indent+"Matching group"
 					result = parse_sequence( node.opt, indent+"  " )
-					If result And result[0]
+					If result 
 						Print indent+"Matched"
-						node = Null		' Force loop exit upon match
+						node = Null
 					Else
 						Print indent+"No match"
-						node = node.alt	' Try next alternative (if one exists)
+						node = node.alt
 					End If
 
 				Case TK_Optional
@@ -193,28 +190,26 @@ Type TParser
 					Print indent+"Matching optional"
 'DebugStop
 					result = parse_sequence( node.opt, indent+"  " )
-					If result And result[0]
+					If result 
 						Print indent+"Matched optional"
 					Else
-						Print indent+"No match (optional)"
+						Print indent+"No optional matches"
 						' If no match was found, Create an empty node
-						'result = New TParseResult( New TToken( TK_Empty, "EMPTY",0,0,"EMPTY") ) 
-						result = [ New TASTNode( New TToken( TK_Empty, "EMPTY",0,0,"EMPTY") ) ]
+						result = New TParseResult( New TToken( TK_Empty, "EMPTY",0,0,"EMPTY") ) 
 					End If
 
-					node = node.alt	' Try next alternative (if one exists)
-
+					node = node.alt
+					
 				Case TK_Repeater
 					' The next token or sequence is repeated
 					Print indent+"Matching Repeating Pattern"
 'DebugStop
-					Local repeater:TASTNode[]
+					Local repeater:TToken[]
 					Repeat
 						result = parse_sequence( node.opt, indent+"  " )
-'DebugStop
-						If result And result[0]
+						If result 
 							Print indent+"Matched"
-							repeater :+ result
+							repeater :+ result.syntax
 						Else
 							Print indent+"No match"
 						End If
@@ -222,18 +217,16 @@ Type TParser
 					
 'DebugStop
 					
-					'Return New TParseResult( repeater )
-					Return repeater
+					Return New TParseResult( repeater )
 				Default
 					'Print indent+node.token.value+" (TERMINAL)"
-					Print indent+"Comparing ("+token.id+") '"+token.value+":"+token.class+"' with "+node.token.value
+					Print indent+"Comparing ("+token.token+") '"+token.value+":"+token.class+"' with "+node.token.value
 
 ' When matching COMMENT, it needs to match the node.token.value with token.class
 					If node.token.value = token.class
 						Print indent+"MATCHED CLASS"
 						lexer.getnext()	' Consume the token
-						'Return New TParseResult( token )
-						Return [New TASTNode( token )]
+						Return New TParseResult( token )
 					End If
 '					If node.token.value = token.value
 '						Print indent+"MATCHED"
@@ -250,7 +243,7 @@ Type TParser
 		Else
 'DebugStop
 			Print indent+node.token.value+" (NON-TERMINAL)"
-			Return [parse_rule( node.token.value, indent )]
+			Return parse_rule( node.token.value, indent )
 		End If
 	
 	End Method
@@ -471,13 +464,12 @@ End Rem
 	End Method
 	End Rem
 	
-	Method reflect:TASTNode( rule:String, arguments:TASTNode[] )
+	Method reflect:TASTNode( rule:String, arguments:TToken[] )
 		Local this:TTypeId = TTypeId.ForObject( Self )
 		Local methd:TMethod = this.FindMethod( "rule_"+rule )
 'DebugStop
 		If methd Return TASTNode( methd.invoke( Self, [arguments] ))
 		Print( "- Parser.rule_"+rule+"() does not exist" )
-		Return New TASTNode( "ERROR" )
 		'Return Null
 	End Method
 	

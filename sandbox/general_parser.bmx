@@ -30,9 +30,13 @@ Include "bin/TBlitzMaxParser.bmx"
 Include "bin/AbstractSyntaxTree.bmx"
 Include "bin/TSymbolTable.bmx"
 
+'	OUTPUT
+Include "bin/TBlitzMaxPrettyPrint.bmx"
+
 '	TYPES AND FUNCTIONS
 
-Type AST_BinaryOperator Extends TAbSynTree
+Rem
+Type AST_BinaryOperator Extends TASTNode
 	Field L:TAbSynTree	' Left 
 	Field R:TAbSynTree	' Right
 	
@@ -43,7 +47,7 @@ Type AST_BinaryOperator Extends TAbSynTree
 	End Method
 	
 End Type
-
+End Rem
 
 Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
     Print "---> "+event
@@ -54,7 +58,7 @@ End Function
 Type TLangServ Extends TVisitor
 
 	Field parser:TParser
-	Field tree:TAbSynTree
+	Field tree:TASTNode
 	
 	Method New( parser:TParser )
 		Self.parser = parser
@@ -64,7 +68,7 @@ Type TLangServ Extends TVisitor
 		' Perform the actual Parsing here
 		parser.parse()
 		tree = parser.ast
-		' Now call the visitor to process the tree
+		' Now call the visitor to walk and process the tree
 		visit( tree )
 	End Method
 	
@@ -76,6 +80,7 @@ Type TLangServ Extends TVisitor
 	' ABSTRACT METHODS
 	' Not all of them are required by the Language server, but "bcc" will need them
 	
+	Rem
 	Method visit_binaryoperator( node:AST_BinaryOperator )
 		If Not node ThrowException( "Invalid node in binaryoperator" ) 
 		Print "BINARY OPERATION"
@@ -88,6 +93,7 @@ Type TLangServ Extends TVisitor
 		End Select
 		
 	End Method
+	End Rem
 	
 End Type
 		
@@ -131,7 +137,7 @@ End Function
 Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=False )
 	Local source:String, lexer:TLexer, parser:TParser
 	Local start:Int, finish:Int
-	Local ast:TAbSynTree
+	Local ast:TASTNode
 	Local transpile:String = StripExt( filepath ) + ".transpile"
 
 	Try		
@@ -147,7 +153,7 @@ Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=F
 		parser = New TBlitzMaxParser( lexer, grammar )		' NOTE LANGUAGE DEFINITION ARGUMENT HERE
 		start  = MilliSecs()
 	'DebugStop
-		ast    = TAbSynTree( parser.parse() )
+		ast    = TASTNode( parser.parse() )
 		finish = MilliSecs()
 		Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )
 
@@ -158,10 +164,16 @@ Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=F
 
 		' Pretty print the AST back into BlitzMax (.transpile file)
 		Print "~nTRANSPILE AST TO BLITZMAX:"
-			
+		
+		Local blitzmax:TBlitzMaxPrettyPrint = New TBlitzMaxPrettyPrint( ast )
+		Local source:String = blitzmax.run()
+		Print "------------------------------------------------------------"
+		Print source
+		Print "------------------------------------------------------------"
+		
 		'Local transpiler:TBlitzMaxCompiler = New TBlitzMaxCompiler( tree )
 		'Local blitzmax:String = transpiler.run()
-		Print "~nTRANSPILER:"
+		'Print "~nTRANSPILER:"
 		'Print blitzmax
 		' Write transpiled code to file
 
