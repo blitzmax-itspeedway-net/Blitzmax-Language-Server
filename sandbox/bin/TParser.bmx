@@ -161,7 +161,8 @@ Type TParser
 	End Method
 	
 	Method parse_node:TParseResult( node:TGrammarNode, indent:String )
-'DebugStop	
+'DebugStop
+		Local result:TParseResult
 		If node.terminal
 			Local token:TToken = lexer.peek()
 			Print indent+"GOAL: ("+token.id+") "+token.class+"="+token.value
@@ -172,36 +173,37 @@ Type TParser
 			While node
 				Select node.token.id
 				Case TK_Group
-'DebugStop					
+DebugStop					
 					Print indent+"Matching group"
-					Local result:TParseResult = parse_sequence( node.opt, indent+"  " )
-					If Not result 
-						Print indent+"No match"
-					Else
+					result = parse_sequence( node.opt, indent+"  " )
+					If result 
 						Print indent+"Matched"
+						node = Null
+					Else
+						Print indent+"No match"
+						node = node.alt
 					End If
 
-					'Return result
 				Case TK_Optional
 					
 					Print indent+"Matching optional"
 'DebugStop
-					Local result:TParseResult = parse_sequence( node.opt, indent+"  " )
-					If Not result 
-						Print indent+"No optional matches"
-					Else
+					result = parse_sequence( node.opt, indent+"  " )
+					If result 
 						Print indent+"Matched optional"
+					Else
+						Print indent+"No optional matches"
+						' If no match was found, Create an empty node
+						result = New TParseResult( New TToken( TK_Empty, "EMPTY",0,0,"EMPTY") ) 
 					End If
-'
-					' If no match was found, return an empty node
-					If Not result ; result = New TParseResult( New TToken( TK_Empty, "EMPTY",0,0,"EMPTY") ) 
-					'Return result
+
+					node = node.alt
+					
 				Case TK_Repeater
 					' The next token or sequence is repeated
 					Print indent+"Matching Repeating Pattern"
 'DebugStop
 					Local repeater:TToken[]
-					Local result:TParseResult
 					Repeat
 						result = parse_sequence( node.opt, indent+"  " )
 						If result 
@@ -218,17 +220,25 @@ Type TParser
 				Default
 					'Print indent+node.token.value+" (TERMINAL)"
 					Print indent+"Comparing ("+token.id+") '"+token.value+":"+token.class+"' with "+node.token.value
-					If node.token.value = token.value
-						Print indent+"MATCHED"
+
+' When matching COMMENT, it needs to match the node.token.value with token.class
+					If node.token.value = token.class
+						Print indent+"MATCHED CLASS"
 						lexer.getnext()	' Consume the token
 						Return New TParseResult( token )
 					End If
+'					If node.token.value = token.value
+'						Print indent+"MATCHED"
+'						lexer.getnext()	' Consume the token
+'						Return New TParseResult( token )
+'					End If
+					node = node.alt
+
 				End Select
-				node = node.alt
 			Wend
-			Print indent+"NO MATCHES"
+			'Print indent+"NO MATCHES"
 			'ThrowParseError( "'"+token.value+"' was unexpected at this time", token.line,token.pos)
-			Return Null
+			Return result
 		Else
 'DebugStop
 			Print indent+node.token.value+" (NON-TERMINAL)"

@@ -172,9 +172,9 @@ End Rem
 	'	CALLED BY REFLECTOR
 	
 	Method rule_strictmode:TAbSynTree( syntax:TToken[] )
-		' strictmode = (strict | superstrict) [comment] EOL
+		' strictmode = (strict | superstrict) <c-eol>
 		Print "RULE STRICTMODE"
-		Assert syntax.length=3, "rule_strictmode() FAILED"
+		Assert syntax.length=2, "rule_strictmode() FAILED"
 
 		' SET PARSER STATE TO SELECTED STRICT MODE
 		strictmode = syntax[0].id
