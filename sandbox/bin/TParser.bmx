@@ -5,6 +5,10 @@
 '	TERMINAL		- Token that defines a constant or optional string
 '	NON-TERMINAL	- Token that defines the rules (usually leading to another rule)
 
+'	CHANGE CONTROL
+'	V1.0	07 AUG 21	Initial version
+'	V1.1	16 AUG 21	Removed BNF generic parsing due to limitations
+
 ' Exception handler for Parse errors
 Type TParseError Extends TException
 End Type
@@ -42,14 +46,12 @@ Type TParser
 	Field lexer:TLexer
 	Field token:TToken
 	
-	Field abnf:TABNF			' ANBF Grammar rules
 	Field ast:TASTNode		' Abstract Syntax Tree
 	
-	Method New( lexer:TLexer, abnf:TABNF=Null )
+	Method New( lexer:TLexer )
 'DebugStop
 		Self.lexer = lexer
 		Self.token = lexer.getnext()
-		Self.abnf  = abnf
 	End Method
 	
 	Method parse:Object( rulename:String = "" )
@@ -70,26 +72,17 @@ Type TParser
 		If rulename="" rulename = abnf.first()
 		'If rulename="" Return Null' No starting node (Empty ABNF?)
 		'ast = walk_rule( rulename )
+
 'DebugStop
 		Print "~nSTARTING PARSER:"
-		Publish( "PARSE-START", Null )
+		Publish( "PARSE-START", Null )		
 		lexer.reset()
-		
-'DebugStop
-		' Create the seed from which the AST tree will grow
-
 		Local program:TASTNode = parse_rule( rulename )
-		
-		''Local token:TToken = lexer.getnext()
-		'While token And token.id<>TK_EOF
-	'	'	program.addChild( parse_token( token ) )
-		'Wend
-		'Print ast.reveal()
 		Publish( "PARSE-FINISH", Null )
 		
 		' Check that file parsing has completed successfully
 		Local after:TToken = lexer.peek()
-		If after.isnot( TK_EOF ) ; ThrowParseError( after.value+" unexpected past end", after.line, after.pos )
+		If after.isnot( TK_EOF ) ; ThrowParseError( "'"after.value+"' unexpected past End", after.line, after.pos )
 		
 		' Print state and return value
 'DebugStop
@@ -102,6 +95,7 @@ Type TParser
 		End If
 	End Method
 	
+	Rem
 	Method parse_rule:TASTNode( rulename:String, indent:String="" )
 		Local result:TASTnode[] '= New TParseResult()
 		
@@ -255,7 +249,11 @@ Type TParser
 	
 	End Method
 	
+	End Rem
+
 '/// BAD PARSING ATTEMPTS PAST HERE
+
+
 Rem
 	Method parse_token:AST( token:TToken )
 		Select token.id
@@ -473,10 +471,10 @@ End Rem
 	
 	Method reflect:TASTNode( rule:String, arguments:TASTNode[] )
 		Local this:TTypeId = TTypeId.ForObject( Self )
-		Local methd:TMethod = this.FindMethod( "rule_"+rule )
+		Local methd:TMethod = this.FindMethod( "parse_"+rule )
 'DebugStop
 		If methd Return TASTNode( methd.invoke( Self, [arguments] ))
-		Print( "- Parser.rule_"+rule+"() does not exist" )
+		Print( "- Parser.parse_"+rule+"() does not exist" )
 		Return New TASTNode( "ERROR" )
 		'Return Null
 	End Method

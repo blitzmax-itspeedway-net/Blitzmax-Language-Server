@@ -16,11 +16,6 @@ Include "bin/TToken.bmx"
 Include "bin/TLexer.bmx"
 Include "bin/TParser.bmx"
 
-' 	ABNF GRAMMAR PARSER
-Include "bin/TABNF.bmx"
-Include "bin/TABNFLexer.bmx"
-Include "bin/TABNFParser.bmx"
-
 '	BLITZMAX PARSER
 Include "bin/lexer-const-bmx.bmx"
 Include "bin/TBlitzMaxLexer.bmx"
@@ -34,20 +29,6 @@ Include "bin/TSymbolTable.bmx"
 Include "bin/TBlitzMaxPrettyPrint.bmx"
 
 '	TYPES AND FUNCTIONS
-
-Rem
-Type AST_BinaryOperator Extends TASTNode
-	Field L:TAbSynTree	' Left 
-	Field R:TAbSynTree	' Right
-	
-	Method New( L:TAbSynTree, token:TToken, R:TAbSynTree )
-		Self.token = token
-		Self.L = L
-		Self.R = R
-	End Method
-	
-End Type
-End Rem
 
 Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
     Print "---> "+event
@@ -95,44 +76,7 @@ Type TLangServ Extends TVisitor
 	
 End Type
 		
-Function load_grammar:TABNF( filepath:String, verbose:Int = True )
-	Try
-		Local source:String, lexer:TLexer, parser:TParser
-		Local bnf:TABNF
-		Local start:Int, finish:Int
-		
-		'	First we Load And parse BlitzMax Grammar into abnf
-		Print "STARTING BNF GRAMMAR PARSER:"
-		source = loadFile( filepath )
-		lexer  = New TABNFLexer( source )
-		parser = New TABNFParser( lexer )	
-		start  = MilliSecs()
-		bnf    = TABNF( parser.parse() )	' Parse BNF to Grammar definition
-		finish = MilliSecs()
-		Print( "BNF LEXER+PARSE TIME: "+(finish-start)+"ms" )
-		
-		'	Save the Grammar Definition
-		'abnf = parser.abnf
-	'DebugStop
-		If verbose
-			Print "~nBNF TOKENS:"
-			If parser.lexer
-				Print parser.lexer.reveal()
-			Else
-				Print "NULL"
-			End If
-			Print "~nBNF STRUCTURE:"
-			Print bnf.reveal()
-		End If
-		
-		Return bnf
-
-	Catch exception:TException
-		Print "## Exception: "+exception.toString()+" ##"
-	End Try		
-End Function
-
-Function test_file:Int( filepath:String, grammar:TABNF, verbose:Int=False )
+Function test_file:Int( filepath:String, verbose:Int=False )
 	Local source:String, lexer:TLexer, parser:TParser
 	Local start:Int, finish:Int
 	Local ast:TASTNode
@@ -148,10 +92,10 @@ Function test_file:Int( filepath:String, grammar:TABNF, verbose:Int=False )
 		'source = loadFile( "samples/1) Simple Blitzmax.bmx" )
 		lexer  = New TBlitzMaxLexer( source )
 	'DebugStop
-		parser = New TBlitzMaxParser( lexer, grammar )		' NOTE LANGUAGE DEFINITION ARGUMENT HERE
+		parser = New TBlitzMaxParser( lexer )
 		start  = MilliSecs()
 	'DebugStop
-		ast    = TASTNode( parser.parse() )
+		ast    = parser.parse()
 		finish = MilliSecs()
 		Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )
 
@@ -203,7 +147,7 @@ Function test_file:Int( filepath:String, grammar:TABNF, verbose:Int=False )
 
 End Function
 
-Function test_folder:Int( folder:String, grammar:TABNF, verbose:Int=False )
+Function test_folder:Int( folder:String, verbose:Int=False )
 	folder = StripSlash( folder )
 	Local dir:String[] = LoadDir( folder )
 	Print "~nTESTING FILES IN "+folder
@@ -211,7 +155,7 @@ Function test_folder:Int( folder:String, grammar:TABNF, verbose:Int=False )
 	For Local filepath:String = EachIn dir
 		If FileType(folder+"/"+filepath)=FILETYPE_FILE And ExtractExt(folder+"/"+filepath)="bmx"
 			Print StripDir(filepath)+" - TESTING"
-			If test_file( folder+"/"+filepath, grammar, verbose )
+			If test_file( folder+"/"+filepath, verbose )
 				Print StripDir(filepath)+" - SUCCESS"
 			Else
 				Print StripDir(filepath)+" - FAILURE"
@@ -223,57 +167,17 @@ Function test_folder:Int( folder:String, grammar:TABNF, verbose:Int=False )
 	
 End Function
 
-'Local token:TToken = goal.entry
-
-Rem
-Now we need To read the node tree, obtain symbols from lexer compar To make sure syntax is correct
-Create the AST, Syntz table (For document) And defnintion tree..
-
-Phew!
-End Rem
-
-'	CREATE TEST NODE TREE
-'	(As we have no BlitzMax BNF Defintion to read from we will do all this manually)
-
-'function name ":" 
-
-
-' DEMO CODE ONLY
-
-' Lets manually build a tree with the expression 2+(3*4)
-
-' Create a node for the number tokens (Which would come from the lexer)
-'Local Number2:AST = New AST( New TToken( "number", "2",0,0 ) )
-'Local Number3:AST = New AST( New TToken( "number", "3",0,0 ) )
-'Local Number4:AST = New AST( New TToken( "number", "4",0,0 ) )
-
-' Built the Abstract Syntax Tree
-'Local addnode:AST_BinaryOperator = New AST_BinaryOperator( ..
-'	Number2, ..
-'	New TToken( "symbol","+",0,0 ), ..
-'	New AST_BinaryOperator( ..
-'		Number3, ..
-'		New TToken( "symbol", "*",0,0 ), ..
-'		Number4 ))
-
-' Now lets test parsing 
-
 Local verbose:Int = True
-
-'	LOAD BLITZMAX GRAMMER
-
-Local grammar:TABNF = load_grammar( "samples/bmx-build.abnf", True )
-Assert grammar, "Failed to load grammar definition"
 
 ' 	MAIN TESTING APPLICATION
 
-'test_file( "samples/test.bmx", grammar, verbose )
-test_file( "samples/framework.bmx", grammar, verbose )
-'test_file( "samples/hello world strict.bmx", grammar, verbose )
-'test_file( "samples/hello world.bmx", grammar, verbose )
-'test_file( "samples/function.bmx", grammar, verbose )
-'test_file( "samples/capabilities.bmx", grammar, verbose )
+'test_file( "samples/test.bmx", verbose )
+test_file( "samples/framework.bmx", verbose )
+'test_file( "samples/hello world strict.bmx", verbose )
+'test_file( "samples/hello world.bmx", verbose )
+'test_file( "samples/function.bmx", verbose )
+'test_file( "samples/capabilities.bmx", verbose )
 
-'test_folder( "samples/", grammar, verbose )
-'test_folder( "samples/", grammar, verbose )
+'test_folder( "samples/", verbose )
+'test_folder( "samples/", verbose )
 

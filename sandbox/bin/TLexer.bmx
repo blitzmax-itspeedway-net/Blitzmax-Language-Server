@@ -11,6 +11,7 @@
 '	V1.4    28 JUL 21  Symbol lookup using string[] instead of TMap
 '	V1.4.1  29 JUL 21  Removed argument "reserved" from new as it is not required
 '	V1.5	 7 AUG 21  Added support for language specific tokeniser
+'	V1.6	15 AUG 21  Added getFirst()
 
 '	TODO:
 '	Use TStringMap instead of TMap
@@ -135,6 +136,11 @@ Type TLexer
 	' Set the token cursor to the first element
 	Method reset()
 		tokpos = tokens.firstLink()
+	End Method
+	
+	' Gets the first token
+	Method getFirst:TLink()
+		Return tokens.firstLink()
 	End Method
 	
     ' Gets the next token from the list

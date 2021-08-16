@@ -84,6 +84,11 @@ Type TASTNode
 	'	Return Null
 	'End Method
 	
+	' Used for debugging tree structure
+	Method reveal:String( indent:String = "" )
+		Return indent+name+"~n"
+	End Method
+	
 End Type
 
 ' A binary AST Node (TRUE/FALSE, LEFT/RIGHT etc)
@@ -101,7 +106,23 @@ Type TASTBinary Extends TASTNode
 	'	If given=rnode Return lnode
 	'	Return Null
 	'End Method
-		
+
+	' Used for debugging tree structure
+	Method reveal:String( indent:String = "" )
+		Local block:String = indent+name+"~n"
+		If lnode
+			block :+ lnode.reveal( indent+"  " )
+		Else
+			block :+ "NULL~n"
+		End If
+		If rnode
+			block :+ rnode.reveal( indent+"  " )
+		Else
+			block :+ "NULL~n"
+		End If
+		Return block
+	End Method
+
 End Type
 
 ' A Compound AST Node with multiple children
@@ -125,6 +146,15 @@ Type TASTCompound Extends TASTNode
 		child.link = children.addlast( child )
 	End Method
 
+	' Used for debugging tree structure
+	Method reveal:String( indent:String = "" )
+		Local block:String = indent+name+"~n"
+		For Local child:TASTNode = EachIn children
+			block :+ child.reveal( indent+"  " )
+		Next
+		Return block
+	End Method
+	
 End Type
 
 
@@ -159,7 +189,19 @@ Type TVisitor
 	
 End Type
 
-
+Rem
+Type AST_BinaryOperator Extends TASTNode
+	Field L:TAbSynTree	' Left 
+	Field R:TAbSynTree	' Right
+	
+	Method New( L:TAbSynTree, token:TToken, R:TAbSynTree )
+		Self.token = token
+		Self.L = L
+		Self.R = R
+	End Method
+	
+End Type
+End Rem
 
 
 

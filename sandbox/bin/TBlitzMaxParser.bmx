@@ -2,94 +2,26 @@
 '	BlitzMax Parser
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-'	A LANGUAGE SYNTAX IS CURRENTLY UNAVAILABLE
-'	THIS IS THEREFORE HARDCODED AT THE MOMENT
-'	IT WILL BE RE-WRITTEN WHEN SYNTAX IS DONE
+'	CHANGE CONTROL
+'	V1.0	07 AUG 21	Initial version
+'	V1.1	16 AUG 21	Removed BNF generic parsing due to limitations
 
 Type TBlitzMaxParser Extends TParser
 
 	Field strictmode:Int = 0
 	Field symbolTable:TSymbolTable = New TSymbolTable()	
 	
-	Method New( lexer:TLexer, abnf:TABNF = Null )
-		Super.New(lexer, abnf)
-
-Rem
-		'	We need to follow a grammar rule so until we have a way to
-		'	parse one from a file, we have to create it manually here
-
-		'	RULE:
-		'	program = Application / Module
-		'	application = [Strictmode] [Framework] [*Import] [*Include] Block
-		'	module = [Strictmode] ModuleDef [*Import] [*Include] Block
-		'	strictmode = "strict" / "superstrict"
-'DebugStop		
-		'	Create "PROGRAM" rule
-		Local _application:TGNode = New TGnode()
-		Local _module:TGNode = New TGnode()
-		
-		' Application has no successor and "Module" as alternative
-		_application.terminal = False
-		_application.alt = _module
-		_application.suc = Null
-		_application.sym = New TSymbol( 0, "application", "" )
-		
-		' Module has no successor and no alternative
-		_module.terminal = False
-		_module.alt = Null
-		_module.suc = Null
-		_module.sym = New TSymbol( 0, "module", "" )
-		
-		' Create rule
-		abnf.add( "program", _application )		
-		
-		'	Create "STRICTMODE" rule
-		Local _strict:TGNode = New TGnode()
-		Local _superstrict:TGNode = New TGnode()
-		Local _strictnull:TGNode = New TGnode()
-
-		' Strictmode can be either "strict" or "superstrict" or null
-		_strict.terminal = True
-		_strict.alt = _superstrict
-		_strict.suc = Null
-		_strict.sym = New TSymbol( 0, "strict", "" )
-		
-		_superstrict.terminal = True
-		_superstrict.alt = _strictnull
-		_superstrict.suc = Null
-		_superstrict.sym = New TSymbol( 0, "superstrict", "" )	
-			
-		_strictnull.terminal = True
-		_strictnull.alt = Null
-		_strictnull.suc = Null
-		_strictnull.sym = New TSymbol( 0, "", "" )		
-		
-		' Create rule
-		abnf.add( "strictmode", _strict )
-		
-		'	Create "Application" rule
-		Local _strictmode:TGNode = New TGnode()
-		Local _framework:TGNode = New TGnode()
-
-		_strictmode.terminal = False
-		_strictmode.alt = Null
-		_strictmode.suc = _framework
-		_strictmode.sym = New TSymbol( 0, "strictmode", "" )
-
-		_framework.terminal = False
-		_framework.alt = Null
-		_framework.suc = Null
-		_framework.sym = New TSymbol( 0, "framework", "" )
-		
-		' Create rule
-		abnf.add( "application", _strictmode )		
-End Rem	
-
+	Method New( lexer:TLexer )
+		Super.New(lexer )
 	End Method
 
-Rem	
-	' The story starts, as they say, with a beginning...
-	Method parse_OLD:AST()
+	' We do not need to over-ride the parser entry point
+	' because it will call parse_program to begin
+	
+	Private
+
+	' Every story starts, as they say, with a beginning...
+	Method parse_program:AST()
 		
 		' 	ABNF
 		'		Program = [Strictmode] | [ Application | Module ]
@@ -98,7 +30,16 @@ Rem
 		'
 DebugStop
 
-
+		' Build a block structure
+		Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
+		
+		' Scan block
+		
+		Local lexnode:TLink = lexer.getFirst()
+		Local found:Int = False
+		
+		'Repeat	
+		'Until
 		
 		
 		
@@ -130,7 +71,6 @@ DebugStop
 		ThrowException( "Unexpected Symbol", tok.line, tok.pos )
 
 	End Method
-End Rem	
 
 	' Dump the symbol table into a string
 	Method reveal:String()
@@ -170,7 +110,8 @@ End Rem
 	
 	'	DYNAMIC METHODS
 	'	CALLED BY REFLECTOR
-	
+
+Rem 	
 	Method rule_program:TASTNode( syntax:TASTNode[] )
 'DebugStop
 		Local tree:TASTCompound = New TASTCompound( "PROGRAM" )
@@ -222,7 +163,7 @@ End Rem
 		End Select
 
 	End Method
-	
+End Rem
 	
 Rem
 	' Field = "field" VarDecl *[ "," VarDecl ]
