@@ -53,8 +53,6 @@ Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
     Print "---> "+event
 End Function
 
-
-
 Type TLangServ Extends TVisitor
 
 	Field parser:TParser
@@ -134,7 +132,7 @@ Function load_grammar:TABNF( filepath:String, verbose:Int = True )
 	End Try		
 End Function
 
-Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=False )
+Function test_file:Int( filepath:String, grammar:TABNF, verbose:Int=False )
 	Local source:String, lexer:TLexer, parser:TParser
 	Local start:Int, finish:Int
 	Local ast:TASTNode
@@ -205,7 +203,7 @@ Function test_file:Int( filepath:String, grammar:TABNF, state:Int, verbose:Int=F
 
 End Function
 
-Function test_folder:Int( folder:String, grammar:TABNF, state:Int, verbose:Int=False )
+Function test_folder:Int( folder:String, grammar:TABNF, verbose:Int=False )
 	folder = StripSlash( folder )
 	Local dir:String[] = LoadDir( folder )
 	Print "~nTESTING FILES IN "+folder
@@ -213,7 +211,7 @@ Function test_folder:Int( folder:String, grammar:TABNF, state:Int, verbose:Int=F
 	For Local filepath:String = EachIn dir
 		If FileType(folder+"/"+filepath)=FILETYPE_FILE And ExtractExt(folder+"/"+filepath)="bmx"
 			Print StripDir(filepath)+" - TESTING"
-			If test_file( folder+"/"+filepath, grammar, state, verbose )
+			If test_file( folder+"/"+filepath, grammar, verbose )
 				Print StripDir(filepath)+" - SUCCESS"
 			Else
 				Print StripDir(filepath)+" - FAILURE"
@@ -269,10 +267,13 @@ Assert grammar, "Failed to load grammar definition"
 
 ' 	MAIN TESTING APPLICATION
 
-test_file( "samples/positive/test.bmx", grammar, True, verbose )
-'test_file( "samples/positive/hello world strict.bmx", grammar, True, verbose )
-'test_file( "samples/positive/hello world.bmx", grammar, True, verbose )
-'test_file( "samples/positive/function.bmx", grammar, True, verbose )
-'test_folder( "samples/positive", grammar, True, verbose )
-'test_folder( "samples/negative", grammar, False, verbose )
+'test_file( "samples/test.bmx", grammar, verbose )
+test_file( "samples/framework.bmx", grammar, verbose )
+'test_file( "samples/hello world strict.bmx", grammar, verbose )
+'test_file( "samples/hello world.bmx", grammar, verbose )
+'test_file( "samples/function.bmx", grammar, verbose )
+'test_file( "samples/capabilities.bmx", grammar, verbose )
+
+'test_folder( "samples/", grammar, verbose )
+'test_folder( "samples/", grammar, verbose )
 
