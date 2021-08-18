@@ -41,7 +41,7 @@ Type TBlitzMaxPrettyPrint Extends TVisitor
 	Method visit_strictmode:String( node:TASTNode )
 'DebugStop
 		If Not node ThrowException( "Invalid node in strictmode" ) 
-		Local text:String = node.token.class
+		Local text:String = node.value
 		If node.descr text :+ " ' "+node.descr
 		Return text + "~n"
 	End Method

@@ -2,16 +2,17 @@
 '	Generic Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-'	VERSION:	1.5
+'	VERSION:	1.6
 '
-'	V1.0    -- JUL 21  Initial version using Queue<TSymbol> and String Tokens. 
-'	V1.1    24 JUL 21  Replaced Queue<TSymbol> with a TList
-'	V1.2    26 JUL 21  TSymbol renamed to TToken as thats what it holds!
-'	V1.3    27 JUL 21  Reworked Tokens to use integer indexes
-'	V1.4    28 JUL 21  Symbol lookup using string[] instead of TMap
-'	V1.4.1  29 JUL 21  Removed argument "reserved" from new as it is not required
-'	V1.5	 7 AUG 21  Added support for language specific tokeniser
-'	V1.6	15 AUG 21  Added getFirst()
+'	CHNAGE LOG
+'	V1.0    -- JUL 21	Initial version using Queue<TSymbol> and String Tokens. 
+'	V1.1    24 JUL 21	Replaced Queue<TSymbol> with a TList
+'	V1.2    26 JUL 21	TSymbol renamed to TToken as thats what it holds!
+'	V1.3    27 JUL 21	Reworked Tokens to use integer indexes
+'	V1.4    28 JUL 21	Symbol lookup using string[] instead of TMap
+'	V1.4.1  29 JUL 21	Removed argument "reserved" from new as it is not required
+'	V1.5	 7 AUG 21	Added support for language specific tokeniser
+'	V1.6	18 AUG 21	Added findNext() and getChunk()
 
 '	TODO:
 '	Use TStringMap instead of TMap
@@ -75,7 +76,7 @@ Const TK_tilde:Int 			= 126	'	~
 '	STANDARD IDENTIFIERS
 
 Const TK_Invalid:Int 		= 600	'	Any token flagged as invalid
-Const TK_Comment:Int 		= 601	'	Comment
+Const TK_Comment:Int 		= 601	'	Line Comment
 Const TK_Alpha:Int			= 602	'	Unidentified identifier
 Const TK_Identifier:Int		= 603	'	Identifier identifier
 Const TK_QString:Int		= 604	'	Quoted String
@@ -138,10 +139,42 @@ Type TLexer
 		tokpos = tokens.firstLink()
 	End Method
 	
-	' Gets the first token
-	Method getFirst:TLink()
-		Return tokens.firstLink()
-	End Method
+	' Gets the first token link
+'	Method getFirstLink:TLink()
+'		Return tokens.firstLink()
+'	End Method
+
+	' Gets the next token link
+'	Method getNextLink:TLink( link:TLink )
+'		If link=Null Return Null
+'		Return link.nextlink
+'	End Method
+
+	' Gets the token at link
+'	Method token:TToken( link:TLink )
+'		If link Return TToken( link.value )
+'		Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+'	End Method
+			
+	' Scan token classes until we reach given
+'	Method search:TLink( pos:TLink, class:Int )
+'		While pos
+'			Local token:TToken = TToken(pos.value)
+'			If token.id = class Exit
+'			pos = pos.nextlink
+'		Wend
+'		Return pos
+'	End Method
+	
+	' Scan token classes until we reach given
+'	Method find:TLink( pos:TLink, classes:Int[] )
+'		While pos
+'			Local token:TToken = TToken(pos.value)
+'			If token.in(classes) Exit
+'			pos = pos.nextlink
+'		Wend
+'		Return pos
+'	End Method
 	
     ' Gets the next token from the list
     Method getNext:TToken()	' ignorelist:String="" )
@@ -179,6 +212,12 @@ Type TLexer
 			If peek.class=expected Return peek
 		Next
         Return Null
+    End Method
+
+    ' Peeks at a given position in the stack
+    Method Peek:TToken( pos:TLink )
+        If pos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+		Return TToken( pos.value )
     End Method
 
     ' Matches the next token otherwise throws an error
@@ -377,9 +416,9 @@ End Rem
 				Else
 					cursor :+ 2
 				End If
-            'Default
-            '    linepos :+ 1
-            '    cursor :+ 1
+            Default
+                linepos :+ 1
+                cursor :+ 1
             End Select
         'Until Not Instr( IgnoredSymbols, char )
 		Wend
@@ -507,6 +546,61 @@ Rem
         Return text
     End Method
 End Rem
+
+	Method findNext:Int( text:String )
+		Local re:TRegEx = TRegEx.Create( "(?i)"+text )
+'DebugStop
+		Try
+			Local match:TRegExMatch = re.find( source, cursor )
+			If match Return match.substart(0)
+		Catch e:TRegExException
+			' Do nothing, its not important!
+		End Try
+		Return 0
+	End Method
+
+	Method findNext:Int[]( text:String, alt:String )
+		Local re:TRegEx = TRegEx.Create( "(?i)"+text+"|"+alt )
+'DebugStop
+		Try
+			Local match:TRegExMatch = re.find( source, cursor )
+			If match 
+				Return [match.substart(0),match.subEnd(0)+1]
+			End If
+		Catch e:TRegExException
+			' Do nothing, its not important!
+		End Try
+		Return []
+	End Method
+		
+	Method getChunk:String( pos:Int )
+		Local start:Int=cursor
+		pos = Min( pos, source.length )	' Bounds check 
+		cursor = pos
+		Return adjust(source[start..pos])
+	End Method
+	
+	' Skips a fixed amount of characters
+	Method skip( count:Int )
+		Local start:Int=cursor
+		Local pos:Int = Min( cursor+count, source.length)
+		adjust(source[cursor..pos])
+		cursor = pos
+	End Method
+
+	' Adjusts the cursor and line position based on a string
+	Method adjust:String( content:String )
+		For Local i:Int = 0 Until content.length
+			If content[i..i+1]="~n"
+                linenum :+1
+                linepos = 1
+			Else
+				linepos :+1
+			End If
+		Next
+		Return content
+	End Method
+	 
 End Type
 
 ' A Simple Symbol

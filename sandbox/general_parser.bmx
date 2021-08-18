@@ -5,6 +5,8 @@ Framework brl.retro
 'Import brl.collections
 'Import brl.map
 Import brl.reflection
+Import Text.RegEx
+
 '
 Include "bin/loadfile().bmx"
 Include "bin/TException.bmx"
@@ -23,6 +25,7 @@ Include "bin/TBlitzMaxParser.bmx"
 
 '	DELIVERABLES
 Include "bin/AbstractSyntaxTree.bmx"
+Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
 
 '	OUTPUT
@@ -171,12 +174,15 @@ Local verbose:Int = True
 
 ' 	MAIN TESTING APPLICATION
 
-'test_file( "samples/test.bmx", verbose )
-test_file( "samples/framework.bmx", verbose )
+test_file( "samples/test.bmx", verbose )
+'test_file( "samples/framework.bmx", verbose )
 'test_file( "samples/hello world strict.bmx", verbose )
 'test_file( "samples/hello world.bmx", verbose )
 'test_file( "samples/function.bmx", verbose )
 'test_file( "samples/capabilities.bmx", verbose )
+
+'test_file( "samples/blocks.bmx", verbose )
+'test_file( "samples/nested blocks.bmx", verbose )
 
 'test_folder( "samples/", verbose )
 'test_folder( "samples/", verbose )

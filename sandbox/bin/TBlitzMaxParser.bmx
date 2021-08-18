@@ -2,9 +2,15 @@
 '	BlitzMax Parser
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
-'	CHANGE CONTROL
+'	CHANGE LOG
 '	V1.0	07 AUG 21	Initial version
 '	V1.1	16 AUG 21	Removed BNF generic parsing due to limitations
+
+Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_IMPORT, TK_MODULE, TK_MODULEINFO ]
+Global SYM_FUNCTIONBODY:Int[] = [ TK_LOCAL, TK_GLOBAL ]
+Global SYM_METHODBODY:Int[] = [ TK_LOCAL, TK_GLOBAL ]
+Global SYM_TYPEBODY:Int[] = [ TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
+
 
 Type TBlitzMaxParser Extends TParser
 
@@ -21,7 +27,13 @@ Type TBlitzMaxParser Extends TParser
 	Private
 
 	' Every story starts, as they say, with a beginning...
-	Method parse_program:AST()
+	Method parse_program:TASTNode()
+		
+		Const FSM_STRICTMODE:Int = 0
+		Const FSM_FRAMEWORK:Int = 1
+		Const FSM_IMPORT:Int = 2
+		Const FSM_MODULE:Int = 3
+		Const FSM_BODY:Int = 4
 		
 		' 	ABNF
 		'		Program = [Strictmode] | [ Application | Module ]
@@ -29,21 +41,79 @@ Type TBlitzMaxParser Extends TParser
 		'		Module = [Strictmode] ModuleDef [*Import] [*Include] Block
 		'
 DebugStop
+		Local fsm:Int = FSM_STRICTMODE
 
 		' Build a block structure
 		Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
 		
-		' Scan block
+		' Scan the tokens, creating children
+		lexer.reset()	' Starting position
 		
-		Local lexnode:TLink = lexer.getFirst()
-		Local found:Int = False
+		Local token:TToken = lexer.getnext()
+		Local prev:TToken, save:TToken
+		Local definition:TToken
 		
-		'Repeat	
-		'Until
+		' [STRICTMODE]
+		Repeat
+DebugStop
+			If Not token Throw( "Unexpected end of token stream (STRICTMODE)" )
+
+			' Save previous token
+			prev = save
+			save = token
+			
+			' Parse this token
+			Select token.id
+			Case TK_EOF
+				ThrowParseError( "Unexpected end of file", token.line, token.pos )
+			Case TK_EOL
+				' Empty lines mark the end of a block comment and not a defintion
+				If prev.id=TK_EOL And definition
+					ast.add( New TAST_Comment( definition ) )
+					definition = Null
+				End If
+				token = lexer.getnext()
+				Continue
+			Case TK_COMMENT
+				' No definition for this identifier
+				If definition
+					ast.add( New TAST_Comment( definition ) )
+					definition = Null					
+				End If
+				ast.add( New TAST_Comment( token ) )
+				' Next should (MUST) be an EOL
+				token = lexer.getnext()	' Skip "COMMENT"
+				token = lexer.getnext()	' SKip "EOL"
+				Continue
+			Case TK_REM
+				' Previous comments are blocks, not definitions
+				If definition ast.add( New TAST_Comment( definition ) )
+				definition = token
+DebugStop
+
+			Case TK_STRICT, TK_SUPERSTRICT
+				If fsm<>FSM_STRICTMODE
+					Publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+					Continue
+				End If
+DebugStop
+				ast.add( New TAST_Strictmode( lexer, token, definition ) )
+				definition=Null
+				fsm :+ 1
+				Continue
+			Default
+DebugStop
+				Print "NOT IMPLEMENTED: "+token.reveal
+				Continue	' Optional not found
+			End Select
+		Forever
+		
+
+
+
 		
 		
-		
-		
+	Rem	
 		'	OPTIONAL STRICTMODE
 		'	StrictMode = "superstrict" / "strict" EOL
 		If lexer.peek( ["superstrict","strict"] )
@@ -69,7 +139,25 @@ DebugStop
 		' Tokens exist past end of file!
 		Local tok:TToken = lexer.peek()
 		ThrowException( "Unexpected Symbol", tok.line, tok.pos )
+End Rem
+	End Method
 
+	' Obtain closing token(s) for a given token if
+	Method closingTokens:Int[]( tokenid:Int )
+		Select tokenid
+		Case TK_EXTERN		;	Return [ TK_END, TK_ENDEXTERN ]
+		Case TK_FUNCTION	;	Return [ TK_END, TK_ENDFUNCTION ]
+		Case TK_IF			;	Return [ TK_END, TK_ENDIF ]
+		Case TK_INTERFACE	;	Return [ TK_END, TK_ENDINTERFACE ]
+		Case TK_METHOD		;	Return [ TK_END, TK_ENDMETHOD ]
+		Case TK_REM			;	Return [ TK_END, TK_ENDREM ]
+		Case TK_REPEAT		;	Return [ TK_FOREVER, TK_UNTIL ]
+		Case TK_SELECT		;	Return [ TK_END, TK_ENDSELECT ]
+		Case TK_STRUCT		;	Return [ TK_END, TK_ENDSTRUCT ]
+		Case TK_TRY			;	Return [ TK_END, TK_ENDTRY ]
+		Case TK_TYPE		;	Return [ TK_END, TK_ENDTYPE ]
+		Case TK_WHILE		;	Return [ TK_END, TK_ENDWHILE, TK_WEND]
+		End Select
 	End Method
 
 	' Dump the symbol table into a string
@@ -301,3 +389,12 @@ End Type
 '		If comment Self.comment = comment.value
 '	End Method
 'End Type
+
+Type TCodeBlock
+	Field start:TToken
+	Field finish:TToken
+	Method New( start:TToken, finish:TToken )
+		Self.start = start
+		Self.finish = finish
+	End Method
+End Type

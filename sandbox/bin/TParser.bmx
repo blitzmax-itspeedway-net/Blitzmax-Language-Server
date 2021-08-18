@@ -5,7 +5,7 @@
 '	TERMINAL		- Token that defines a constant or optional string
 '	NON-TERMINAL	- Token that defines the rules (usually leading to another rule)
 
-'	CHANGE CONTROL
+'	CHANGE LOG
 '	V1.0	07 AUG 21	Initial version
 '	V1.1	16 AUG 21	Removed BNF generic parsing due to limitations
 
@@ -54,7 +54,7 @@ Type TParser
 		Self.token = lexer.getnext()
 	End Method
 	
-	Method parse:Object( rulename:String = "" )
+	Method parse:TASTNode()
 '	Method testabnf:Int( rulename:String, path:String="" )
 'DebugStop
 		Print "~nSTARTING LEXER:"
@@ -69,7 +69,7 @@ Type TParser
 		Print( lexer.reveal() )
 'DebugStop
 		' If no rulename passed, then use first rule in ANBF		
-		If rulename="" rulename = abnf.first()
+		'If rulename="" rulename = abnf.first()
 		'If rulename="" Return Null' No starting node (Empty ABNF?)
 		'ast = walk_rule( rulename )
 
@@ -77,12 +77,12 @@ Type TParser
 		Print "~nSTARTING PARSER:"
 		Publish( "PARSE-START", Null )		
 		lexer.reset()
-		Local program:TASTNode = parse_rule( rulename )
+		Local program:TASTNode = parse_program()
 		Publish( "PARSE-FINISH", Null )
 		
 		' Check that file parsing has completed successfully
 		Local after:TToken = lexer.peek()
-		If after.isnot( TK_EOF ) ; ThrowParseError( "'"after.value+"' unexpected past End", after.line, after.pos )
+		If after.isnot( TK_EOF ) ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
 		
 		' Print state and return value
 'DebugStop
@@ -94,6 +94,11 @@ Type TParser
 			Return Null
 		End If
 	End Method
+
+	Private
+		
+	Method parse_program:TASTNode() Abstract
+	
 	
 	Rem
 	Method parse_rule:TASTNode( rulename:String, indent:String="" )

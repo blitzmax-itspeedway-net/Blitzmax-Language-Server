@@ -2,6 +2,10 @@
 '	BlitzMax Lexer
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
+'	CHANGE LOG
+'	V1.0	07 AUG 21	Initial version
+'	V1.1	16 AUG 21	Fixed issue that made all defined tokens TK_Identifiers!
+
 Const TK_EMPTY:Int = $FFFE		' Used to represent optional token matches
 
 Type TBlitzMaxLexer Extends TLexer
@@ -72,8 +76,15 @@ Type TBlitzMaxLexer Extends TLexer
 			Local text:String = ExtractIdent( SYM_ALPHA+"_" )
 			' Check if this is a named-token or just an alpha
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
-			If symbol Return New TToken( TK_Identifier, text, line, pos, symbol.class )
-			Return New TToken( TK_Alpha, text, line, pos, "ALPHA" )
+			If symbol
+				If symbol.id = TK_REM
+'DebugStop
+					Return New TToken( symbol.id, ExtractRemark(), line, pos, symbol.class )
+				Else
+					Return New TToken( symbol.id, text, line, pos, symbol.class )
+				End If
+			End If
+			Return New TToken( TK_Identifier, text, line, pos, "ALPHA" )
 		'Case Instr( valid_symbols, char, 1 )            ' Single character symbol
 		Default								' A Symbol
 			PopChar()   ' Move to next character
@@ -95,7 +106,18 @@ Type TBlitzMaxLexer Extends TLexer
 			Return New TToken( ascii, char, line, pos, "symbol" )
 		EndSelect
 	End Method
-		
+	
+	Method ExtractRemark:String()
+        Local remark:String
+		Local found:Int[] = findnext("endrem","end rem")
+		' Have we found anything?
+		If found.length=2 
+			remark = Replace( getchunk( found[0] ),"~r","")
+			getchunk( found[1] )	' Skip closing identifier			
+		End If
+		Return remark
+	End Method
+	
 End Type
 
 ' Blitzmax Tables

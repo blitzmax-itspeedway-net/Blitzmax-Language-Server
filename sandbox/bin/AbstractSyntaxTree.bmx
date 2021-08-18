@@ -2,6 +2,10 @@
 '	ABSTRACT SYNTAX TREE (AST)
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
+'	CHANGE LOG
+'	V1.0	07 AUG 21	Initial version
+'	V1.1	17 AUG 21	Added consume()
+
 Rem
 Type TAbSynTree
 	Field name:String		' IMPORTANT - THIS IS USED TO CALL THE METHOD
@@ -43,8 +47,12 @@ Type TASTNode
 	Field parent:TASTNode
 	'Field class:Int
 	Field name:String
-	Field token:TToken
-	Field descr:String		' Optional Trailing comment
+	'Field token:TToken
+	Field tokenid:Int		' This is the token id that created the node
+	Field value:String		' Used in leaf nodes
+	Field line:Int, pos:Int	' Not normally held in an AST, but needed for language server
+	Field definition:String	' Block comment (before) used to describe meaning
+	Field descr:String		' Optional Trailing "line" comment
 	Field link:TLink		' Used in Compound nodes
 	
 	Method New( name:String )
@@ -52,15 +60,20 @@ Type TASTNode
 	End Method
 
 	Method New( token:TToken )
-		Self.token = token
+		consume( token )
 	End Method
-	
-	'Method New( name:TASTNode
 
 	Method New( name:String, token:TToken, desc:String = "" )
 		Self.name  = name
-		Self.token = token
+		consume( token )
 		Self.descr = descr
+	End Method
+	
+	Method consume( token:TToken )
+		Self.tokenid = token.id
+		Self.value   = token.value
+		Self.line    = token.line
+		Self.pos     = token.pos
 	End Method
 	
 	' Walk the tree to find left-most leaf
@@ -180,7 +193,7 @@ Type TVisitor
 	
 	' This is called when node doesn't have a name...
 	Method visit_:String( node:TASTNode )
-		ThrowException( "Node "+node.token.class+" has no name!" )
+		ThrowException( "Node '"+node.value+"' has no name!" )
 	End Method
 	
 	Method exception( node:TASTNode )
