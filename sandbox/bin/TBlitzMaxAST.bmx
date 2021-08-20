@@ -21,9 +21,11 @@ Type TAST_Strictmode Extends TASTNode
 		If def definition = def.value
 		consume( token )
 		'
-		Local peek:TToken = lexer.getnext()
-		'If peek.id=TK_EOLDebugStop
-		lexer.getnext()
+		token = lexer.expect( [TK_COMMENT,TK_EOL] )
+		If token.id = TK_EOL Return
+		' Inline comment becomes the node description
+		descr = token.value
+		lexer.Expect( TK_EOL )
 	End Method
 	
 End Type

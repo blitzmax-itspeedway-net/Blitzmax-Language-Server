@@ -5,6 +5,8 @@
 '	CHANGE LOG
 '	V1.0	07 AUG 21	Initial version
 '	V1.1	16 AUG 21	Fixed issue that made all defined tokens TK_Identifiers!
+'	V1.2	18 AUG 21	Added support for REM..(ENDREM|END REM)
+'	V1.3	20 AUG 21	Fixed bug where remarks can contain "end rem"!
 
 Const TK_EMPTY:Int = $FFFE		' Used to represent optional token matches
 
@@ -77,7 +79,7 @@ Type TBlitzMaxLexer Extends TLexer
 			' Check if this is a named-token or just an alpha
 			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
 			If symbol
-				If symbol.id = TK_REM
+				If symbol.id = TK_REM And previous.id <> TK_END
 'DebugStop
 					Return New TToken( symbol.id, ExtractRemark(), line, pos, symbol.class )
 				Else
@@ -109,12 +111,20 @@ Type TBlitzMaxLexer Extends TLexer
 	
 	Method ExtractRemark:String()
         Local remark:String
-		Local found:Int[] = findnext("endrem","end rem")
+'DebugStop
+		Local match:TRegExMatch = findnext("(?im)^[ \t]*(ENDREM|END REM)(?![a-zA-Z0-9_])", True)
+		If Not match Return ""
 		' Have we found anything?
-		If found.length=2 
-			remark = Replace( getchunk( found[0] ),"~r","")
-			getchunk( found[1] )	' Skip closing identifier			
-		End If
+		'For Local i:Int = 0 Until match.SubCount()
+		'	Print i + ": " + match.SubExp(i) + " at "+match.substart(i)+"-"+match.subend(i)
+		'Next
+		Local start:Int = match.substart(0)
+		'Local finish:Int = match.subEnd(0)+1
+		remark = Replace( getchunk( start ),"~r","")
+		'Local ignore:String = getchunk( match.subEnd(1)+1 )		' Skip closing identifier	
+
+'DebugLog( "/*"+remark+"*/" )
+'DebugStop
 		Return remark
 	End Method
 	

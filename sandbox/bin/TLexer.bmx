@@ -12,7 +12,7 @@
 '	V1.4    28 JUL 21	Symbol lookup using string[] instead of TMap
 '	V1.4.1  29 JUL 21	Removed argument "reserved" from new as it is not required
 '	V1.5	 7 AUG 21	Added support for language specific tokeniser
-'	V1.6	18 AUG 21	Added findNext() and getChunk()
+'	V1.6	18 AUG 21	Added findNext() and getChunk(), skip(count:int), adjust(), fastfwd()
 
 '	TODO:
 '	Use TStringMap instead of TMap
@@ -96,6 +96,7 @@ Type TLexer
 	Field cursor:Int				' Lexer (Char cursor)
 	'Field lookahead:String			' Next character
 	Field tokpos:TLink				' Current token cursor
+	Field previous:TToken			' Previous token (For back-checking)
 	
 	Field tokens:TList = New TList()
 	Field defined:TMap = New TMap()	' List of known tokens. Key is token, Value is class
@@ -221,14 +222,22 @@ Type TLexer
     End Method
 
     ' Matches the next token otherwise throws an error
-	Method Expect( id:Int )
+	Method Expect:TToken( id:Int )
         If tokpos=Null ThrowException( "Unexpected end of file" )
-		Local tok:TToken = TToken( tokpos.value )
+		Local token:TToken = TToken( tokpos.value )
 		tokpos = tokpos.nextlink
-		If tok.id = id Return
-		ThrowException( "Unexpected token '"+tok.value+"'", tok.line, tok.pos )
+		If token.id = id Return token
+		ThrowException( "Unexpected token '"+token.value+"'", token.line, token.pos )
 	End Method
-		
+
+    ' Matches the next token otherwise throws an error
+	Method Expect:TToken( expectation:Int[] )
+        If tokpos=Null ThrowException( "Unexpected end of file" )
+		Local token:TToken = TToken( tokpos.value )
+		tokpos = tokpos.nextlink
+		If token.in( expectation ) Return token
+		ThrowException( "Unexpected token '"+token.value+"'", token.line, token.pos )
+	End Method	
 Rem
     Method Expect:TToken( expectedclass:String, expectedvalue:String="" )
 		Local tok:TToken = TToken( tokpos.value )
@@ -242,7 +251,6 @@ Rem
     End Method
 End Rem
 
-
     ' Matches the given token and throws it away (Useful for comments)
     Method skip:String( expectedclass:String )
 		Local tok:TToken = TToken( tokpos.value )
@@ -255,6 +263,17 @@ End Rem
 		Return skipped
     End Method
 
+	' Skip all tokens until we find given
+	Method fastfwd:TToken( given:Int )
+'DebugStop
+		Local token:TToken = TToken( tokpos.value )
+		While token.notin( [TK_EOF, given] )
+			tokpos = tokpos.nextlink
+			token  = TToken( tokpos.value )
+		Wend
+		Return token
+	End Method
+	
 	' Identifies if we have any token remaining
 	Method isAtEnd:Int()
 		Return (tokpos = Null )
@@ -266,9 +285,11 @@ End Rem
 'DebugStop
 		Local token:TToken	' = nextToken()
 		'nextChar()			' Move to first character
+		previous = New TToken( TK_Invalid, "", 0,0, "" ) ' Beginning of file (Stops NUL)
 		Repeat
 			token = nextToken()
 			tokens.addlast( token )
+			previous = token
 		Until token.id = TK_EOF
 		' Set the token cursor to the first element
 		tokpos = tokens.firstLink()
@@ -547,30 +568,31 @@ Rem
     End Method
 End Rem
 
-	Method findNext:Int( text:String )
-		Local re:TRegEx = TRegEx.Create( "(?i)"+text )
+	Method findNext:TRegExMatch( text:String, regex:Int = False )
+		Local re:TRegEx
+		If Not regex text = "(?i)"+text
+		re = TRegEx.Create( text )
 'DebugStop
 		Try
-			Local match:TRegExMatch = re.find( source, cursor )
-			If match Return match.substart(0)
+			Local matches:TRegExMatch = re.find( source, cursor )
+			If matches Return matches
 		Catch e:TRegExException
 			' Do nothing, its not important!
 		End Try
-		Return 0
+		Return Null
 	End Method
 
-	Method findNext:Int[]( text:String, alt:String )
+	Method findNext:TRegExMatch( text:String, alt:String )
 		Local re:TRegEx = TRegEx.Create( "(?i)"+text+"|"+alt )
 'DebugStop
 		Try
-			Local match:TRegExMatch = re.find( source, cursor )
-			If match 
-				Return [match.substart(0),match.subEnd(0)+1]
-			End If
+			Local matches:TRegExMatch = re.find( source, cursor )
+			If matches Return matches
+			'Return [match.substart(0),match.subEnd(0)+1]
 		Catch e:TRegExException
 			' Do nothing, its not important!
 		End Try
-		Return []
+		Return Null
 	End Method
 		
 	Method getChunk:String( pos:Int )
@@ -587,7 +609,7 @@ End Rem
 		adjust(source[cursor..pos])
 		cursor = pos
 	End Method
-
+	
 	' Adjusts the cursor and line position based on a string
 	Method adjust:String( content:String )
 		For Local i:Int = 0 Until content.length

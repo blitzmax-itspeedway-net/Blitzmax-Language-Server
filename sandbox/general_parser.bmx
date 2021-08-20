@@ -28,8 +28,11 @@ Include "bin/AbstractSyntaxTree.bmx"
 Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
 
-'	OUTPUT
-Include "bin/TBlitzMaxPrettyPrint.bmx"
+'	OUTPUT / TRANSPILE
+Include "bin/TTranspiler.bmx"
+Include "bin/TTranspileBlitzMax.bmx"
+Include "bin/TTranspileCPP.bmx"
+Include "bin/TTranspileJava.bmx"
 
 '	TYPES AND FUNCTIONS
 
@@ -110,28 +113,30 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		' Pretty print the AST back into BlitzMax (.transpile file)
 		Print "~nTRANSPILE AST TO BLITZMAX:"
 		
-		Local blitzmax:TBlitzMaxPrettyPrint = New TBlitzMaxPrettyPrint( ast )
-		Local source:String = blitzmax.run()
+		Local blitzmax:TTranspileBlitzMax = New TTranspileBlitzMax( ast )
+		source = blitzmax.run()
+		Print "------------------------------------------------------------"
+		Print source
+		Print "------------------------------------------------------------"
+
+		' Pretty print the AST into C++
+		Print "~nTRANSPILE AST TO C++:"
+		
+		Local cpp:TTranspileCPP = New TTranspileCPP( ast )
+		source = cpp.run()
 		Print "------------------------------------------------------------"
 		Print source
 		Print "------------------------------------------------------------"
 		
-		'Local transpiler:TBlitzMaxCompiler = New TBlitzMaxCompiler( tree )
-		'Local blitzmax:String = transpiler.run()
-		'Print "~nTRANSPILER:"
-		'Print blitzmax
-		' Write transpiled code to file
-
-
-		' Test language server AST parsing
+		' Pretty print the AST into Java
+		Print "~nTRANSPILE AST TO Java+:"
 		
-		' ... be be continued...
+		Local java:TTranspileJava = New TTranspileJava( ast )
+		source = java.run()
+		Print "------------------------------------------------------------"
+		Print source
+		Print "------------------------------------------------------------"
 
-	'	parser.testabnf( "program" )
-		
-		'parser.parse()
-		'Print parser.reveal()
-		'Local langserv:TLangServ = New TLangServ( parser )
 		
 		Return True
 		

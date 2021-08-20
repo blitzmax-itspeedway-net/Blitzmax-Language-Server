@@ -40,7 +40,7 @@ Type TBlitzMaxParser Extends TParser
 		'		Application = [Strictmode] [Framework] [*Import] [*Include] Block
 		'		Module = [Strictmode] ModuleDef [*Import] [*Include] Block
 		'
-DebugStop
+'DebugStop
 		Local fsm:Int = FSM_STRICTMODE
 
 		' Build a block structure
@@ -55,63 +55,78 @@ DebugStop
 		
 		' [STRICTMODE]
 		Repeat
-DebugStop
-			If Not token Throw( "Unexpected end of token stream (STRICTMODE)" )
+		
+			Try
+'DebugStop
+				If Not token Throw( "Unexpected end of token stream (STRICTMODE)" )
 
-			' Save previous token
-			prev = save
-			save = token
-			
-			' Parse this token
-			Select token.id
-			Case TK_EOF
-				ThrowParseError( "Unexpected end of file", token.line, token.pos )
-			Case TK_EOL
-				' Empty lines mark the end of a block comment and not a defintion
-				If prev.id=TK_EOL And definition
-					ast.add( New TAST_Comment( definition ) )
-					definition = Null
-				End If
-				token = lexer.getnext()
-				Continue
-			Case TK_COMMENT
-				' No definition for this identifier
-				If definition
-					ast.add( New TAST_Comment( definition ) )
-					definition = Null					
-				End If
-				ast.add( New TAST_Comment( token ) )
-				' Next should (MUST) be an EOL
-				token = lexer.getnext()	' Skip "COMMENT"
-				token = lexer.getnext()	' SKip "EOL"
-				Continue
-			Case TK_REM
-				' Previous comments are blocks, not definitions
-				If definition ast.add( New TAST_Comment( definition ) )
-				definition = token
-DebugStop
-
-			Case TK_STRICT, TK_SUPERSTRICT
-				If fsm<>FSM_STRICTMODE
-					Publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+				' Save previous token
+				prev = save
+				save = token
+				
+				' Parse this token
+				Select token.id
+				Case TK_EOF
+					Exit
+				Case TK_EOL
+					' Empty lines mark the end of a block comment and not a defintion
+					If prev And prev.id=TK_EOL And definition
+						ast.add( New TAST_Comment( definition ) )
+						definition = Null
+					End If
+					token = lexer.getnext()
 					Continue
+				Case TK_COMMENT
+					' No definition for this identifier
+					If definition
+						ast.add( New TAST_Comment( definition ) )
+						definition = Null					
+					End If
+					ast.add( New TAST_Comment( token ) )
+					' Next should (MUST) be an EOL
+					token = lexer.getnext()	' Skip "COMMENT"
+					token = lexer.getnext()	' SKip "EOL"
+					Continue
+				Case TK_REM
+					' Previous comments are blocks, not definitions
+					If definition ast.add( New TAST_Comment( definition ) )
+					definition = token
+'DebugStop
+					' Now look for ENDREM or END REM
+					token = lexer.expect( [TK_ENDREM, TK_END] )
+					If token.id = TK_END lexer.expect( TK_REM )
+					
+					' Next we look for a weird trailing comment and EOL
+					token = lexer.expect( [TK_COMMENT, TK_EOL] )
+					If token.id = TK_EOL Continue
+					' After ENDREM is a weird place to put a comment; just ignore the stupid thing!
+					' The next thing must be an EOL
+					token = lexer.expect( TK_EOL )
+					Continue
+				Case TK_STRICT, TK_SUPERSTRICT
+					If fsm<>FSM_STRICTMODE
+						Publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						Continue
+					End If
+'DebugStop
+					ast.add( New TAST_Strictmode( lexer, token, definition ) )
+					definition=Null
+					fsm :+ 1
+					token = lexer.peek()
+					Continue
+				Default
+DebugStop			
+					ThrowParseError( "'"+token.value+"' is unknown at this time", token.line, token.pos )
+				End Select
+		
+			Catch e:TParseError
+DebugStop
+				If e 
+					token = lexer.fastFwd( TK_EOL )	' Skip to end of line
 				End If
-DebugStop
-				ast.add( New TAST_Strictmode( lexer, token, definition ) )
-				definition=Null
-				fsm :+ 1
-				Continue
-			Default
-DebugStop
-				Print "NOT IMPLEMENTED: "+token.reveal
-				Continue	' Optional not found
-			End Select
+
+			EndTry
 		Forever
-		
-
-
-
-		
 		
 	Rem	
 		'	OPTIONAL STRICTMODE
@@ -140,6 +155,7 @@ DebugStop
 		Local tok:TToken = lexer.peek()
 		ThrowException( "Unexpected Symbol", tok.line, tok.pos )
 End Rem
+		Return ast
 	End Method
 
 	' Obtain closing token(s) for a given token if
