@@ -121,6 +121,7 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		Print "~nTRANSPILE AST TO BLITZMAX:"	
 
 		Local blitzmax:TTranspileBlitzMax = New TTranspileBlitzMax( ast )
+'DebugStop
 		source = blitzmax.run()
 		Print "------------------------------------------------------------"
 		Print source
@@ -149,11 +150,13 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		
 	Catch e:Object
 		Local exception:TException = TException( e )
+		Local blitzexception:TBlitzException = TBlitzException( e )
 		Local runtime:TRuntimeException = TRuntimeException( e )
 		Local text:String = String( e )
 		Local typ:TTypeId = TTypeId.ForObject( e )
-	'DebugStop
+DebugStop
 		If exception Print "## Exception: "+exception.toString()+" ##"
+		If blitzexception Print "## BLITZ Exception: "+blitzexception.toString()+" ##"
 		If runtime Print "## Exception: "+runtime.toString()+" ##"
 		If text Print "## Exception: '"+text+"' ##"
 		Print "TYPE: "+typ.name

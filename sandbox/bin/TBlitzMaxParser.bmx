@@ -57,17 +57,17 @@ Type TBlitzMaxParser Extends TParser
 		Local token:TToken = lexer.getnext()
 		
 		' FIRST WE DEAL WITH THE PROGRAM HEADER
-		Local ast:TASTCompound = parseHeader( token )
-		'ast.name = "PROGRAM"
+		Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
+		ast = parseHeader( ast, token )
 		
 		' NEXT WE DEAL WITH PROGRAM BODY
 		Local allow:Int[] = SYM_PROGRAMBODY
-		Local body:TASTCompound = parseBlock( token, allow, error_to_eol )
+		ast = parseBlock( 0, ast, token, allow, error_to_eol )
 		
 		' INSERT BODY INTO PROGRAM
-		For Local child:TASTNode = EachIn body.children
-			ast.add( child )
-		Next
+		'For Local child:TASTNode = EachIn body.children
+		'	ast.add( child )
+		'Next
 	
 		If token.id <> TK_EOF
 			ThrowParseError( "Unexpected characters past end of program", token.line, token.pos )
@@ -108,11 +108,18 @@ Rem
 
 EndRem
 	
-	' Parses a block
-	Method parseBlock:TASTCompound( token:TToken Var, allowed:Int[], syntaxfn( lexer:TLexer, start:Int,finish:Int) )	
-		Local ast:TASTCompound = New TASTCompound( "BLOCK" )
+	' Parses a block into an EXISTING ast compound node
+	'	BlockType	- The type of block we are parsing (Used to tally-up END <BLOCKTYPE>)
+	'	ast			- The AST Node we are building
+	'	Token		- The Current Token
+	'	Allowed		- List of allowed tokens...
+	Method parseBlock:TASTCompound( BlockType:Int, ast:TASTCompound, token:TToken Var, allowed:Int[], syntaxfn( lexer:TLexer, start:Int,finish:Int) )	
+		
+		' Identify token that would close this block type
+		Local blockClose:Int = ClosingToken( BlockType )
 
-		allowed = [TK_EOL,TK_EOL,TK_COMMENT,TK_REM]+allowed
+		' Extend allowed list for generic tokens
+		allowed :+ [ TK_EOL, TK_REM, TK_COMMENT, TK_END, BlockClose ]
 
 		Repeat
 			Try
@@ -129,8 +136,24 @@ EndRem
 					ast.add( Parse_Comment( token ) )
 				Case TK_REM
 					ast.add( Parse_Rem( token ) )
-'				
 '
+				Case TK_END
+'DebugStop
+					' Identify if this is "END" or "END <BLOCK>"
+					Local peek:TToken = lexer.peek()
+					If peek.id = BlockType
+						' THIS IS END OF THE BLOCK
+						token = lexer.getnext() ' Consume END
+						token = lexer.getnext() ' Consume BlockType
+						Return ast
+					Else
+						' THIS IS AN END
+						ast.add( Parse_End( token ) )
+					End If
+				Case BlockClose
+'DebugStop
+					token = lexer.getnext()
+					Return ast
 				Case TK_FUNCTION
 					ast.add( Parse_Function( token ) )
 				Case TK_INCLUDE
@@ -141,22 +164,18 @@ EndRem
 					ast.add( Parse_Type( token ) )
 
 				Default
-Local debug:String = token.class
-DebugStop			
-					'Reflection doesn;t seem to work with "pass by reference"
-					'reflect( token.class, Byte Ptr token )
-DebugStop
-					'ThrowParseError( "'"+token.value+"' is unknown at this time", token.line, token.pos )
+
+					' If we encounter anything else; the block (SHOULD BE) complete
+					Return ast
 				End Select
 		
 			Catch e:Object
-DebugStop						
 				Local parseerror:TParseError = TParseError(e)
 				Local exception:TException = TException( e )
 				Local runtime:TRuntimeException = TRuntimeException( e )
 				Local text:String = String( e )
 				Local typ:TTypeId = TTypeId.ForObject( e )
-			'DebugStop
+DebugStop
 				If parseerror
 					publish( "syntax-error", parseerror.text + " at "+parseerror.line + ","+ parseerror.pos )
 					token = lexer.fastFwd( TK_EOL )	' Skip to end of line
@@ -168,18 +187,18 @@ DebugStop
 			EndTry
 		Forever
 
-		Return ast
+		'Return ast
 	End Method
 		
-	' Parses the application header
-	Method parseHeader:TASTCompound( token:TToken Var )	
+	' Parses the application header into an EXISTING ast compound node
+	Method parseHeader:TASTCompound( ast:TASTCompound, token:TToken Var )	
 		Const FSM_STRICTMODE:Int = 0
 		Const FSM_FRAMEWORK:Int = 1
 		Const FSM_MODULE:Int = 2
 		Const FSM_MODULEINFO:Int = 3
 		Const FSM_IMPORT:Int = 4
 		
-		Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
+		'Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
 		Local ast_module:TASTCompound, ast_imports:TASTCompound
 		Local fsm:Int = FSM_STRICTMODE
 'DebugStop	
@@ -255,7 +274,6 @@ DebugStop
 					ast.add( Parse_Include( token ) )
 				Default
 					' If we encounter anything else; the header is complete
-'DebugStop			
 					Return ast
 				End Select
 		
@@ -289,6 +307,16 @@ DebugStop
 		Local ast:TASTNode = New TASTNode( "COMMENT", token )
 		token = lexer.expect(TK_EOL)
 		token = lexer.getNext()			' Skip EOL
+		Return ast
+	End Method
+
+	Method Parse_End:TASTNode( token:TToken Var )
+		Local ast:TASTNode = New TASTNode( "END", token )
+		token = lexer.expect(TK_END)	' Consume SELF
+		'
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
 		Return ast
 	End Method
 	
@@ -386,8 +414,37 @@ DebugStop
 
 	'	method = method [ ":" <vartype> ] "(" [<args>] ")" [COMMENT] EOL
 	Method Parse_Method:TASTNode( token:TToken Var )
-DebugStop
-Throw( "PARSE_METHOD IS NOT IMPLEMENTED" )
+		Local ast:TAST_Method = New TAST_Method( token )
+		
+'DebugStop
+		' Get method name
+		token = lexer.expect( TK_ALPHA )
+		ast.value = token.value
+		
+		' Get method Type
+		Local peek:TToken = lexer.peek()
+		If peek.id = TK_COLON
+			token = lexer.getnext()	' Skip the colon
+			token = lexer.getNext() ' Get the return type
+			ast.returntype = token
+		End If
+
+		' For the sake of simplicity at the moment, this will not parse the body
+		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
+		
+		Local finished:Int = False
+		Repeat
+			token = lexer.getNext()
+			If token.id = TK_END
+				token = lexer.getNext()
+				If token.id = TK_METHOD ; finished = True
+			End If
+		Until token.id = TK_ENDMETHOD Or finished
+		'
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
+		Return ast
 	End Method
 		
 	Method Parse_Module:TASTCompound( token:TToken Var )
@@ -457,16 +514,23 @@ Throw( "PARSE_METHOD IS NOT IMPLEMENTED" )
 		ast.value = token.value
 		
 		' Get extend Type
-		Local peek:TToken = lexer.peek()
-		If peek.id = TK_EXTENDS
+		token = lexer.getNext()
+		If token.id = TK_EXTENDS
 			token = lexer.getnext()	' Skip "EXTENDS"
 			token = lexer.getNext() ' Get the super type
 			ast.supertype = token
+			token = lexer.getNext()	' Skip supertype
 		End If
-
-		' For the sake of simplicity at the moment, this will not parse the body
-		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
 		
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
+
+		' Parse TYPE into ast
+'DebugStop
+		ast = TAST_Type( ParseBlock( TK_TYPE, ast, token, SYM_TYPEBODY, Null ) )
+
+		Rem
 		Local finished:Int = False
 		Repeat
 			token = lexer.getNext()
@@ -475,6 +539,8 @@ Throw( "PARSE_METHOD IS NOT IMPLEMENTED" )
 				If token.id = TK_TYPE ; finished = True
 			End If
 		Until token.id = TK_ENDTYPE Or finished
+		End Rem
+		
 		'
 		' Trailing comment is a description
 		ast.descr = ParseDescription( token )
@@ -482,25 +548,23 @@ Throw( "PARSE_METHOD IS NOT IMPLEMENTED" )
 		Return ast
 	End Method
 
-	' Obtain closing token(s) for a given token if
-Rem
-	Method closingTokens:Int[]( tokenid:Int )
+	' Obtain closing token for a given blocktype
+	Method closingToken:Int( tokenid:Int )
 		Select tokenid
-		Case TK_EXTERN		;	Return [ TK_END, TK_ENDEXTERN ]
-		Case TK_FUNCTION	;	Return [ TK_END, TK_ENDFUNCTION ]
-		Case TK_IF			;	Return [ TK_END, TK_ENDIF ]
-		Case TK_INTERFACE	;	Return [ TK_END, TK_ENDINTERFACE ]
-		Case TK_METHOD		;	Return [ TK_END, TK_ENDMETHOD ]
-		Case TK_REM			;	Return [ TK_END, TK_ENDREM ]
-		Case TK_REPEAT		;	Return [ TK_FOREVER, TK_UNTIL ]
-		Case TK_SELECT		;	Return [ TK_END, TK_ENDSELECT ]
-		Case TK_STRUCT		;	Return [ TK_END, TK_ENDSTRUCT ]
-		Case TK_TRY			;	Return [ TK_END, TK_ENDTRY ]
-		Case TK_TYPE		;	Return [ TK_END, TK_ENDTYPE ]
-		Case TK_WHILE		;	Return [ TK_END, TK_ENDWHILE, TK_WEND]
+		Case TK_EXTERN		;	Return TK_ENDEXTERN
+		Case TK_FUNCTION	;	Return TK_ENDFUNCTION
+		Case TK_IF			;	Return TK_ENDIF
+		Case TK_INTERFACE	;	Return TK_ENDINTERFACE
+		Case TK_METHOD		;	Return TK_ENDMETHOD
+		Case TK_REM			;	Return TK_ENDREM
+		Case TK_REPEAT		;	Return Null	'[ TK_FOREVER, TK_UNTIL ]
+		Case TK_SELECT		;	Return TK_ENDSELECT
+		Case TK_STRUCT		;	Return TK_ENDSTRUCT
+		Case TK_TRY			;	Return TK_ENDTRY
+		Case TK_TYPE		;	Return TK_ENDTYPE
+		Case TK_WHILE		;	Return Null 'TK_ENDWHILE, TK_WEND]
 		End Select
 	End Method
-End Rem
 
 	' Dump the symbol table into a string
 	Method reveal:String()

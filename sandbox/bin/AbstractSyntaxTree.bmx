@@ -185,6 +185,21 @@ Type TASTCompound Extends TASTNode
 	
 End Type
 
+' Argument passed to visitor nodes
+Type TVisitorArg
+	Field node:TASTNode
+	Field indent:String
+	
+	Method New( node:TASTNode, indent:String )
+		Self.node = node
+		Self.indent = indent
+	End Method
+	
+	'Method tab:TVisitorArg()
+	'	Self.indent :+ "~t"
+	'	Return Self
+	'End Method
+End Type
 
 ' A Visitor is a process that does something with the data
 ' A Compiler or Interpreter are the usual candidates, but
@@ -202,7 +217,7 @@ Type TVisitor
 		Local this:TTypeId = TTypeId.ForObject( Self )
 		Local methd:TMethod = this.FindMethod( "visit_"+node.name )
 		If Not methd exception( node )
-		Local text:String = String( methd.invoke( Self, [node] ))
+		Local text:String = String( methd.invoke( Self, [New TVisitorArg(node,indent)] ))
 		Return text
 	End Method
 	
