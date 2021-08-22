@@ -222,11 +222,15 @@ Type TLexer
     End Method
 
     ' Matches the next token otherwise throws an error
-	Method Expect:TToken( id:Int )
+	Method Expect:TToken( expectation:Int )
         If tokpos=Null ThrowException( "Unexpected end of file" )
 		Local token:TToken = TToken( tokpos.value )
 		tokpos = tokpos.nextlink
-		If token.id = id Return token
+' 21/8/21, Changed returned token from NEXT token to THIS TOKEN
+		If token.id = expectation Return token
+'			If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+'			Return TToken( tokpos.value )
+'		End If
 		ThrowException( "Unexpected token '"+token.value+"'", token.line, token.pos )
 	End Method
 
@@ -235,7 +239,11 @@ Type TLexer
         If tokpos=Null ThrowException( "Unexpected end of file" )
 		Local token:TToken = TToken( tokpos.value )
 		tokpos = tokpos.nextlink
+' 21/8/21, Changed returned token from NEXT token to THIS TOKEN
 		If token.in( expectation ) Return token
+'			If tokpos=Null Return New TToken( TK_EOF,"", linenum, linepos, "EOF")
+'			Return TToken( tokpos.value )
+'		End If
 		ThrowException( "Unexpected token '"+token.value+"'", token.line, token.pos )
 	End Method	
 Rem
@@ -252,7 +260,8 @@ Rem
 End Rem
 
     ' Matches the given token and throws it away (Useful for comments)
-    Method skip:String( expectedclass:String )
+Rem
+    Method skipOLD:String( expectedclass:String )
 		Local tok:TToken = TToken( tokpos.value )
 		Local skipped:String
 		While tok.class = expectedclass
@@ -262,6 +271,7 @@ End Rem
 		Wend
 		Return skipped
     End Method
+End Rem
 
 	' Skip all tokens until we find given
 	Method fastfwd:TToken( given:Int )

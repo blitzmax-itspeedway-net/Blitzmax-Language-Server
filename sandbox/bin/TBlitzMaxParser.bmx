@@ -5,17 +5,40 @@
 '	CHANGE LOG
 '	V1.0	07 AUG 21	Initial version
 '	V1.1	16 AUG 21	Removed BNF generic parsing due to limitations
+'	V1.2	21 AUG 21	Re-organised program parsing, added parseHeader() ParseBlock()
 
-Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_IMPORT, TK_MODULE, TK_MODULEINFO ]
-Global SYM_FUNCTIONBODY:Int[] = [ TK_LOCAL, TK_GLOBAL ]
+Rem
+PROGRAM
+	COMMENT
+	COMMENT
+	STRICTMODE=Strict
+	FRAMEWORK=brl.retro
+	MODULE=its.btree
+		MODULEINFO
+		MODULEINFO
+		MODULEINFO
+	IMPORTS
+		IMPORT brl.linkedlist
+		IMPORT brl.retro
+	INCLUDE=abc.bmx
+	
+End Rem
+
+
+Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, TK_IMPORT, TK_MODULEINFO ]
+
+Global SYM_PROGRAMBODY:Int[] = [ TK_LOCAL, TK_GLOBAL, TK_FUNCTION ]
 Global SYM_METHODBODY:Int[] = [ TK_LOCAL, TK_GLOBAL ]
 Global SYM_TYPEBODY:Int[] = [ TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
-
+Global SYM_MODULEBODY:Int[] = [ TK_MODULEINFO, TK_LOCAL, TK_GLOBAL ]
 
 Type TBlitzMaxParser Extends TParser
-
+	
 	Field strictmode:Int = 0
 	Field symbolTable:TSymbolTable = New TSymbolTable()	
+	'
+	'Field prev:TToken, save:TToken	' Used for lookback (Specifically for END XXX statements)
+	'Field definition:TToken			' Used to identify a block definition comment
 	
 	Method New( lexer:TLexer )
 		Super.New(lexer )
@@ -29,91 +52,95 @@ Type TBlitzMaxParser Extends TParser
 	' Every story starts, as they say, with a beginning...
 	Method parse_program:TASTNode()
 		
-		Const FSM_STRICTMODE:Int = 0
-		Const FSM_FRAMEWORK:Int = 1
-		Const FSM_IMPORT:Int = 2
-		Const FSM_MODULE:Int = 3
-		Const FSM_BODY:Int = 4
-		
-		' 	ABNF
-		'		Program = [Strictmode] | [ Application | Module ]
-		'		Application = [Strictmode] [Framework] [*Import] [*Include] Block
-		'		Module = [Strictmode] ModuleDef [*Import] [*Include] Block
-		'
-'DebugStop
-		Local fsm:Int = FSM_STRICTMODE
-
-		' Build a block structure
-		Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
-		
 		' Scan the tokens, creating children
 		lexer.reset()	' Starting position
-		
 		Local token:TToken = lexer.getnext()
-		Local prev:TToken, save:TToken
-		Local definition:TToken
 		
-		' [STRICTMODE]
-		Repeat
+		' FIRST WE DEAL WITH THE PROGRAM HEADER
+		Local ast:TASTCompound = parseHeader( token )
+		'ast.name = "PROGRAM"
 		
-			Try
-'DebugStop
-				If Not token Throw( "Unexpected end of token stream (STRICTMODE)" )
+		' NEXT WE DEAL WITH PROGRAM BODY
+		Local allow:Int[] = SYM_PROGRAMBODY
+		Local body:TASTCompound = parseBlock( token, allow, error_to_eol )
+		
+		' INSERT BODY INTO PROGRAM
+		For Local child:TASTNode = EachIn body.children
+			ast.add( child )
+		Next
+	
+		If token.id <> TK_EOF
+			ThrowParseError( "Unexpected characters past end of program", token.line, token.pos )
+		End If
+		
+		Return ast
+	End Method
 
-				' Save previous token
-				prev = save
-				save = token
-				
+Rem
+	' Parses Comments and EOL
+	Method parseCEOL:Int( ast:TASTCompound, token:TToken Var )
+		Select token.id
+		Case TK_EOL
+'DebugStop
+			' Empty lines mark the end of a block comment and not a defintion
+			'If prev And prev.id=TK_EOL And definition
+			'	ast.add( New TAST_Comment( definition ) )
+			'	definition = Null
+			'End If
+			token = lexer.getnext()
+			Return True
+		Case TK_COMMENT
+'DebugStop
+			' No definition for this identifier
+			'If definition
+			'	ast.add( New TAST_Comment( definition ) )
+			'	definition = Null					
+			'End If
+			ast.add( New TASTNode( "COMMENT", token ) )
+			token = lexer.expect(TK_EOL)
+			token = lexer.getNext()			' Skip EOL
+			Return True
+		End Select
+		' Not a Comment or EOL
+		Return False
+	End Method
+
+
+EndRem
+	
+	' Parses a block
+	Method parseBlock:TASTCompound( token:TToken Var, allowed:Int[], syntaxfn( lexer:TLexer, start:Int,finish:Int) )	
+		Local ast:TASTCompound = New TASTCompound( "BLOCK" )
+
+		allowed = [TK_EOL,TK_EOL,TK_COMMENT,TK_REM]+allowed
+
+		Repeat
+			Try
+				If Not token Throw( "Unexpected end of token stream (STRICTMODE)" )
+DebugStop				
+				' Parse Comments and EOL
+				'If parseCEOL( ast, token ) Continue
+				'If parseREM( ast, token ) Continue
+
+				If token.notin( allowed ) ThrowParseError( "'"+token.value+"' is unexpected", token.line, token.pos )
+
+DebugStop								
 				' Parse this token
 				Select token.id
 				Case TK_EOF
-					Exit
-				Case TK_EOL
-					' Empty lines mark the end of a block comment and not a defintion
-					If prev And prev.id=TK_EOL And definition
-						ast.add( New TAST_Comment( definition ) )
-						definition = Null
-					End If
-					token = lexer.getnext()
-					Continue
-				Case TK_COMMENT
-					' No definition for this identifier
-					If definition
-						ast.add( New TAST_Comment( definition ) )
-						definition = Null					
-					End If
-					ast.add( New TAST_Comment( token ) )
-					' Next should (MUST) be an EOL
-					token = lexer.getnext()	' Skip "COMMENT"
-					token = lexer.getnext()	' SKip "EOL"
-					Continue
-				Case TK_REM
-					' Previous comments are blocks, not definitions
-					If definition ast.add( New TAST_Comment( definition ) )
-					definition = token
-'DebugStop
-					' Now look for ENDREM or END REM
-					token = lexer.expect( [TK_ENDREM, TK_END] )
-					If token.id = TK_END lexer.expect( TK_REM )
-					
-					' Next we look for a weird trailing comment and EOL
-					token = lexer.expect( [TK_COMMENT, TK_EOL] )
-					If token.id = TK_EOL Continue
-					' After ENDREM is a weird place to put a comment; just ignore the stupid thing!
-					' The next thing must be an EOL
-					token = lexer.expect( TK_EOL )
-					Continue
-				Case TK_STRICT, TK_SUPERSTRICT
-					If fsm<>FSM_STRICTMODE
-						Publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
-						Continue
-					End If
-'DebugStop
-					ast.add( New TAST_Strictmode( lexer, token, definition ) )
-					definition=Null
-					fsm :+ 1
-					token = lexer.peek()
-					Continue
+					Return ast	' Just exit out of recursion
+			
+				Case TK_INCLUDE
+DebugStop
+					ast.add( New TASTNode( "INCLUDE", token ))
+' THIS IS INCOMPLETE
+'				Case TK_FUNCTION
+'					ast.add( parseBlock( SYM_FUNCTIONBODY ) )
+'				Case TK_TYPE
+'					ast.add( parseBlock( SYM_TYPEBODY ) )
+'				Case TK_METHOD
+'					ast.add( parseBlock( SYM_METHODBODY ) )
+
 				Default
 DebugStop			
 					ThrowParseError( "'"+token.value+"' is unknown at this time", token.line, token.pos )
@@ -127,37 +154,239 @@ DebugStop
 
 			EndTry
 		Forever
-		
-	Rem	
-		'	OPTIONAL STRICTMODE
-		'	StrictMode = "superstrict" / "strict" EOL
-		If lexer.peek( ["superstrict","strict"] )
-			token_strictmode( lexer.getnext() )
-		End If
-		
-		'	OPTIONAL FRAMEWORK
-		'	Framework = "framework" ModuleIdentifier EOL
-		If lexer.peek( ["framework"] )
-			Print "FRAMEWORK"
-			token_framework( lexer.getnext() )
-		End If
-		
-		'	OPTIONAL IMPORTS
-		'	OPTIONAL INCLUDES
-		'	OPTIONAL EXTERN
-		
-		'	APPLICATION CODE BODY
-		Parse_Body( ["local","global","function","type","print"] )
 
-		If lexer.isAtEnd() Return Null 'Completed successfully
+		Return ast
+	End Method
 		
-		' Tokens exist past end of file!
-		Local tok:TToken = lexer.peek()
-		ThrowException( "Unexpected Symbol", tok.line, tok.pos )
-End Rem
+	' Parses the application header
+	Method parseHeader:TASTCompound( token:TToken Var )	
+		Const FSM_STRICTMODE:Int = 0
+		Const FSM_FRAMEWORK:Int = 1
+		Const FSM_MODULE:Int = 2
+		Const FSM_MODULEINFO:Int = 3
+		Const FSM_IMPORT:Int = 4
+		'Const FSM_BODY:Int = 5
+		'Const FSM_EXIT:Int = 99
+		
+		Local ast:TASTCompound = New TASTCompound( "PROGRAM" )
+		Local ast_module:TASTCompound, ast_imports:TASTCompound
+		Local fsm:Int = FSM_STRICTMODE
+'DebugStop	
+		Repeat		
+			Try
+				If Not token Throw( "Unexpected end of token stream (STRICTMODE)" )
+				
+				' Parse Comments and EOL
+				'If parseCEOL( ast, token ) Continue
+				'If parseREM( ast, token ) Continue
+				'If token.id = TK_EOF Return ast		' Source finished
+
+'DebugStop				
+				' Parse this token
+				Select token.id			
+				Case TK_EOF
+					Return ast
+				Case TK_EOL
+					ast.add( New TASTNode( "EOL" ) )
+					token = lexer.getNext()
+					Continue
+				Case TK_COMMENT
+					ast.add( Parse_Comment( token ) )
+					Continue
+				Case TK_REM
+					ast.add( Parse_Rem( token ) )
+					Continue				
+				Case TK_STRICT, TK_SUPERSTRICT
+					If fsm > FSM_STRICTMODE
+						Publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						Continue
+					End If
+					fsm = FSM_FRAMEWORK
+					'
+					ast.add( Parse_Strictmode( token ) )
+					Continue
+				Case TK_FRAMEWORK
+					If fsm > FSM_FRAMEWORK
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						Continue
+					End If
+					fsm = FSM_IMPORT
+					'
+					ast.add( Parse_Framework( token ) )
+					Continue
+				Case TK_MODULE
+					If fsm > FSM_FRAMEWORK
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						Continue
+					End If
+					fsm = FSM_MODULE
+					'
+					ast_module = Parse_Module( token )
+					ast.add( ast_module )
+					Continue
+				Case TK_MODULEINFO
+					If fsm <> FSM_MODULE
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						Continue
+					End If
+					'
+					ast_module.add( Parse_Moduleinfo( token ) )
+					Continue
+				Case TK_IMPORT
+'DebugStop
+					If fsm > FSM_IMPORT
+						publish( "syntax-error", "'"+token.value+"' was unexpected at this time", token )
+						Continue
+					End If
+
+					' Create an imports section if none exists
+					If Not ast_imports
+						ast_imports = New TASTCompound( "IMPORTS" )
+						ast.add( ast_imports )
+					End If
+					
+					' Add import 
+					ast_imports.add( Parse_Import( token ) )
+					Continue
+				Default
+					' If we encounter anything else; the header is complete
+'DebugStop			
+					Return ast
+				End Select
+		
+			Catch e:TParseError
+DebugStop
+				If e 
+					token = lexer.fastFwd( TK_EOL )	' Skip to end of line
+				End If
+
+			EndTry
+		Forever
+
+		Return ast
+	End Method
+	
+	'	Looks for trailing comments
+	'	These will become descriptions in the ast node
+	Method ParseDescription:String( token:TToken Var )
+		Local description:String
+		' Trailing comment is a description
+		token = lexer.expect( [TK_COMMENT,TK_EOL] )
+		If token.id = TK_COMMENT
+			' Inline comment becomes the node description
+			description = token.value
+			token = lexer.Expect( TK_EOL )
+		End If
+		Return description
+	End Method
+
+	Method Parse_Comment:TASTNode( token:TToken Var )
+		Local ast:TASTNode = New TASTNode( "COMMENT", token )
+		token = lexer.expect(TK_EOL)
+		token = lexer.getNext()			' Skip EOL
+		Return ast
+	End Method
+	
+	'	framework = framework ALPHA PERIOD ALPHA [COMMENT] EOL
+	Method Parse_Framework:TASTNode( token:TToken Var )
+		Local ast:TASTNode = New TASTNode( "FRAMEWORK", token )
+		'
+		' Get module name
+		token = lexer.expect( TK_ALPHA )
+		ast.value = token.value
+		token = lexer.expect( TK_PERIOD )
+		token = lexer.expect( TK_ALPHA )
+		ast.value :+ "."+token.value
+DebugStop		'
+		' Trailing comment is a description
+		'token = lexer.expect( [TK_COMMENT,TK_EOL] )
+		'If token.id = TK_COMMENT
+		'	' Inline comment becomes the node description
+		'	ast.descr = token.value
+		'	token = lexer.Expect( TK_EOL )
+		'End If
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
+		Return ast
+	End Method
+	
+	'	Create an AST Node for Import containing all imported modules as children
+	'	import = import ALPHA PERIOD ALPHA [COMMENT] EOL
+	Method Parse_Import:TASTNode( token:TToken Var )
+		Local ast:TASTNode = New TASTNode( "IMPORT", token )
+'DebugStop
+		'
+		' Get module name
+		token = lexer.expect( TK_ALPHA )
+		ast.value = token.value
+		token = lexer.expect( TK_PERIOD )
+		token = lexer.expect( TK_ALPHA )
+		ast.value :+ "."+token.value
+		'
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
+		Return ast		
+	End Method
+		
+	Method Parse_Module:TASTCompound( token:TToken Var )
+		Local ast:TASTCompound = New TASTCompound( "MODULE" )
+		'
+		' Get module name
+		token = lexer.expect( TK_ALPHA )
+		ast.value = token.value
+		token = lexer.expect( TK_PERIOD )
+		token = lexer.expect( TK_ALPHA )
+		ast.value :+ "."+token.value
+		'
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()		
 		Return ast
 	End Method
 
+	Method Parse_ModuleInfo:TASTNode( token:TToken Var )
+		' Get moduleinfo
+		token = lexer.expect( TK_QSTRING )
+		Local ast:TASTNode = New TASTNode( "MODULEINFO", token )
+'DebugStop		'
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
+		Return ast
+	End Method
+	
+	'	strictmode = (strict|superstrict) [COMMENT] EOL
+	Method Parse_Strictmode:TASTNode( token:TToken Var )
+		Local ast:TASTNode = New TASTNode( "STRICTMODE", token )
+		'
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
+		Return ast
+	End Method
+
+	' Parses REM
+	Method Parse_Rem:TASTNode( token:TToken Var )
+		Local ast:TASTNode = New TASTNode( "COMMENT", token )
+'DebugStop
+		' Now look for ENDREM or END REM
+		token = lexer.expect( [TK_ENDREM, TK_END] )
+		If token.id = TK_END lexer.expect( TK_REM )
+		
+		' Next we look for a weird trailing comment
+		' If it exists, we treat it as a newline
+		Local peek:TToken = lexer.peek()
+		If peek.id = TK_COMMENT 
+			token = lexer.getNext()
+			Return ast
+		End If
+		
+		token = lexer.expect( TK_EOL )
+		token = lexer.getNext()
+		Return ast
+	End Method
+	
 	' Obtain closing token(s) for a given token if
 	Method closingTokens:Int[]( tokenid:Int )
 		Select tokenid
@@ -394,6 +623,15 @@ Rem
 	End Method
 End Rem
 
+	'	ERROR RECOVERY FUNCTIONS
+	
+	Function error_to_eol( lexer:TLexer, ignore1:Int, ignore2:Int )
+DebugStop
+	End Function
+
+	Function error_until_end( lexer:TLexer, starttag:Int, endtag:Int )
+DebugStop
+	End Function
 	
 End Type
 

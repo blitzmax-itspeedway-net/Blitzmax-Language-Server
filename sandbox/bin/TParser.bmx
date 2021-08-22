@@ -82,7 +82,7 @@ Type TParser
 		
 		' Check that file parsing has completed successfully
 		Local after:TToken = lexer.peek()
-		If after.isnot( TK_EOF ) ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
+		If after.id <> TK_EOF ; ThrowParseError( "'"+after.value+"' unexpected past End", after.line, after.pos )
 		
 		' Print state and return value
 'DebugStop

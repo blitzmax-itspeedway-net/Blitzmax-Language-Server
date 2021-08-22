@@ -54,14 +54,14 @@ Type TToken
 	'End Method
 
 	' Confirm class ("if token.class = id" )
-	Method is:Int( id:Int )
+	'Method is:Int( id:Int )
 'DebugStop
-		Return (Self.id=id)
-	End Method	
+	'	Return (Self.id=id)
+	'End Method	
 	
 	' Confirm class ("if token.class <> id" )
-	Method isnot:Int( id:Int )
+	'Method isnt:Int( id:Int )
 'DebugStop
-		Return Not(Self.id=id)
-	End Method	
+	'	Return Not(Self.id=id)
+	'End Method	
 End Type

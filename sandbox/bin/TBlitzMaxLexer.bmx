@@ -86,7 +86,7 @@ Type TBlitzMaxLexer Extends TLexer
 					Return New TToken( symbol.id, text, line, pos, symbol.class )
 				End If
 			End If
-			Return New TToken( TK_Identifier, text, line, pos, "ALPHA" )
+			Return New TToken( TK_ALPHA, text, line, pos, "ALPHA" )
 		'Case Instr( valid_symbols, char, 1 )            ' Single character symbol
 		Default								' A Symbol
 			PopChar()   ' Move to next character

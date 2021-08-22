@@ -1,31 +1,16 @@
-REM STARTING BLOCK
-END REM
+'   This program tests framework, import and include statements
+superstrict
 
-REM
-ANOTHER
-END REM
+framework brl.retro     ' Lets start with retro basic
 
-' THis is a singular block comment
+REM EXAMPLE
+da da
 
-' THis is a multiline block comment
-' because it doesn;t have a EOL in the middle
+endrem ' with a weird comment
 
-' This is a block definition
-rem
-    function one()
+import brl.graphics
+import brl.linkedlist
 
-    end function
-
-This block has the word "endrem" in the middle to really confuse the parser
-
-start remark with the word REM
-end remark with "ENDREM" or "END REM" on a newline
-
-    end rem ' Weird endrem comment!
-
-
-' This is a BLOCK comment
-superstrict 'this is a defintion comment
-
-
+include "first.bmx"
+include "second.bmx"
 

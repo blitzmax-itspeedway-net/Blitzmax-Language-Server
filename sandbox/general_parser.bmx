@@ -25,7 +25,7 @@ Include "bin/TBlitzMaxParser.bmx"
 
 '	DELIVERABLES
 Include "bin/AbstractSyntaxTree.bmx"
-Include "bin/TBlitzMaxAST.bmx"
+'Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
 
 '	OUTPUT / TRANSPILE
@@ -110,6 +110,13 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 			Return False
 		End If
 
+		' SHOW AST STRICTURE
+		Print "~nAST STRICTURE:"
+		Print "------------------------------------------------------------"
+		Print ast.reveal()
+		Print "------------------------------------------------------------"
+
+
 		' Pretty print the AST back into BlitzMax (.transpile file)
 		Print "~nTRANSPILE AST TO BLITZMAX:"
 		
@@ -180,6 +187,8 @@ Local verbose:Int = True
 ' 	MAIN TESTING APPLICATION
 
 test_file( "samples/test.bmx", verbose )
+
+
 'test_file( "samples/framework.bmx", verbose )
 'test_file( "samples/hello world strict.bmx", verbose )
 'test_file( "samples/hello world.bmx", verbose )

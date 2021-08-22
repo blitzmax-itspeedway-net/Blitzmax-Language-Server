@@ -51,7 +51,7 @@ Type TASTNode
 	Field tokenid:Int		' This is the token id that created the node
 	Field value:String		' Used in leaf nodes
 	Field line:Int, pos:Int	' Not normally held in an AST, but needed for language server
-	Field definition:String	' Block comment (before) used to describe meaning
+	'Field definition:String	' Block comment (before) used to describe meaning
 	Field descr:String		' Optional Trailing "line" comment
 	Field link:TLink		' Used in Compound nodes
 	
@@ -158,6 +158,11 @@ Type TASTCompound Extends TASTNode
 	Method add( child:TASTNode )
 		child.link = children.addlast( child )
 	End Method
+	
+	' Insert a child at top
+'	Method insert( child:TASTNode )
+'		child.link = children.addfirst( child )
+'	End Method
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
