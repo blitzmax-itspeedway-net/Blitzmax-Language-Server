@@ -27,10 +27,10 @@ End Rem
 
 Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, TK_IMPORT, TK_MODULEINFO ]
 
-Global SYM_PROGRAMBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_FUNCTION ]
+Global SYM_PROGRAMBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
 Global SYM_METHODBODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL ]
 Global SYM_TYPEBODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
-Global SYM_MODULEBODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL ]
+Global SYM_MODULEBODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
 
 Type TBlitzMaxParser Extends TParser
 	
@@ -132,7 +132,6 @@ EndRem
 '				
 '
 				Case TK_FUNCTION
-'DebugStop
 					ast.add( Parse_Function( token ) )
 				Case TK_INCLUDE
 					ast.add( Parse_Include( token ) )			
@@ -284,7 +283,7 @@ DebugStop
 			token = lexer.Expect( TK_EOL )
 		End If
 		Return description
-	End Method
+	End Method	
 
 	Method Parse_Comment:TASTNode( token:TToken Var )
 		Local ast:TASTNode = New TASTNode( "COMMENT", token )
@@ -451,8 +450,36 @@ Throw( "PARSE_METHOD IS NOT IMPLEMENTED" )
 
 	'	type = type ALPHA [ extends ALPHA ] [COMMENT] EOL
 	Method Parse_Type:TASTNode( token:TToken Var )
-DebugStop
-Throw( "PARSE_TYPE IS NOT IMPLEMENTED" )
+		Local ast:TAST_Type = New TAST_Type( token )
+'DebugStop
+		' Get name
+		token = lexer.expect( TK_ALPHA )
+		ast.value = token.value
+		
+		' Get extend Type
+		Local peek:TToken = lexer.peek()
+		If peek.id = TK_EXTENDS
+			token = lexer.getnext()	' Skip "EXTENDS"
+			token = lexer.getNext() ' Get the super type
+			ast.supertype = token
+		End If
+
+		' For the sake of simplicity at the moment, this will not parse the body
+		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
+		
+		Local finished:Int = False
+		Repeat
+			token = lexer.getNext()
+			If token.id = TK_END
+				token = lexer.getNext()
+				If token.id = TK_TYPE ; finished = True
+			End If
+		Until token.id = TK_ENDTYPE Or finished
+		'
+		' Trailing comment is a description
+		ast.descr = ParseDescription( token )
+		token = lexer.getNext()
+		Return ast
 	End Method
 
 	' Obtain closing token(s) for a given token if

@@ -193,7 +193,7 @@ End Type
 ' The Visitor uses reflection to process the Abstract Syntax Tree
 Type TVisitor
 
-	Method visit:String( node:TASTNode )
+	Method visit:String( node:TASTNode, indent:String="" )
 'DebugStop
 		If Not node ThrowException( "Cannot visit null node" ) 
 		'If node.name = "" invalid()	' Leave this to use "visit_" method
@@ -207,7 +207,7 @@ Type TVisitor
 	End Method
 	
 	' This is called when node doesn't have a name...
-	Method visit_:String( node:TASTNode )
+	Method visit_:String( node:TASTNode, indent:String="" )
 		ThrowException( "Node '"+node.value+"' has no name!" )
 	End Method
 	

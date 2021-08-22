@@ -8,17 +8,17 @@ Type TTranspileBlitzMax Extends TTranspiler
 		Return "~n'~n'~tTranspiled from BlitzMaxNG by Scaremongers Transpiler~n'~n~n"
 	End Method
 
-	Method visit_comment:String( node:TASTNode )
+	Method visit_comment:String( node:TASTNode, indent:String="" )
 		Return "' "+node.value+"~n"
 	End Method
 
-	Method visit_framework:String( node:TASTNode )
+	Method visit_framework:String( node:TASTNode, indent:String="" )
 		Local text:String = "Framework "+node.value
 		If node.descr text :+ " ' "+node.descr
 		Return text + "~n"
 	End Method
 	
-	Method visit_function:String( node:TAST_Function )
+	Method visit_function:String( node:TAST_Function, indent:String="" )
 'DebugStop
 		If Not node ThrowException( "Invalid node in visit_function" ) 
 		Local text:String = "Function "+node.value
@@ -31,31 +31,27 @@ Type TTranspileBlitzMax Extends TTranspiler
 		Return text
 	End Method
 
-	Method visit_import:String( node:TASTNode )
+	Method visit_import:String( node:TASTNode, indent:String="" )
 		Local text:String = "Import "+node.value
 		If node.descr text :+ " ' "+node.descr
 		Return text + "~n"
 	End Method
 	
-	Method visit_imports:String( node:TASTCompound )
-		Local text:String
-		For Local child:TASTNode = EachIn node.children
-			text :+ visit_import( child )
-		Next
-		Return text
+	Method visit_imports:String( node:TASTCompound, indent:String="" )
+		Return visitChildren( node )
 	End Method
 
-	Method visit_include:String( node:TASTNode )
+	Method visit_include:String( node:TASTNode, indent:String="" )
 		Local text:String = "Include "+node.value
 		If node.descr text :+ " ' "+node.descr
 		Return text + "~n"
 	End Method
 	
-	Method visit_remark:String( node:TASTNode )
+	Method visit_remark:String( node:TASTNode, indent:String="" )
 		Return "REM"+node.value+"ENDREM~n"
 	End Method
 
-	Method visit_strictmode:String( node:TASTNode )
+	Method visit_strictmode:String( node:TASTNode, indent:String="" )
 'DebugStop
 		If Not node ThrowException( "Invalid node in visit_strictmode" ) 
 		Local text:String = node.value
@@ -63,6 +59,16 @@ Type TTranspileBlitzMax Extends TTranspiler
 		Return text + "~n"
 	End Method
 
+	Method visit_type:String( node:TAST_Type, indent:String="" )
+		Local text:String = "Type "+node.value
+		If node.supertype
+			text :+ " extends "+node.supertype.value
+		EndIf
+		If node.descr text :+ " ' "+node.descr
+		text :+ visitChildren( node )
+		text :+ "~nEndType~n"
+		Return text
+	End Method
 
 Rem	Method visit_binop node:TAbSynTree )
 		If Not node ThrowException( "Invalid node in binaryoperator" ) 

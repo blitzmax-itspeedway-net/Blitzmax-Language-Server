@@ -16,6 +16,16 @@ Type TAST_Function Extends TASTCompound
 
 End Type
 
+Type TAST_Type Extends TASTCompound
+	Field supertype:TToken
+
+	Method New( token:TToken )
+		name = "TYPE"
+		consume( token )
+	End Method
+
+End Type
+
 Rem Type TAST_Comment Extends TASTNode
 
 	Method New( token:TToken )

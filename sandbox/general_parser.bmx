@@ -113,14 +113,13 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		' SHOW AST STRICTURE
 		Print "~nAST STRICTURE:"
 		Print "------------------------------------------------------------"
-'DebugStop
 		Print ast.reveal()
 		Print "------------------------------------------------------------"
 
 
 		' Pretty print the AST back into BlitzMax (.transpile file)
-		Print "~nTRANSPILE AST TO BLITZMAX:"
-		
+		Print "~nTRANSPILE AST TO BLITZMAX:"	
+
 		Local blitzmax:TTranspileBlitzMax = New TTranspileBlitzMax( ast )
 		source = blitzmax.run()
 		Print "------------------------------------------------------------"

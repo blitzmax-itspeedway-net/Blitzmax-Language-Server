@@ -1,25 +1,20 @@
 '   This program tests framework, import and include statements
 superstrict
 
-framework brl.retro     ' Lets start with retro basic
+import abc.xyz
+import brl.retri
 
-REM EXAMPLE
-da da
+type abc
 
-endrem ' with a weird comment
+    method xyz()
+    end method
 
-import brl.graphics
-import brl.linkedlist
+end type
 
-include "first.bmx"
-include "second.bmx"
+type xyz extends abc    ' Mytype
 
-function abc()
-end function
+    method abc123()
+    end method
 
-function xyz:int()
-end function
-
-function weird()
-end function ' with weird trailing comment!
+end type
 
