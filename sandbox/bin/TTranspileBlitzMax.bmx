@@ -8,22 +8,61 @@ Type TTranspileBlitzMax Extends TTranspiler
 		Return "~n'~n'~tTranspiled from BlitzMaxNG by Scaremongers Transpiler~n'~n~n"
 	End Method
 
+	Method visit_comment:String( node:TASTNode )
+		Return "' "+node.value+"~n"
+	End Method
+
+	Method visit_framework:String( node:TASTNode )
+		Local text:String = "Framework "+node.value
+		If node.descr text :+ " ' "+node.descr
+		Return text + "~n"
+	End Method
+	
+	Method visit_function:String( node:TAST_Function )
+'DebugStop
+		If Not node ThrowException( "Invalid node in visit_function" ) 
+		Local text:String = "Function "+node.value
+		If node.returntype
+			text :+ ":"+node.returntype.value
+		EndIf
+		text :+ "()"
+		If node.descr text :+ " ' "+node.descr
+		text :+ "~nEndFunction~n"
+		Return text
+	End Method
+
+	Method visit_import:String( node:TASTNode )
+		Local text:String = "Import "+node.value
+		If node.descr text :+ " ' "+node.descr
+		Return text + "~n"
+	End Method
+	
+	Method visit_imports:String( node:TASTCompound )
+		Local text:String
+		For Local child:TASTNode = EachIn node.children
+			text :+ visit_import( child )
+		Next
+		Return text
+	End Method
+
+	Method visit_include:String( node:TASTNode )
+		Local text:String = "Include "+node.value
+		If node.descr text :+ " ' "+node.descr
+		Return text + "~n"
+	End Method
+	
+	Method visit_remark:String( node:TASTNode )
+		Return "REM"+node.value+"ENDREM~n"
+	End Method
+
 	Method visit_strictmode:String( node:TASTNode )
 'DebugStop
-		If Not node ThrowException( "Invalid node in strictmode" ) 
+		If Not node ThrowException( "Invalid node in visit_strictmode" ) 
 		Local text:String = node.value
 		If node.descr text :+ " ' "+node.descr
 		Return text + "~n"
 	End Method
 
-	Method visit_comment:String( node:TASTNode )
-'DebugStop
-		If node.tokenid = TK_REM
-			Return "REM"+node.value+"ENDREM~n"
-		Else	' TK_COMMENT
-			Return "' "+node.value+"~n"
-		End If
-	End Method
 
 Rem	Method visit_binop node:TAbSynTree )
 		If Not node ThrowException( "Invalid node in binaryoperator" ) 

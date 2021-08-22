@@ -25,7 +25,7 @@ Include "bin/TBlitzMaxParser.bmx"
 
 '	DELIVERABLES
 Include "bin/AbstractSyntaxTree.bmx"
-'Include "bin/TBlitzMaxAST.bmx"
+Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
 
 '	OUTPUT / TRANSPILE
@@ -37,7 +37,7 @@ Include "bin/TTranspileJava.bmx"
 '	TYPES AND FUNCTIONS
 
 Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
-    Print "---> "+event
+    Print "---> "+event + "; "+String( data )
 End Function
 
 Type TLangServ Extends TVisitor
@@ -113,6 +113,7 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		' SHOW AST STRICTURE
 		Print "~nAST STRICTURE:"
 		Print "------------------------------------------------------------"
+'DebugStop
 		Print ast.reveal()
 		Print "------------------------------------------------------------"
 

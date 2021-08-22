@@ -99,7 +99,11 @@ Type TASTNode
 	
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Return indent+name+"~n"
+		Local block:String = indent+name
+		If value<>"" block :+ " "+Replace(value,"~n","\n")
+		block :+ "~n"
+		If descr<>"" block :+ indent+"  ("+descr+")~n"
+		Return block
 	End Method
 	
 End Type
@@ -122,7 +126,9 @@ Type TASTBinary Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = indent+name+"~n"
+		Local block:String = indent+name
+		If value<>"" block :+ " "+Replace(value,"~n","\n")
+		block :+ "~n"
 		If lnode
 			block :+ lnode.reveal( indent+"  " )
 		Else
@@ -133,6 +139,7 @@ Type TASTBinary Extends TASTNode
 		Else
 			block :+ "NULL~n"
 		End If
+		If descr<>"" block :+ indent+"  ("+descr+")~n"
 		Return block
 	End Method
 
@@ -166,7 +173,10 @@ Type TASTCompound Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = indent+name+"~n"
+		Local block:String = indent+name
+		If value<>"" block :+ " "+Replace(value,"~n","\n")
+		block :+ "~n"
+		If descr<>"" block :+ indent+"  ("+descr+")~n"
 		For Local child:TASTNode = EachIn children
 			block :+ child.reveal( indent+"  " )
 		Next

@@ -23,6 +23,10 @@ Type TTranspiler Extends TVisitor
 	
 	' ABSTRACT METHODS
 
+	Method visit_EOL:String( node:TASTNode )
+		Return "~n"
+	End Method
+	
 	Method visit_program:String( node:TASTCompound )
 		Local text:String = header()
 		For Local child:TASTNode = EachIn node.children

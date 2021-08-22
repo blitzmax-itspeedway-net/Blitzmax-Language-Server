@@ -14,3 +14,12 @@ import brl.linkedlist
 include "first.bmx"
 include "second.bmx"
 
+function abc()
+end function
+
+function xyz:int()
+end function
+
+function weird()
+end function ' with weird trailing comment!
+

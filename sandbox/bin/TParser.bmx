@@ -474,13 +474,16 @@ End Rem
 	End Method
 	End Rem
 	
-	Method reflect:TASTNode( rule:String, arguments:TASTNode[] )
+'22 AUG 21	I cannot use reflection here until I can find a way
+'			of passing the Token (Argument) by reference
+	Method reflect:TASTNode( identifier:String, argument:TToken )
 		Local this:TTypeId = TTypeId.ForObject( Self )
-		Local methd:TMethod = this.FindMethod( "parse_"+rule )
+		Local methd:TMethod = this.FindMethod( "Parse_"+identifier )
 'DebugStop
-		If methd Return TASTNode( methd.invoke( Self, [arguments] ))
-		Print( "- Parser.parse_"+rule+"() does not exist" )
-		Return New TASTNode( "ERROR" )
+		If methd Return TASTNode( methd.invoke( Self, [argument] ))
+		'Print( "- Parser.Farse_"+identifier+"() does not exist" )
+		'Return New TASTNode( "ERROR" )
+		Throw( "Parser.Parse_"+identifier+"() does not exist" )
 		'Return Null
 	End Method
 	
