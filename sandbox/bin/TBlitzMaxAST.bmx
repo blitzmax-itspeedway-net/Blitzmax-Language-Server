@@ -4,7 +4,7 @@
 
 '	CHANGE LOG
 '	V1.0	17 AUG 21	Initial version
-'	V1.1	22 AUG 21	Added TAST_Function()
+'	V1.1	22 AUG 21	Added TAST_Function(), TAST_Method() and TAST_Type()
 
 Type TAST_Function Extends TASTCompound
 	Field returntype:TToken

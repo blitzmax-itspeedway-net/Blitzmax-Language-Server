@@ -5,6 +5,7 @@
 '	CHANGE LOG
 '	V1.0	07 AUG 21	Initial version
 '	V1.1	17 AUG 21	Added consume()
+'	V1.2	23 AUG 21	Exception on missing method is optional
 
 Rem
 Type TAbSynTree
@@ -208,16 +209,31 @@ End Type
 ' The Visitor uses reflection to process the Abstract Syntax Tree
 Type TVisitor
 
-	Method visit:String( node:TASTNode, indent:String="" )
+	Field exception_on_missing_method:Int = True
+
+	Method visit:String( node:TASTNode, prefix:String="visit", indent:String="" )
 'DebugStop
 		If Not node ThrowException( "Cannot visit null node" ) 
 		'If node.name = "" invalid()	' Leave this to use "visit_" method
 		
 		' Use Reflection to call the visitor method (or an error)
 		Local this:TTypeId = TTypeId.ForObject( Self )
-		Local methd:TMethod = this.FindMethod( "visit_"+node.name )
-		If Not methd exception( node )
-		Local text:String = String( methd.invoke( Self, [New TVisitorArg(node,indent)] ))
+		Local methd:TMethod = this.FindMethod( prefix+"_"+node.name )
+		If methd
+			Local text:String = String( methd.invoke( Self, [New TVisitorArg(node,indent)] ))
+			Return text
+		EndIf
+		If exception_on_missing_method ; exception( prefix+"_"+node.name )
+		Return ""
+	End Method
+
+	Method visitChildren:String( node:TASTNode, prefix:String, indent:String="" )
+		Local text:String
+		Local compound:TASTCompound = TASTCompound( node )
+'DebugStop
+		For Local child:TASTNode = EachIn compound.children
+			text :+ visit( child, prefix, indent )
+		Next
 		Return text
 	End Method
 	
@@ -226,8 +242,8 @@ Type TVisitor
 		ThrowException( "Node '"+node.value+"' has no name!" )
 	End Method
 	
-	Method exception( node:TASTNode )
-		ThrowException( "Method visit_"+node.name+"() does not exist" )
+	Method exception( nodename:String )
+		ThrowException( "Method "+nodename+"() does not exist" )
 	End Method
 	
 End Type

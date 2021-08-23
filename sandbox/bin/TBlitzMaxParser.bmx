@@ -138,7 +138,7 @@ EndRem
 					ast.add( Parse_Rem( token ) )
 '
 				Case TK_END
-DebugStop
+'DebugStop
 					' Identify if this is "END" or "END <BLOCK>"
 					Local peek:TToken = lexer.peek()
 					If peek.id = BlockType
@@ -528,7 +528,7 @@ DebugStop
 		token = lexer.getNext()
 
 		' Parse TYPE into ast
-DebugStop
+'DebugStop
 		ast = TAST_Type( ParseBlock( TK_TYPE, ast, token, SYM_TYPEBODY, Null ) )
 
 		Rem

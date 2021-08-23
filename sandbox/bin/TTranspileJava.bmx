@@ -41,7 +41,7 @@ Type TTranspileJava Extends TTranspiler
 	End Method
 	
 	Method visit_imports:String( arg:TVisitorArg ) 'node:TASTCompound, indent:String="" )
-		Return visitChildren( arg.node, arg.indent+TAB  )
+		Return visitChildren( arg.node, "visit", arg.indent+TAB  )
 	End Method
 
 	Method visit_include:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
@@ -82,7 +82,7 @@ Type TTranspileJava Extends TTranspiler
 		EndIf
 		text :+ " {~n"
 		If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
-		text :+ visitChildren( arg.node, arg.indent+TAB )
+		text :+ visitChildren( arg.node, "visit", arg.indent+TAB )
 		text :+ "}~n"
 		Return text
 	End Method

@@ -39,7 +39,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 	End Method
 	
 	Method visit_imports:String( arg:TVisitorArg ) 'node:TASTCompound, indent:String="" )
-		Return visitChildren( TASTCompound(arg.node), arg.indent+TAB  )
+		Return visitChildren( TASTCompound(arg.node), "visit", arg.indent+TAB  )
 	End Method
 
 	Method visit_include:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
@@ -82,7 +82,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 			text :+ " extends "+compound.supertype.value
 		EndIf
 		If arg.node.descr text :+ " ' "+arg.node.descr
-		text :+ "~n"+visitChildren( arg.node, arg.indent+TAB )
+		text :+ "~n"+visitChildren( arg.node, "visit", arg.indent+TAB )
 		text :+ "EndType~n"
 		Return text
 	End Method

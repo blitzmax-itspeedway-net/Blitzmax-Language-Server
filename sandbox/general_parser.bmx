@@ -27,6 +27,7 @@ Include "bin/TBlitzMaxParser.bmx"
 Include "bin/AbstractSyntaxTree.bmx"
 Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
+Include "bin/TLanguageServerVisitor.bmx"
 
 '	OUTPUT / TRANSPILE
 Include "bin/TTranspiler.bmx"
@@ -40,47 +41,6 @@ Function Publish:Int( event:String, data:Object=Null, extra:Object=Null )
     Print "---> "+event + "; "+String( data )
 End Function
 
-Type TLangServ Extends TVisitor
-
-	Field parser:TParser
-	Field tree:TASTNode
-	
-	Method New( parser:TParser )
-		Self.parser = parser
-	End Method
-	
-	Method run()
-		' Perform the actual Parsing here
-		parser.parse()
-		tree = parser.ast
-		' Now call the visitor to walk and process the tree
-		visit( tree )
-	End Method
-	
-	' Not sure how to debug this yet...!
-	' Maybe dump the syntax tree and definition table?
-	Method reveal:String()
-	End Method
-	
-	' ABSTRACT METHODS
-	' Not all of them are required by the Language server, but "bcc" will need them
-	
-	Rem
-	Method visit_binaryoperator( node:AST_BinaryOperator )
-		If Not node ThrowException( "Invalid node in binaryoperator" ) 
-		Print "BINARY OPERATION"
-	
-		Select node.token.value
-		Case "+"	; 'Local x:Int = visit( node.L ) + visit( node.R )
-		Case "-"	
-		Case "*"
-		Case "/"
-		End Select
-		
-	End Method
-	End Rem
-	
-End Type
 		
 Function test_file:Int( filepath:String, verbose:Int=False )
 	Local source:String, lexer:TLexer, parser:TParser
@@ -116,6 +76,13 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		Print ast.reveal()
 		Print "------------------------------------------------------------"
 
+
+		' SHOW AST STRICTURE
+		Print "~nLANGUAGE SERVER:"
+		Print "------------------------------------------------------------"
+		Local langserv:TLanguageServerVisitor = New TLanguageServerVisitor( ast )
+		Print langserv.getOutline( StripDir(filepath) )
+		Print "------------------------------------------------------------"
 
 		' Pretty print the AST back into BlitzMax (.transpile file)
 		Print "~nTRANSPILE AST TO BLITZMAX:"	
@@ -154,12 +121,12 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		Local runtime:TRuntimeException = TRuntimeException( e )
 		Local text:String = String( e )
 		Local typ:TTypeId = TTypeId.ForObject( e )
-DebugStop
 		If exception Print "## Exception: "+exception.toString()+" ##"
 		If blitzexception Print "## BLITZ Exception: "+blitzexception.toString()+" ##"
 		If runtime Print "## Exception: "+runtime.toString()+" ##"
 		If text Print "## Exception: '"+text+"' ##"
 		Print "TYPE: "+typ.name
+DebugStop
 		Return False
 	End Try
 
