@@ -5,7 +5,7 @@
 Type TTranspileBlitzMax Extends TTranspiler
 
 	Method header:String()
-		Return "~n'~n'~tTranspiled from BlitzMaxNG by Scaremongers Transpiler~n'~n~n"
+		Return "~n'~n'"+TAB+"Transpiled from BlitzMaxNG by Scaremongers Transpiler~n'~n~n"
 	End Method
 
 	Method visit_comment:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
@@ -39,7 +39,7 @@ Type TTranspileBlitzMax Extends TTranspiler
 	End Method
 	
 	Method visit_imports:String( arg:TVisitorArg ) 'node:TASTCompound, indent:String="" )
-		Return visitChildren( TASTCompound(arg.node), arg.indent+"~t"  )
+		Return visitChildren( TASTCompound(arg.node), arg.indent+TAB  )
 	End Method
 
 	Method visit_include:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
@@ -75,15 +75,15 @@ Type TTranspileBlitzMax Extends TTranspiler
 	End Method
 
 	Method visit_type:String( arg:TVisitorArg ) 'node:TAST_Type, indent:String="" )
-DebugStop
+'DebugStop
 		Local text:String = "Type "+arg.node.value
 		Local compound:TAST_Type = TAST_Type( arg.node )
 		If compound.supertype
 			text :+ " extends "+compound.supertype.value
 		EndIf
 		If arg.node.descr text :+ " ' "+arg.node.descr
-		text :+ "~n"+visitChildren( arg.node, arg.indent+"~t" )
-		text :+ "~nEndType~n"
+		text :+ "~n"+visitChildren( arg.node, arg.indent+TAB )
+		text :+ "EndType~n"
 		Return text
 	End Method
 

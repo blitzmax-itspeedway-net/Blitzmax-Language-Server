@@ -5,7 +5,7 @@
 Type TTranspileCPP Extends TTranspiler
 
 	Method header:String()
-		Return "~n//~n//~tTranspiled from BlitzMaxNG by Scaremongers Transpiler~n//~n~n"
+		Return "~n//~n//"+TAB+"Transpiled from BlitzMaxNG by Scaremongers Transpiler~n//~n~n"
 	End Method
 
 	Method visit_comment:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
@@ -29,8 +29,8 @@ Type TTranspileCPP Extends TTranspiler
 			text :+ "void "
 		EndIf
 		text :+ arg.node.value+"() {~n"
-		If arg.node.descr text :+ "~t// "+arg.node.descr +"~n"
-		text :+ "}~n"
+		If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
+		text :+ arg.indent+"}~n"
 		Return text
 	End Method
 	
@@ -41,7 +41,7 @@ Type TTranspileCPP Extends TTranspiler
 	End Method
 	
 	Method visit_imports:String( arg:TVisitorArg ) 'node:TASTCompound, indent:String="" )
-		Return visitChildren( arg.node, arg.indent+"~t"  )
+		Return visitChildren( arg.node, arg.indent+TAB  )
 	End Method
 
 	Method visit_include:String( arg:TVisitorArg ) 'node:TASTNode, indent:String="" )
@@ -61,8 +61,8 @@ Type TTranspileCPP Extends TTranspiler
 			text :+ "void "
 		EndIf
 		text :+ arg.node.value+"() {~n"
-		If arg.node.descr text :+ "~t// "+arg.node.descr +"~n"
-		text :+ "}~n"
+		If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
+		text :+ arg.indent+"}~n"
 		Return text
 	End Method
 	
@@ -85,9 +85,9 @@ Type TTranspileCPP Extends TTranspiler
 			text :+ " : public "+compound.supertype.value
 		EndIf
 		text :+ " {~n"
-		If arg.node.descr text :+ "~t// "+arg.node.descr +"~n"
-		text :+ visitChildren( arg.node, arg.indent+"~t" )
-		text :+ "~n}~n"
+		If arg.node.descr text :+ TAB+"// "+arg.node.descr +"~n"
+		text :+ visitChildren( arg.node, arg.indent+TAB )
+		text :+ "}~n"
 		Return text
 	End Method
 	

@@ -138,16 +138,16 @@ EndRem
 					ast.add( Parse_Rem( token ) )
 '
 				Case TK_END
-'DebugStop
+DebugStop
 					' Identify if this is "END" or "END <BLOCK>"
 					Local peek:TToken = lexer.peek()
 					If peek.id = BlockType
 						' THIS IS END OF THE BLOCK
 						token = lexer.getnext() ' Consume END
-						token = lexer.getnext() ' Consume BlockType
+						'token = lexer.getnext() ' Consume BlockType
 						Return ast
 					Else
-						' THIS IS AN END
+						' THIS IS AN END OF APPLICATION TOKEN
 						ast.add( Parse_End( token ) )
 					End If
 				Case BlockClose
@@ -175,7 +175,7 @@ EndRem
 				Local runtime:TRuntimeException = TRuntimeException( e )
 				Local text:String = String( e )
 				Local typ:TTypeId = TTypeId.ForObject( e )
-DebugStop
+				'
 				If parseerror
 					publish( "syntax-error", parseerror.text + " at "+parseerror.line + ","+ parseerror.pos )
 					token = lexer.fastFwd( TK_EOL )	' Skip to end of line
@@ -184,6 +184,7 @@ DebugStop
 				If runtime Print "## Runtime: "+runtime.toString()+" ##"
 				If text Print "## Exception: '"+text+"' ##"
 				Print "TYPE: "+typ.name
+DebugStop
 			EndTry
 		Forever
 
@@ -514,12 +515,12 @@ DebugStop
 		ast.value = token.value
 		
 		' Get extend Type
-		token = lexer.getNext()
-		If token.id = TK_EXTENDS
+		Local peek:TToken = lexer.peek()
+		If peek.id = TK_EXTENDS
 			token = lexer.getnext()	' Skip "EXTENDS"
 			token = lexer.getNext() ' Get the super type
 			ast.supertype = token
-			token = lexer.getNext()	' Skip supertype
+			'token = lexer.getNext()	' Skip supertype
 		End If
 		
 		' Trailing comment is a description
@@ -527,7 +528,7 @@ DebugStop
 		token = lexer.getNext()
 
 		' Parse TYPE into ast
-'DebugStop
+DebugStop
 		ast = TAST_Type( ParseBlock( TK_TYPE, ast, token, SYM_TYPEBODY, Null ) )
 
 		Rem
@@ -543,7 +544,8 @@ DebugStop
 		
 		'
 		' Trailing comment is a description
-		ast.descr = ParseDescription( token )
+		Local descr:String = ParseDescription( token )
+		If descr ast.descr :+ " "+descr
 		token = lexer.getNext()
 		Return ast
 	End Method

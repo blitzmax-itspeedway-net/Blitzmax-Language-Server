@@ -5,9 +5,11 @@
 Type TTranspiler Extends TVisitor
 
 	Field ast:TASTNode
+	Field TAB:String = "~t"
 	
-	Method New( ast:TASTNode )
+	Method New( ast:TASTNode, tab:String="~t" )
 		Self.ast = ast
+		Self.TAB = tab
 	End Method
 	
 	' Create source code from the AST
@@ -37,7 +39,7 @@ Type TTranspiler Extends TVisitor
 	' ABSTRACT METHODS
 
 	Method visit_program:String( arg:TVisitorArg ) 'node:TASTCompound, indent:String="" )
-DebugStop
+'DebugStop
 		Local text:String = header()
 		text :+ visitChildren( arg.node, "" )
 		Return text
