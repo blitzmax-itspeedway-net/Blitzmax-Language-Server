@@ -7,15 +7,17 @@ Framework brl.retro
 Import brl.reflection
 Import Text.RegEx
 
+Import bmx.lexer
+
 '
 Include "bin/loadfile().bmx"
-Include "bin/TException.bmx"
+'Include "bin/TException.bmx"
 
 'Include "../bin/json.bmx"
 
 '	GENERIC LEXER AND PARSER
-Include "bin/TToken.bmx"
-Include "bin/TLexer.bmx"
+'Include "bin/TToken.bmx"
+'Include "bin/TLexer.bmx"
 Include "bin/TParser.bmx"
 
 '	BLITZMAX PARSER
