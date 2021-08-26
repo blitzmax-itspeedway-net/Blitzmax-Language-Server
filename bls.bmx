@@ -19,6 +19,8 @@ Import pub.freeprocess
 'debugstop
 '   INCLUDE APPLICATION COMPONENTS
 
+'Import bmx.json
+
 AppTitle = "Language Server for BlitzMax NG"
 
 'DebugStop

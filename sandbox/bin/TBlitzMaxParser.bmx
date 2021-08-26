@@ -46,8 +46,6 @@ Type TBlitzMaxParser Extends TParser
 
 	' We do not need to over-ride the parser entry point
 	' because it will call parse_program to begin
-	
-	Private
 
 	' Every story starts, as they say, with a beginning...
 	Method parse_program:TASTNode()
@@ -576,8 +574,6 @@ DebugStop
 		Next
 		Return report
 	End Method
-
-	Private
 	
 	' Recover from syntax errors
 	' Called by parse method during try-catch for TParseError()

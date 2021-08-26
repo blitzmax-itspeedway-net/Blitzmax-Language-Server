@@ -7,7 +7,8 @@ Framework brl.retro
 Import brl.reflection
 Import Text.RegEx
 
-Import bmx.lexer
+'Import bmx.lexer
+Import bmx.parser
 
 '
 Include "bin/loadfile().bmx"
@@ -18,7 +19,7 @@ Include "bin/loadfile().bmx"
 '	GENERIC LEXER AND PARSER
 'Include "bin/TToken.bmx"
 'Include "bin/TLexer.bmx"
-Include "bin/TParser.bmx"
+'Include "bin/TParser.bmx"
 
 '	BLITZMAX PARSER
 Include "bin/lexer-const-bmx.bmx"
@@ -26,7 +27,7 @@ Include "bin/TBlitzMaxLexer.bmx"
 Include "bin/TBlitzMaxParser.bmx"
 
 '	DELIVERABLES
-Include "bin/AbstractSyntaxTree.bmx"
+'Include "bin/AbstractSyntaxTree.bmx"
 Include "bin/TBlitzMaxAST.bmx"
 Include "bin/TSymbolTable.bmx"
 Include "bin/TLanguageServerVisitor.bmx"
@@ -63,7 +64,7 @@ Function test_file:Int( filepath:String, verbose:Int=False )
 		parser = New TBlitzMaxParser( lexer )
 		start  = MilliSecs()
 	'DebugStop
-		ast    = parser.parse()
+		ast    = parser.parse_ast()
 		finish = MilliSecs()
 		Print( "BLITZMAX LEXER+PARSE TIME: "+(finish-start)+"ms" )
 
