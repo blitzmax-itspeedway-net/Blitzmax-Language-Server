@@ -1,6 +1,6 @@
 SuperStrict
 
-'   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
+'   BLITZMAX LANGUAGE SERVER
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
 Framework brl.standardio 
@@ -19,9 +19,9 @@ Import pub.freeprocess
 'debugstop
 '   INCLUDE APPLICATION COMPONENTS
 
-'Import bmx.json
+Import bmx.json
 
-AppTitle = "Language Server for BlitzMax NG"
+AppTitle = "BlitzMax Language Server"	' BLS
 
 'DebugStop
 ' Load order - FIRST
@@ -36,7 +36,7 @@ Include "bin/TLSP.bmx"
 Include "bin/TObserver.bmx"
 Include "bin/TMessageQueue.bmx"
 'Include "bin/TTemplate.bmx"    ' Depreciated (Functionality moved into JSON)
-Include "bin/json.bmx"
+'Include "bin/json.bmx"
 
 Include "bin/sandbox.bmx"
 

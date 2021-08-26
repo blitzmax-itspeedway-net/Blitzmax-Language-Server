@@ -10,7 +10,7 @@ Type TConfig Extends TMap
         'logfile.write( "Config started" )
         defaults()
         Try
-            Local filename:String = AppDir+"/lsp.config"
+            Local filename:String = AppDir+"/bls.config"
             ' Check if file exists
             Select FileType( filename )
             Case 0  ' File does not exist
@@ -35,9 +35,9 @@ Type TConfig Extends TMap
         insert( "threadpool","4" )
     End Method 
 
-    Method readconfig:int( filename:String )
+    Method readconfig:Int( filename:String )
         Local file:TStream = ReadStream( filename )
-        If Not file return Publish( "log", "WARN", "Unable to open logfile" )
+        If Not file Return Publish( "log", "WARN", "Unable to open logfile" )
 
         ' Read file into TMAP
         While Not Eof( file )
@@ -55,7 +55,7 @@ Type TConfig Extends TMap
             If keyvalue[0] <> "" insert( keyvalue[0], keyvalue[1] )
         Wend
         file.Close()
-        return True
+        Return True
     End Method
 
     Method writeconfig( filename:String )
