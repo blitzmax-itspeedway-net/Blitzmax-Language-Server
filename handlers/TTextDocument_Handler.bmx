@@ -10,13 +10,15 @@
 DebugLog( "TTextDocument_Handler" )
 Publish( "log", "DEBG", "Initialise TTextDocument_Handler()" )
 New TTextDocument_Handler()
+
+
 Type TTextDocument_Handler Extends TMessageHandler
 
 	Const TextDocumentSyncKind_None:Int=0
 	Const TextDocumentSyncKind_Full:Int=1
 	Const TextDocumentSyncKind_Incremental:Int=2
 
-	Field documents:TMap = New TMap()
+	'Field documents:TMap = New TMap()
 
 	Method New()
 		Publish( "log", "DEBG", "TTextDocument_Handler.new()" )
@@ -79,23 +81,24 @@ Publish( "log", "DEBG", "TextDocument:Capabilities: "+lsp.capabilities.stringify
 				}
 			}
 		}
-		end rem
+		End Rem
 
 		Publish( "log","debug",message.J.stringify() )
 
-		Local uriNode:JSON = message.J.find( "params|textDocument|uri" )
-		Local textNode:JSON = message.J.find( "params|textDocument|text" )
+		'	EXTRACT JSON
 		
-		Local uri:String = uriNode.toString() 
+		'"textDocument":{
+		'	"languageId":"blitzmax",
+		'	"text":<SOURCECODE>,
+		'	"uri":"file:///home/si/dev/bmx.transpiler/examples/bmx-to-cpp.bmx",
+		'	"version":1
+		'	}
+		
 
-		Local document:TTextDocument = TTextDocument( MapValueForKey( documents, uri ) )
-		If document
-			document.setContent( textnode.toString() )
-		Else
-			' New Document
-			document = New TTextDocument( textNode.toString() )
-		End If
-
+		' Add or Open a document
+		Local document:TDocument = documents.open( message.J.find( "params|textDocument" ) )
+'		If Not document ; documents.add( uri, textNode.toString() )
+		
 	End Method
 	
 	Method didChange:String( message:TMessage )
@@ -124,17 +127,24 @@ Publish( "log", "DEBG", "TextDocument:Capabilities: "+lsp.capabilities.stringify
 				}
 			}
 		}
-		end rem
+		End Rem
 		Publish( "log","debug",message.J.stringify() )
 
-		Local uriNode:JSON = message.J.find( "params|textDocument|uri" )		
-		Local uri:String = uriNode.toString() 
-
-		Local document:TTextDocument = TTextDocument( MapValueForKey( documents, uri ) )
-		If Not document Return ""
+		' Add or Open a document
+		Local document:TDocument = documents.open( message.J.find( "params|textDocument" ) )
+		If Not document ; Return ""
 		
-		Local contentChanges:JSON = message.J.find( "params|contentChanges" )
-		Local changes:JSON[] = contentChanges.toArray()
+		'	EXTRACT URI		
+		'Local Juri:JSON = message.J.find( "params|textDocument|uri" )
+		'Local uri:String = Juri.toString() 
+
+		'	OPEN DOCUMENT
+		'Local document:TDocument = documents.open( uri )
+		'If Not document ; Return ""
+
+		'	GET CHANGES
+		Local Jchanges:JSON = message.J.find( "params|contentChanges" )
+		Local changes:JSON[] = Jchanges.toArray()
 		If Not changes Return ""
 		
 		' Loop through all the changes
@@ -163,10 +173,13 @@ Publish( "log", "DEBG", "TextDocument:Capabilities: "+lsp.capabilities.stringify
 		end rem
 		Publish( "log","debug",message.J.stringify() )
 
-		Local uriNode:JSON = message.J.find( "params|textDocument|uri" )		
-		Local uri:String = uriNode.toString() 
+		' Add or Open a document
+		Local document:TDocument = documents.open( message.J.find( "params|textDocument" ) )
 
-		Local document:TTextDocument = TTextDocument( MapValueForKey( documents, uri ) )
+'		Local uriNode:JSON = message.J.find( "params|textDocument|uri" )		
+'		Local uri:String = uriNode.toString() 
+
+'		Local document:TDocument = TDocument( MapValueForKey( documents, uri ) )
 		If document
 			document.Close()
 		End If
@@ -190,13 +203,16 @@ Publish( "log", "DEBG", "TextDocument:Capabilities: "+lsp.capabilities.stringify
 		end rem
 		Publish( "log","debug",message.J.stringify() )
 
-		Local uriNode:JSON = message.J.find( "params|textDocument|uri" )		
-		Local uri:String = uriNode.toString() 
+		' Add or Open a document
+		Local document:TDocument = documents.open( message.J.find( "params|textDocument" ) )
 
-		Local document:TTextDocument = TTextDocument( MapValueForKey( documents, uri ) )
-		If document
-			document.save()
-		End If
+'		Local uriNode:JSON = message.J.find( "params|textDocument|uri" )		
+'		Local uri:String = uriNode.toString() 
+
+'		Local document:TTextDocument = TTextDocument( MapValueForKey( documents, uri ) )
+		'If document
+		'	document.save()
+		'End If
 
 	End Method
 
@@ -245,6 +261,7 @@ Publish( "log", "DEBG", "TextDocument:Capabilities: "+lsp.capabilities.stringify
 	
 End Type
 
+Rem
 Type TTextDocument
 	Field content:String		' Document text
 	Field isopen:Int = False
@@ -403,33 +420,5 @@ Type TSymbol
 	
 End Type
 
-Type TRange
-	Field rangeStart:TPosition = New TPosition
-	Field rangeEnd:TPosition = New TPosition
-	Field _valid:Int = False
-	
-	Method New( range:JSON )
-		rangeStart = New TPosition( range.find("start") )
-		rangeEnd = New TPosition( range.find("end") )
-		If rangeStart And rangeEnd _valid=True
-	End Method
-	
-	Method invalid:Int()
-		Return Not _valid
-	End Method
-	
-	Method valid:Int()
-		Return _valid
-	End Method
-	
-End Type
 
-Type TPosition
-	Field character:Int
-	Field line:Int
-	
-	Method New( position:JSON )
-		character = position.find("character").toInt()
-		line = position.find("line").toInt()
-	End Method	
-End Type
+End Rem

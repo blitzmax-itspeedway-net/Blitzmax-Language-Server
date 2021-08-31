@@ -26,6 +26,9 @@ Type TLSP_Stdio Extends TLSP
 
         Local quit:Int = False     ' Local loop state
 
+		' V0.3, Start event listener
+		listen()
+
         ' Open StandardIn
         StdIn = ReadStream( StandardIOStream )
         If Not StdIn
@@ -36,18 +39,30 @@ Type TLSP_Stdio Extends TLSP
         ' Start threads
         Receiver = CreateThread( ReceiverThread, Self )
         Sender = CreateThread( SenderThread, Self )
+		
         'ThreadPool = TThreadPoolExecutor.newFixedThreadPool( ThreadPoolSize )
 'DebugStop
         ' Start Message Loop
+		'Local this:TMessage
         Repeat
+
+			Rem 31/8/21, Depreciated the ThreadPool
             ' Fill thread pool
             While ThreadPool.threadsWorking < ThreadPool.maxThreads            
                 ' Get next task from queue
-				Local task:TMessage = queue.getNextTask()
+				'Local task:TMessage = queue.getNextTask()
+				Local task:TMSG = queue.getNextTask()
 				If Not task Exit
 				' Process the event handler
 				ThreadPool.execute( New TRunnableTask( task, Self ) )
             Wend
+			EndRem
+			
+			' Get the next message
+			Local message:TMessage = queue.getNextTask()
+			' Message is only returned if it needs to be emitted (Launched)
+			If message ; message.emit()
+			
             Delay(100)
         'Until endprocess
         Until CompareAndSwap( lsp.QuitMain, quit, True )
@@ -63,8 +78,15 @@ Type TLSP_Stdio Extends TLSP
         DetachThread( Sender )
         Publish( "debug", "Sender thread closed" )
 
+		' Close the document manager
+        documents.Close()
+
         ThreadPool.shutdown()
         Publish( "debug", "Worker thread pool closed" )
+
+		' V0.3, Stop event listener
+		unlisten()
+		queue.Close()
 
         Return exitcode
     End Method

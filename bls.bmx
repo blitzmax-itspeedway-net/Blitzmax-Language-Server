@@ -34,14 +34,21 @@ Include "bin/TLSP.bmx"
 
 ' Load order - ANY
 Include "bin/TObserver.bmx"
+Include "bin/TMessage.bmx"
 Include "bin/TMessageQueue.bmx"
 'Include "bin/TTemplate.bmx"    ' Depreciated (Functionality moved into JSON)
 'Include "bin/json.bmx"
 
-Include "bin/sandbox.bmx"
+'Include "bin/sandbox.bmx"
+
+' Text Document Manager
+Include "bin/TDocumentMGR.bmx"
 
 'debugstop
-Include "handlers/handlers.bmx"
+' Message Handlers
+'Include "handlers/handlers.bmx"
+
+
 
 ' RPC2.0 Error Messages
 Const ERR_PARSE_ERROR:String =       "-32700"  'Invalid JSON was received by the server.
@@ -54,9 +61,14 @@ Const ERR_INTERNAL_ERROR:String =    "-32603"  'Internal JSON-RPC error.
 Const ERR_SERVER_NOT_INITIALIZED:String = "-32002"
 Const ERR_CONTENT_MODIFIED:String =       "-32801"
 Const ERR_REQUEST_CANCELLED:String =      "-32800"
-
 '
 Const JSONRPC:String = "2.0"		' Supported JSON-RPC version
+
+' MESSAGE STATES
+Const STATE_WAITING:Int = 0
+Const STATE_RUNNING:Int = 1
+Const STATE_COMPLETE:Int = 2
+'const STATE_CANCELLED:int = 3
 
 ?win32
     Const EOL:String = "~n"
@@ -80,26 +92,20 @@ Publish "log", "INFO", "Version "+version+"."+build
 Publish "log", "DEBG", "CURRENTDIR: "+CurrentDir$()
 Publish "log", "DEBG", "APPDIR:     "+AppDir
 
-Function Response_Error:String( code:String, message:String, id:String="null" )
-    Publish( "log", "ERRR", message )
-    Local response:JSON = New JSON()
-    response.set( "id", id )
-    response.set( "jsonrpc", "2.0" )
-    response.set( "error", [["code",code],["message","~q"+message+"~q"]] )
-    Return response.stringify()
-End Function
-
+Rem 31/8/21, Depreciated by new message queue
 '   Worker Thread
 Type TRunnableTask Extends TRunnable
-    Field message:TMessage
+    Field message:TMSG
     Field lsp:TLSP
-    Method New( handler:TMessage, lsp:TLSP )
+
+    Method New( handler:TMSG, lsp:TLSP )
         Self.message = handler
         Self.lsp = lsp
     End Method
+
     Method run()
 		Local response:String = message.run()
-		'V0.2, default to error if nothign returned from handler
+		'V0.2, default to error if nothing returned from handler
 		If response="" response = Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available", message.id )
 		' Send the response to the client
 		Publish( "sendmessage", response )
@@ -108,6 +114,13 @@ Type TRunnableTask Extends TRunnable
 		message.state = STATE_COMPLETE
     End Method
 End Type
+End Rem
+
+' HELPER: Send a message to client
+Function SendMessage( response:JSON )
+	New TMessage( "SEND-TO-CLIENT", response ).emit()		' Send message to client
+End Function
+
 
 '   Run the Application
 Publish( "log", "DEBG", "Starting LSP..." )

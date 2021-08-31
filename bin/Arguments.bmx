@@ -2,7 +2,11 @@
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, July 2021, All Right Reserved
 
-'	ARGUMENTS:	*** NONE OF THESE ARE CURRENTLY SUPPORTED ***
+'	ARGUMENTS:	
+'   -C XXX      - Capabilities
+'   
+
+' *** NONE OF THESE ARE CURRENTLY SUPPORTED ***
 '
 '	--debug:<filename>			- Turn on extended debug logging to a file
 '	-v | --version				- Return current version number

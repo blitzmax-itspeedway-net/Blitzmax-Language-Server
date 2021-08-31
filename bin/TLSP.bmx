@@ -27,8 +27,10 @@ Type TLSP Extends TObserver
     ' Threads
     Field Receiver:TThread
     Field QuitReceiver:Int = True   ' Atomic State
+
     Field Sender:TThread
     Field QuitSender:Int = True     ' Atomic State
+
     Field ThreadPool:TThreadPoolExecutor
     Field ThreadPoolSize:Int
     Field sendMutex:TMutex = CreateMutex()
@@ -87,7 +89,11 @@ Type TLSP Extends TObserver
             'Local debug:String = JSON.stringify(J)
             'logfile.write( "STRINGIFY:" )
             'logfile.write( "  "+debug )
+
+			' V0.3 Event Creation
+			New TMessage( "RECEIVE-FROM-CLIENT", J ).emit()		' Send Message Received event	
    
+Rem V0.2 depreciated
             ' Check for a method
             node = J.find("method")
             If Not node 
@@ -100,6 +106,7 @@ Type TLSP Extends TObserver
                 Publish( "send", Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ))
                 Continue
             End If
+
             ' Validation
             If Not LSP.initialized And methd<>"initialize"
                 Publish( "send", Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" ))
@@ -159,6 +166,7 @@ Type TLSP Extends TObserver
                     Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))    
                 End Try
             End If
+EndRem
         Until CompareAndSwap( lsp.QuitReceiver, quit, True )
         'Publish( "debug", "ReceiverThread - Exit" )
     End Function
@@ -199,6 +207,7 @@ Type TLSP Extends TObserver
         Publish( "debug", "SenderThread - Exit" )
     End Function  
 
+
 	'V0.2
 	' Add a Capability
 	'Method addCapability( capability:String )
@@ -215,6 +224,7 @@ Type TLSP Extends TObserver
 	'	Return result
 	'End Method
 
+Rem 31/8/21 Depreciated
 	'V0.2
 	' Add Message Handler
 	Method addHandler( handler:TMessageHandler, events:String[] )
@@ -227,6 +237,84 @@ Type TLSP Extends TObserver
 	' Get a Message Handler
 	Method getMessageHandler:TMessageHandler( methd:String )
 		Return TMessageHandler( handlers.valueForkey( methd ) )
+	End Method
+EndRem
+
+	'V0.3 - Event Handlers	
+	Method onExit:Int( message:TMessage )
+		publish( "log", "DBG", "EVENT onExit()" )
+		' QUIT MAIN LOOP
+        AtomicSwap( QuitMain, False )
+		message.state = STATE_COMPLETE
+		Return True
+	End Method
+	
+	Method onInitialize:Int( message:TMessage )
+		publish( "log", "DBG", "EVENT onInitialize()" )
+		initialized = True
+		Local id:String = message.getid()
+		Local params:JSON = message.params
+		
+        ' Write Client information to logfile
+        If params
+            'logfile.write( "PARAMS EXIST" )
+            'if params.isvalid() logfile.write( "PARAMS IS VALID" )
+            Local clientinfo:JSON = params.find( "clientInfo" )    ' VSCODE=clientInfo
+            If clientinfo
+                'logfile.write( "CLIENT INFO EXISTS" )
+                Local clientname:String = clientinfo["name"]
+                Local clientver:String = clientinfo["version"]
+                Publish "CLIENT: "+clientname+", "+clientver
+            'else
+                'logfile.write( "NO CLIENT INFO EXISTS" )
+            End If
+        End If
+
+        ' RESPONSE 
+
+		'V0.2, Capabilities are managed by the LSP
+		Local capabilities:JSON = Self.capabilities
+
+Publish( "log", "DEBG", "Initialize:Capabilities: "+capabilities.stringify() )
+        Local response:JSON = New JSON()
+        response.set( "id", id )
+        response.set( "jsonrpc", JSONRPC )
+        'response.set( "result|capabilities", [["hover","true"]] )
+        'response.set( "result|capabilities", [["hoverProvider","true"]] )
+
+        response.set( "result|capabilities", capabilities )
+
+        response.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
+Publish( "log", "DEBG", "RESULT: "+response.stringify() )
+
+		SendMessage( response )
+		'
+		message.state = STATE_COMPLETE
+        Return True
+	End Method 
+	
+	Method onInitialized:Int( message:TMessage )
+		publish( "log", "DBG", "EVENT onInitialized()" )
+		SendMessage( Response_Ok( message.getid() ) )
+		'
+		message.state = STATE_COMPLETE
+		Return True
+	End Method 
+
+	Method onShutdown:Int( message:TMessage )
+		publish( "log", "DBG", "EVENT onShutdown()" )
+		shutdown = True
+
+		' Send response to Client
+        Local response:JSON = New JSON()
+        response.set( "id", message.getid() )
+        response.set( "jsonrpc", JSONRPC )
+        response.set( "result", "null" )
+        'response.set( "error", [["code",0],["message","TTFN"]] )
+		SendMessage( response )
+		'
+		message.state = STATE_COMPLETE
+        Return True
 	End Method
 	
 End Type

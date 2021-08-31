@@ -38,14 +38,13 @@ Include "TTextDocument_Handler.bmx"	'	textDocumentSync, definitionProvider
 'Include "xxxxxxxxxx.bmx"			'	monikerProvider
 'Include "xxxxxxxxxx.bmx"			'	workspaceSymbolProvider
 'Include "xxxxxxxxxx.bmx"			'	workspace
-
-Const STATE_WAITING:Int = 0
-Const STATE_RUNNING:Int = 1
-Const STATE_COMPLETE:Int = 2
-'const STATE_CANCELLED:int = 3
+'WORKSPACE
+'Include "workspace/didChangeConfiguration.bmx"	
 
 ' BASIC REQUEST TYPE
+Rem
 Type TMessage
+
     Field state:Int = STATE_WAITING		' State of the message
     Field cancelled:Int = False         ' Message cancellation
     Field J:JSON                    	' Original JSON message
@@ -92,3 +91,6 @@ Type TMessageHandler Extends TObserver
 	End Method
 	
 End Type
+End Rem
+
+
