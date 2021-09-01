@@ -173,7 +173,7 @@ Type TMessageQueue Extends TObserver
 	
 	' Received a message from the client
 	Method onReceivedFromClient:Int( message:TMessage )		
-		Publish( "debug", "TMessageQueue.onReceive("+message.methd+")")
+		Publish( "debug", "TMessageQueue.onReceivedFromClient()")
 
 		' Pre-mark message as complete
 		message.state = STATE_COMPLETE
@@ -182,21 +182,21 @@ Type TMessageQueue Extends TObserver
 		Local J:JSON = JSON( message.extra )
 		If Not J 
 			SendMessage( Response_Error( ERR_INVALID_REQUEST, "Invalid request" ) )
-			Return True
+			Return False
 		End If
 		
 		' Check for a method
 		Local node:JSON = J.find("method")
 		If Not node 
 			SendMessage( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
-			Return True
+			Return False
 		End If
 		
 		' Validate methd
 		Local methd:String = node.tostring()
 		If methd = "" 
 			SendMessage( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
-			Return True
+			Return False
 		End If
 		
 		' Extract "Params" if it exists (which it should)
@@ -204,18 +204,25 @@ Type TMessageQueue Extends TObserver
 		Local params:JSON = J.find( "params" )
 		'End If
 
+		Publish( "debug", "- ID:      "+message.getid() )
+		Publish( "debug", "- METHOD:  "+methd )
+		Publish( "debug", "- REQUEST: "+J.stringify() )
+		'Publish( "debug", "- PARAMS:  "+params.stringify() )
+
 		' An ID indicates a request message
 		If J.contains( "id" )
+			Publish( "debug", "- REQUEST" )
 			' This is a request, add to queue
 			Publish( "debug", "Pushing request '"+methd+"' to queue")
 			pushTaskQueue( New TMessage( methd, J, params ) )
-			Return True
+			Return False
 		End If
 					
 		' The message is a notification, send it now.
+		Publish( "debug", "- NOTIFICATION" )
 		Publish( "debug", "Executing notification "+methd )
 		New TMessage( methd, J, params ).emit()
-		Return True
+		Return False
 	End Method
 	
 	' Sending a message to the client
@@ -227,13 +234,13 @@ Type TMessageQueue Extends TObserver
 
 		' Message.Extra contains the JSON being sent
 		Local J:JSON = JSON( message.extra )
-		If Not J Return True ' If it isn't there, do nothing!
+		If Not J Return False ' If it isn't there, do nothing!
 		
 		' Extract message
 		Local text:String = J.stringify()
 		publish( "debug", "TMessageQueue.onSendToClient()~n"+text )
 		If text ; pushSendQueue( text )
-		Return True
+		Return False
 	End Method	
 
 	' Cancel Request
@@ -248,7 +255,7 @@ Type TMessageQueue Extends TObserver
 		Local Jid:JSON = message.params.find( "id" )
 		If Not Jid
 			SendMessage( Response_Error( ERR_INVALID_REQUEST, "Missing ID" ) )
-			Return True
+			Return False
 		End If
 		'
 		Local id:String = Jid.toString()
@@ -260,7 +267,7 @@ Type TMessageQueue Extends TObserver
 			End If
 		Next
 		UnlockMutex( taskMutex )
-		Return True
+		Return False
 	End Method
 
 End Type

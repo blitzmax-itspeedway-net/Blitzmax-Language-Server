@@ -36,13 +36,15 @@ Type TMessage Extends TEvent
 		Case "shutdown" 			; id = EV_shutdown
 		Case "exit" 				; id = EV_exit
 		
-'		Case "onDidChangeContent" 	; id = EV_DidChangeContent
-'		Case "onDidChangeContent" 	; id = EV_DidChangeContent
-		Case "textDocument/didOpen" ; id = EV_DidOpen
-'		Case "onWillSave" 			; id = EV_WillSave
-'		Case "onWillSaveWaitUntil"	; id = EV_WillSaveWaitUntil
-'		Case "onDidSave" 			; id = EV_DidSave
-'		Case "onDidClose" 			; id = EV_DidClose	
+		Case "$/cancelRequest"		; id = EV_cancelRequest
+		
+		Case "textDocument/onDidChangeContent" 	; id = EV_DidChangeContent
+		Case "textDocument/onDidChangeContent" 	; id = EV_DidChangeContent
+		Case "textDocument/didOpen" 			; id = EV_DidOpen
+		Case "textDocument/onWillSave" 			; id = EV_WillSave
+		Case "textDocument/onWillSaveWaitUntil"	; id = EV_WillSaveWaitUntil
+		Case "textDocument/onDidSave" 			; id = EV_DidSave
+		Case "textDocument/onDidClose" 			; id = EV_DidClose	
 		'case "$/setTraceNotification"	;	id = EV_setTraceNotification
 		'Case "NEXTONE" 		; id = NEXTONE
 		Default

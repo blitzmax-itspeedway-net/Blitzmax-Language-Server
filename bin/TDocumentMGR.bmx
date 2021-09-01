@@ -6,9 +6,13 @@
 
 Global documents:TDocumentMGR = New TDocumentMGR()
 
-Type TDocumentMGR
+Type TDocumentMGR Extends TEventHandler
 	Global documents:TMap = New TMap()
-	
+
+	Const TextDocumentSyncKind_None:Int=0
+	Const TextDocumentSyncKind_Full:Int=1
+	Const TextDocumentSyncKind_Incremental:Int=2
+		
 	' Threads
 	
 	Field DocThread:TThread
@@ -17,6 +21,11 @@ Type TDocumentMGR
 	
 	Method New()
 		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
+		listen()
+		
+		' Register Capabilities
+		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind_Incremental )
+		lsp.capabilities.set( "definitionProvider", "true" )
 	End Method
 
 	Method Close()
@@ -24,6 +33,7 @@ Type TDocumentMGR
 		PostSemaphore( semaphore )  		' Wake the thread from it's slumber
         DetachThread( DocThread )
         Publish( "debug", "Document thread closed" )
+		unlisten()
 	End Method
 	
 	' Invalidate the document list forcing a re-validation
@@ -74,6 +84,62 @@ Type TDocumentMGR
             End Try
 		Until CompareAndSwap( manager.QuitDocThread, quit, True )
 	End Function
+	
+	' V0.3 EVENT HANDLERS
+	' Message.Extra contains the original JSON being sent
+	' Message.Params contains the parameters
+	
+	Method onDidChangeContent:Int( message:TMessage )
+Publish( "log", "DBG", "TDocumentMGR.onDidChangeContent()" )
+		message.state = STATE_COMPLETE
+		Return False
+	End Method
+	
+	Method onDidOpen:Int( message:TMessage )
+Publish( "log", "DBG", "TDocumentMGR.onDidOpen()" )
+		If Not message Or Not message.params ; Return True
+		'
+		Local params:JSON = message.params
+		
+		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
+		'Local version:String = params.find( "textDocument|version" ).toString()
+
+		Local document:TDocument = TDocument( documents.valueforkey( uri ) )
+		If Not document
+			Local text:String = params.find( "textDocument|text" ).tostring()
+			document = New TDocument( uri, text )
+			documents.insert( uri, document )
+		End If
+
+		'
+		message.state = STATE_COMPLETE
+		Return False
+	End Method
+	
+	Method onWillSave:Int( message:TMessage )
+Publish( "log", "DBG", "TDocumentMGR.onWillSave()" )
+		message.state = STATE_COMPLETE
+		Return False
+	End Method
+	
+	Method onWillSaveWaitUntil:Int( message:TMessage )
+Publish( "log", "DBG", "TDocumentMGR.onWillSaveWaitUntil()" )
+		message.state = STATE_COMPLETE
+		Return False
+	End Method
+	
+	Method onDidSave:Int( message:TMessage )
+Publish( "log", "DBG", "TDocumentMGR.onDidSave()" )
+		message.state = STATE_COMPLETE
+		Return False
+	End Method
+	
+	Method onDidClose:Int( message:TMessage )
+Publish( "log", "DBG", "TDocumentMGR.onDidClose()" )
+		message.state = STATE_COMPLETE
+		Return False
+	End Method
 	
 End Type
 

@@ -246,7 +246,7 @@ EndRem
 		' QUIT MAIN LOOP
         AtomicSwap( QuitMain, False )
 		message.state = STATE_COMPLETE
-		Return True
+		Return False
 	End Method
 	
 	Method onInitialize:Int( message:TMessage )
@@ -290,7 +290,7 @@ Publish( "log", "DEBG", "RESULT: "+response.stringify() )
 		SendMessage( response )
 		'
 		message.state = STATE_COMPLETE
-        Return True
+        Return False
 	End Method 
 	
 	Method onInitialized:Int( message:TMessage )
@@ -298,7 +298,7 @@ Publish( "log", "DEBG", "RESULT: "+response.stringify() )
 		SendMessage( Response_Ok( message.getid() ) )
 		'
 		message.state = STATE_COMPLETE
-		Return True
+		Return False
 	End Method 
 
 	Method onShutdown:Int( message:TMessage )
@@ -314,7 +314,7 @@ Publish( "log", "DEBG", "RESULT: "+response.stringify() )
 		SendMessage( response )
 		'
 		message.state = STATE_COMPLETE
-        Return True
+        Return False
 	End Method
 	
 End Type

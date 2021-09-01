@@ -85,22 +85,22 @@ Type TEventHandler
 	End Method
 
 	' EVENT HANDLERS
-	Method onReceivedFromClient:Int( message:TMessage ) ; End Method
-	Method onSendToClient:Int( message:TMessage ) ; End Method	
+	Method onReceivedFromClient:Int( message:TMessage ) ; Return True ; End Method
+	Method onSendToClient:Int( message:TMessage ) ; Return True ; End Method	
 	
-	Method onExit:Int( message:TMessage ) ; End Method
-	Method onInitialize:Int( message:TMessage ) ; End Method
-	Method onInitialized:Int( message:TMessage ) ; End Method
-	Method onShutdown:Int( message:TMessage ) ; End Method
+	Method onExit:Int( message:TMessage ) ; Return True ; End Method
+	Method onInitialize:Int( message:TMessage ) ; Return True ; End Method
+	Method onInitialized:Int( message:TMessage ) ; Return True ; End Method
+	Method onShutdown:Int( message:TMessage ) ; Return True ; End Method
 
-	Method onCancelRequest:Int( message:TMessage ) ; End Method
+	Method onCancelRequest:Int( message:TMessage ) ; Return True ; End Method
 	
-	Method onDidChangeContent:Int( message:TMessage ) ; End Method
-	Method onDidOpen:Int( message:TMessage ) ; End Method
-	Method onWillSave:Int( message:TMessage ) ; End Method
-	Method onWillSaveWaitUntil:Int( message:TMessage ) ; End Method
-	Method onDidSave:Int( message:TMessage ) ; End Method
-	Method onDidClose:Int( message:TMessage ) ; End Method
+	Method onDidChangeContent:Int( message:TMessage ) ; Return True ; End Method
+	Method onDidOpen:Int( message:TMessage ) ; Return True ; End Method
+	Method onWillSave:Int( message:TMessage ) ; Return True ; End Method
+	Method onWillSaveWaitUntil:Int( message:TMessage ) ; Return True ; End Method
+	Method onDidSave:Int( message:TMessage ) ; Return True ; End Method
+	Method onDidClose:Int( message:TMessage ) ; Return True ; End Method
 
 	Function EventHandler:Object( id:Int, data:Object, context:Object )
 'DebugStop
@@ -120,7 +120,7 @@ Type TEventHandler
 		Local obj:TEventHandler = TEventHandler( context )
 		If obj 
 			' Distribute message and return null if processed
-			If obj.distribute( event.id, message ) ; Return Null
+			If Not obj.distribute( event.id, message ) ; Return Null
 		EndIf
 		' We didn;t process this, so pass to next handler
 		Return data
