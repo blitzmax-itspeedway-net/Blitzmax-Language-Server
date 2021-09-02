@@ -68,7 +68,7 @@ Type TMessageQueue Extends TObserver
             '
             If task.cancelled 
 				'JSON RPC REQUIRES THAT EVERY REQUEST SENDS BACK A RESPONSE
-				SendMessage( Response_OK( task.id ) )
+				client.send( Response_OK( task.id ) )
                 taskqueue.remove( task.id )
 			ElseIf task.state=STATE_COMPLETE
                 Publish( "Closing Task "+task.id)
@@ -181,21 +181,21 @@ Type TMessageQueue Extends TObserver
 		' Message.Extra contains the original JSON from client
 		Local J:JSON = JSON( message.extra )
 		If Not J 
-			SendMessage( Response_Error( ERR_INVALID_REQUEST, "Invalid request" ) )
+			client.send( Response_Error( ERR_INVALID_REQUEST, "Invalid request" ) )
 			Return False
 		End If
 		
 		' Check for a method
 		Local node:JSON = J.find("method")
 		If Not node 
-			SendMessage( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
+			client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
 			Return False
 		End If
 		
 		' Validate methd
 		Local methd:String = node.tostring()
 		If methd = "" 
-			SendMessage( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
+			client.send( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
 			Return False
 		End If
 		
@@ -206,7 +206,7 @@ Type TMessageQueue Extends TObserver
 
 		Publish( "debug", "- ID:      "+message.getid() )
 		Publish( "debug", "- METHOD:  "+methd )
-		Publish( "debug", "- REQUEST: "+J.stringify() )
+		Publish( "debug", "- REQUEST:~n"+J.prettyprint() )
 		'Publish( "debug", "- PARAMS:  "+params.stringify() )
 
 		' An ID indicates a request message
@@ -254,7 +254,7 @@ Type TMessageQueue Extends TObserver
 
 		Local Jid:JSON = message.params.find( "id" )
 		If Not Jid
-			SendMessage( Response_Error( ERR_INVALID_REQUEST, "Missing ID" ) )
+			client.send( Response_Error( ERR_INVALID_REQUEST, "Missing ID" ) )
 			Return False
 		End If
 		'

@@ -19,7 +19,7 @@ Type TLSP Extends TObserver
     Field shutdown:Int = False      ' Set by "shutdown" message
     Field QuitMain:Int = True       ' Atomic State - Set by "exit" message
 
-    Field queue:TMessageQueue = New TMessageQueue()
+    'Field client:TClient = New TClient()		' Moved to a global
 
 	' Create a document manager
 	'Field textDocument:TTextDocument_Handler	' Do not initialise here: Depends on lsp.
@@ -181,10 +181,10 @@ EndRem
         Repeat
             Try
                 'Publish( "debug", "Sender thread going to sleep")
-                WaitSemaphore( lsp.queue.sendcounter )
+                WaitSemaphore( client.sendcounter )
                 'Publish( "debug", "SenderThread is awake" )
                 ' Create a Response from message
-                Local content:String = lsp.queue.popSendQueue()
+                Local content:String = client.popSendQueue()
                 Publish( "log", "DEBG", "Sending '"+content+"'" )
                 If content<>""  ' Only returns "" when thread exiting
                     Local response:String = "Content-Length: "+Len(content)+EOL
@@ -249,53 +249,9 @@ EndRem
 		Return False
 	End Method
 	
-	Method onInitialize:Int( message:TMessage )
-		publish( "log", "DBG", "EVENT onInitialize()" )
-		initialized = True
-		Local id:String = message.getid()
-		Local params:JSON = message.params
-		
-        ' Write Client information to logfile
-        If params
-            'logfile.write( "PARAMS EXIST" )
-            'if params.isvalid() logfile.write( "PARAMS IS VALID" )
-            Local clientinfo:JSON = params.find( "clientInfo" )    ' VSCODE=clientInfo
-            If clientinfo
-                'logfile.write( "CLIENT INFO EXISTS" )
-                Local clientname:String = clientinfo["name"]
-                Local clientver:String = clientinfo["version"]
-                Publish "CLIENT: "+clientname+", "+clientver
-            'else
-                'logfile.write( "NO CLIENT INFO EXISTS" )
-            End If
-        End If
-
-        ' RESPONSE 
-
-		'V0.2, Capabilities are managed by the LSP
-		Local capabilities:JSON = Self.capabilities
-
-Publish( "log", "DEBG", "Initialize:Capabilities: "+capabilities.stringify() )
-        Local response:JSON = New JSON()
-        response.set( "id", id )
-        response.set( "jsonrpc", JSONRPC )
-        'response.set( "result|capabilities", [["hover","true"]] )
-        'response.set( "result|capabilities", [["hoverProvider","true"]] )
-
-        response.set( "result|capabilities", capabilities )
-
-        response.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
-Publish( "log", "DEBG", "RESULT: "+response.stringify() )
-
-		SendMessage( response )
-		'
-		message.state = STATE_COMPLETE
-        Return False
-	End Method 
-	
 	Method onInitialized:Int( message:TMessage )
 		publish( "log", "DBG", "EVENT onInitialized()" )
-		SendMessage( Response_Ok( message.getid() ) )
+		client.send( Response_Ok( message.getid() ) )
 		'
 		message.state = STATE_COMPLETE
 		Return False
@@ -311,7 +267,7 @@ Publish( "log", "DEBG", "RESULT: "+response.stringify() )
         response.set( "jsonrpc", JSONRPC )
         response.set( "result", "null" )
         'response.set( "error", [["code",0],["message","TTFN"]] )
-		SendMessage( response )
+		client.send( response )
 		'
 		message.state = STATE_COMPLETE
         Return False

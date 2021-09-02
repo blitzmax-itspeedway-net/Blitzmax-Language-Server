@@ -59,7 +59,7 @@ Type TLSP_Stdio Extends TLSP
 			EndRem
 			
 			' Get the next message
-			Local message:TMessage = queue.getNextTask()
+			Local message:TMessage = client.getNextTask()
 			' Message is only returned if it needs to be emitted (Launched)
 			If message ; message.emit()
 			
@@ -86,7 +86,7 @@ Type TLSP_Stdio Extends TLSP
 
 		' V0.3, Stop event listener
 		unlisten()
-		queue.Close()
+		client.Close()
 
         Return exitcode
     End Method

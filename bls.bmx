@@ -36,6 +36,7 @@ Include "bin/TLSP.bmx"
 Include "bin/TObserver.bmx"
 Include "bin/TMessage.bmx"
 Include "bin/TMessageQueue.bmx"
+Include "bin/TClient.bmx"		' Represents the remote IDE
 'Include "bin/TTemplate.bmx"    ' Depreciated (Functionality moved into JSON)
 'Include "bin/json.bmx"
 
@@ -115,12 +116,6 @@ Type TRunnableTask Extends TRunnable
     End Method
 End Type
 End Rem
-
-' HELPER: Send a message to client
-Function SendMessage( response:JSON )
-	New TMessage( "SEND-TO-CLIENT", response ).emit()		' Send message to client
-End Function
-
 
 '   Run the Application
 Publish( "log", "DEBG", "Starting LSP..." )
