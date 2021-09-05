@@ -7,8 +7,8 @@ Type TLSP_Stdio Extends TLSP
 	Field StdIn:TStream
 
     Method New( threads:Int = 4 )
-        Publish( "info", "LSP for BlitzMax NG" )
-        Publish( "info", "V"+Version+"."+build )
+        'Publish( "info", "LSP for BlitzMax NG" )
+        'Publish( "info", "V"+Version+"."+build )
         'Log.write( "Initialised")
         ' Set up instance and exit function
         instance = Self
@@ -59,7 +59,9 @@ Type TLSP_Stdio Extends TLSP
 			EndRem
 			
 			' Get the next message
-			Local message:TMessage = client.getNextTask()
+			'Local message:TMessage = client.getNextTask()
+			Local message:TMessage = client.popTaskQueue()
+			
 			' Message is only returned if it needs to be emitted (Launched)
 			If message ; message.emit()
 			
@@ -126,7 +128,7 @@ Type TLSP_Stdio Extends TLSP
                     'Publish( "log", "DEBG", "WAITING FOR CONTENT...")
                     content = stdIN.ReadString$( contentlength )
                     'Publish( "log", "DEBG", "Received "+contentlength+" bytes:~n"+content )
-                    Publish( "log", "DEBG", "Received "+contentlength+" bytes" )
+                    Publish( "log", "DEBG", "TLSP_Stdio.getRequest() received "+contentlength+" bytes" )
                     Return content
                 Else
                     Publish( "log", "DEBG", "Skipping: "+line )

@@ -16,26 +16,7 @@ Rem
         cancelrequest   JNODE               ' Request cancellation ($/cancelRequest)
         exitnow                             ' ExitProcedure() has been called.
 
-END REM
-
-' EVENT TYPES
-Global EV_receivedFromClient:Int = AllocUserEventId( "ReceivedFromClient" )
-Global EV_sendToClient:Int = AllocUserEventId( "SendToClient" )
-
-Global EV_initialize:Int = AllocUserEventId( "initialize" )
-Global EV_initialized:Int = AllocUserEventId( "initialized" )
-Global EV_shutdown:Int = AllocUserEventId( "shutdown" )
-Global EV_exit:Int = AllocUserEventId( "exit" )
-
-Global EV_CancelRequest:Int = AllocUserEventId( "$/cancelRequest" )
-
-Global EV_DidChangeContent:Int = AllocUserEventId( "onDidChangeContent" )
-Global EV_DidOpen:Int = AllocUserEventId( "onDidOpen" )
-Global EV_WillSave:Int = AllocUserEventId( "onWillSave" )
-Global EV_WillSaveWaitUntil:Int = AllocUserEventId( "onWillSaveWaitUntil" )
-Global EV_DidSave:Int = AllocUserEventId( "onDidSave" )
-Global EV_DidClose:Int = AllocUserEventId( "onDidClose" )
-'Global NEXTONE:Int = AllocUserEventId( "NEXTONE" )
+End Rem
 
 Type TEventHandler
 	
@@ -52,78 +33,100 @@ Type TEventHandler
 		'publish( "log", "DBG", "# TEventHandler Stopped" )
 		RemoveHook( EmitEventHook, EventHandler, Self )
 	End Method
-	
-	Method distribute:Int( id:Int, message:TMessage )
+		
+	Method distribute:TMessage( id:Int, message:TMessage )
 'DebugStop
-		Local this:TTypeId = TTypeId.ForObject(Self)
-		'publish( "log", "DBG", "# "+this.name+".distribute("+message.methd+")" )		
-		'Local running:Int = False
-		
-		'publish( "log", "DBG", "# DISTRIBUTING: "+message.methd+ " ("+id+")")
-		Select id
-		Case EV_receivedFromClient	;	Return onReceivedFromClient( message )
-		Case EV_sendToClient		;	Return onSendToClient( message )
+		Try
+			Local this:TTypeId = TTypeId.ForObject(Self)
+			'publish( "log", "DBG", "# "+this.name+".distribute("+message.methd+")" )		
+			'Local running:Int = False
+			
+			'publish( "log", "DBG", "# DISTRIBUTING: "+message.methd+ " ("+id+")")
+			Select id
 
-		Case EV_CancelRequest		;	Return OnCancelRequest( message )
+			Case EV_receivedFromClient		;	Return onReceivedFromClient( message )
+			Case EV_sendToClient			;	Return onSendToClient( message )
 
-		Case EV_initialize			;	Return onInitialize( message )
-		Case EV_initialized			;	Return onInitialized( message )
-		Case EV_shutdown			;	Return onShutdown( message )
-		Case EV_exit				;	Return onExit( message )
-		
-		Case EV_DidChangeContent	;	Return onDidChangeContent( message )
-		Case EV_DidOpen				;	Return onDidOpen( message )
-		Case EV_WillSave			;	Return onWillSave( message )
-		Case EV_WillSaveWaitUntil	;	Return onWillSaveWaitUntil( message )
-		Case EV_DidSave				;	Return onDidSave( message )
-		Case EV_DidClose			;	Return onDidClose( message )
-		'Case NEXTONE			;	NEXTONE( message )
-		Default
-			publish( "log", "DBG", "# TEventHandler: Missing '"+message.methd+"'" )			
-		End Select
-		
+			Case EV_initialize				;	Return onInitialize( message )
+			Case EV_initialized				;	Return onInitialized( message )
+			Case EV_shutdown				;	Return onShutdown( message )
+			Case EV_exit					;	Return onExit( message )
+
+			Case EV_DidChangeConfiguration	;	Return onDidChangeConfiguration( message )
+
+			' TEXTDOCUMENT/
+			Case EV_DidChange				;	Return onDidChange( message )
+			Case EV_DidOpen					;	Return onDidOpen( message )
+			Case EV_WillSave				;	Return onWillSave( message )
+			Case EV_WillSaveWaitUntil		;	Return onWillSaveWaitUntil( message )
+			Case EV_DidSave					;	Return onDidSave( message )
+			Case EV_DidClose				;	Return onDidClose( message )
+			Case EV_Definition				;	Return onDefinition( message )
+			
+			' DOLLAR/
+			Case EV_CancelRequest			;	Return onCancelRequest( message )
+			Case EV_SetTraceNotification	;	Return onSetTraceNotification( message )	
+
+			'Case NEXTONE			;	NEXTONE( message )
+			Default
+				publish( "log", "DBG", "# TEventHandler: Missing '"+message.methd+"'" )			
+			End Select
+		Catch Exception:String
+			logfile.info( "## EXCEPTION: TEventHandler.distribute~n"+Exception )
+		End Try
+
 	End Method
 
-	' EVENT HANDLERS
-	Method onReceivedFromClient:Int( message:TMessage ) ; Return True ; End Method
-	Method onSendToClient:Int( message:TMessage ) ; Return True ; End Method	
-	
-	Method onExit:Int( message:TMessage ) ; Return True ; End Method
-	Method onInitialize:Int( message:TMessage ) ; Return True ; End Method
-	Method onInitialized:Int( message:TMessage ) ; Return True ; End Method
-	Method onShutdown:Int( message:TMessage ) ; Return True ; End Method
+	'	V0.3 EVENT HANDLERS
+	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
+	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
 
-	Method onCancelRequest:Int( message:TMessage ) ; Return True ; End Method
+	Method onReceivedFromClient:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onSendToClient:TMessage( message:TMessage ) ; Return message ; End Method	
 	
-	Method onDidChangeContent:Int( message:TMessage ) ; Return True ; End Method
-	Method onDidOpen:Int( message:TMessage ) ; Return True ; End Method
-	Method onWillSave:Int( message:TMessage ) ; Return True ; End Method
-	Method onWillSaveWaitUntil:Int( message:TMessage ) ; Return True ; End Method
-	Method onDidSave:Int( message:TMessage ) ; Return True ; End Method
-	Method onDidClose:Int( message:TMessage ) ; Return True ; End Method
+	Method onExit:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onInitialize:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onInitialized:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onShutdown:TMessage( message:TMessage ) ; Return message ; End Method
 
+	Method onDidChangeConfiguration:TMessage( message:TMessage ) ; Return message ; End Method
+	
+	Method onDidChange:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onDidOpen:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onWillSave:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onWillSaveWaitUntil:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onDidSave:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onDidClose:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onDefinition:TMessage( message:TMessage ) ; Return message ; End Method
+	
+	Method onCancelRequest:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onSetTraceNotification:TMessage( message:TMessage ) ; Return message ; End Method
+	
 	Function EventHandler:Object( id:Int, data:Object, context:Object )
 'DebugStop
-		' Test for valid event
-		Local event:TEvent = TEvent( data )
-		If Not event Return data
+		Try
+			' Test for valid event
+			' (Handled events return null, so we can ignore them)
+			Local event:TEvent = TEvent( data )
+			If Not event Return data
 
-		' Test for valid message (and not system event)
-		Local message:TMessage = TMessage( event.source )
-		'Local J:JSON = JSON( event.extra )
-		If Not message Return data
-		'If Not message Or Not J Return data
-'publish( "log", "DBG", "# Event Handler: "+message.methd )
-'publish( "log", "DBG", "# ("+event.id+") "+event.tostring() )
+			' Test for valid message (and not system event)
+			Local message:TMessage = TMessage( event.source )
+			'Local J:JSON = JSON( event.extra )
+			If Not message Return data
+			'If Not message Or Not J Return data
+	'publish( "log", "DBG", "# Event Handler: "+message.methd )
+	'publish( "log", "DBG", "# ("+event.id+") "+event.tostring() )
 
-		' Distribute event
-		Local obj:TEventHandler = TEventHandler( context )
-		If obj 
-			' Distribute message and return null if processed
-			If Not obj.distribute( event.id, message ) ; Return Null
-		EndIf
-		' We didn;t process this, so pass to next handler
-		Return data
+			' Distribute event
+			Local obj:TEventHandler = TEventHandler( context )
+			' Distribute message
+			If obj ; Return obj.distribute( event.id, message )
+			' We didn;t process this, so pass to next handler
+			Return data
+		Catch Exception:String
+			logfile.info( "## EXCEPTION: TEventHandler.EventHandler~n"+Exception )
+		End Try
 	End Function
 
 End Type

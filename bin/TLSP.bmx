@@ -15,16 +15,18 @@ Type TLSP Extends TObserver
 
     Field exitcode:Int = 0
 
-	Field initialized:Int = False   ' Set by "iniialized" message
-    Field shutdown:Int = False      ' Set by "shutdown" message
-    Field QuitMain:Int = True       ' Atomic State - Set by "exit" message
-
+	Field initialized:Int = False   	' Set by "iniialized" message
+    Field shutdown:Int = False      	' Set by "shutdown" message
+	Field setTrace:String = "off"		' Set by $/setTrace
+	
     'Field client:TClient = New TClient()		' Moved to a global
 
 	' Create a document manager
 	'Field textDocument:TTextDocument_Handler	' Do not initialise here: Depends on lsp.
 
     ' Threads
+    Field QuitMain:Int = True       ' Atomic State - Set by "exit" message
+
     Field Receiver:TThread
     Field QuitReceiver:Int = True   ' Atomic State
 
@@ -34,6 +36,7 @@ Type TLSP Extends TObserver
     Field ThreadPool:TThreadPoolExecutor
     Field ThreadPoolSize:Int
     Field sendMutex:TMutex = CreateMutex()
+
     
 	' System
 	Field capabilities:JSON = New JSON()	' Empty object
@@ -180,18 +183,18 @@ EndRem
         'DebugLog( "SenderThread()" )
         Repeat
             Try
-                'Publish( "debug", "Sender thread going to sleep")
+                Publish( "debug", "TLSP.SenderThread going to sleep")
                 WaitSemaphore( client.sendcounter )
-                'Publish( "debug", "SenderThread is awake" )
+                Publish( "debug", "TLSP.SenderThread is awake" )
                 ' Create a Response from message
                 Local content:String = client.popSendQueue()
-                Publish( "log", "DEBG", "Sending '"+content+"'" )
+                'Publish( "log", "DEBG", "Sending '"+content+"'" )
                 If content<>""  ' Only returns "" when thread exiting
                     Local response:String = "Content-Length: "+Len(content)+EOL
                     response :+ EOL
                     response :+ content
                     ' Log the response
-                    Publish( "log", "DEBG", "Sending:~n"+response )
+                    'Publish( "log", "DEBG", "Sending:~n"+response )
                     ' Send to client
                     LockMutex( lsp.sendMutex )
                     StandardIOStream.WriteString( response )
@@ -240,24 +243,31 @@ Rem 31/8/21 Depreciated
 	End Method
 EndRem
 
-	'V0.3 - Event Handlers	
-	Method onExit:Int( message:TMessage )
+	'	V0.3 EVENT HANDLERS
+	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
+	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
+	
+	Method onExit:TMessage( message:TMessage )
 		publish( "log", "DBG", "EVENT onExit()" )
 		' QUIT MAIN LOOP
         AtomicSwap( QuitMain, False )
 		message.state = STATE_COMPLETE
-		Return False
+		'Return null
 	End Method
 	
-	Method onInitialized:Int( message:TMessage )
+	Method onInitialized:TMessage( message:TMessage )
 		publish( "log", "DBG", "EVENT onInitialized()" )
 		client.send( Response_Ok( message.getid() ) )
 		'
 		message.state = STATE_COMPLETE
-		Return False
+		
+		' Register for configuration changes
+		client.RegisterForConfigChanges()
+		
+		Return Null
 	End Method 
 
-	Method onShutdown:Int( message:TMessage )
+	Method onShutdown:TMessage( message:TMessage )
 		publish( "log", "DBG", "EVENT onShutdown()" )
 		shutdown = True
 
@@ -266,11 +276,22 @@ EndRem
         response.set( "id", message.getid() )
         response.set( "jsonrpc", JSONRPC )
         response.set( "result", "null" )
-        'response.set( "error", [["code",0],["message","TTFN"]] )
 		client.send( response )
 		'
 		message.state = STATE_COMPLETE
-        Return False
+        'Return Null
 	End Method
 	
+	' Trace notifications
+	Method OnSetTraceNotification:TMessage( message:TMessage )
+		publish( "log", "DBG", "EVENT onSetTraceNotification()" )
+		' Set our value to match params:
+		Local J:JSON = message.J.find( "params|value" )
+		If J 
+			Publish( "log","DBG", J.prettify() )
+			setTrace = J.toString()
+		End If
+		' This is a notification, so we dont need a reply.
+		'Return Null
+	End Method
 End Type

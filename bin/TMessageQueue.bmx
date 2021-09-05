@@ -30,7 +30,8 @@ End Rem
 Type TMessageQueue Extends TObserver
     Global requestThread:TThread
     Global sendqueue:TQueue<String>         ' Messages waiting to deliver to Language Client
-    Global taskqueue:TIntMap                ' Tasks Waiting or Running
+    Global taskqueue:TList				    ' Tasks Waiting or Running
+    'Global taskqueue:TIntMap                ' Tasks Waiting or Running
     ' Locks
     Field sendMutex:TMutex = CreateMutex()
     Field taskMutex:TMutex = CreateMutex()
@@ -40,7 +41,8 @@ Type TMessageQueue Extends TObserver
 
     Method New()
         sendQueue = New TQueue<String>()
-        taskQueue = New TIntMap()
+        'taskQueue = New TIntMap()
+        taskQueue = New TList()
 'DebugStop
 
 		' V0.3, Start Event Listener
@@ -55,15 +57,18 @@ Type TMessageQueue Extends TObserver
 		PostSemaphore( sendCounter )
 	End Method
 
+Rem
     ' Get next waiting message in the queue
     Method getNextTask:TMessage()
         If taskqueue.isEmpty() Return Null
         Publish( "getNextTask()" )
         LockMutex( TaskMutex )
+
         For Local task:TMessage = EachIn taskqueue.values()
             ' Debugging
             Local state:String =  ["waiting","running","complete"][task.state]
             If task.cancelled state :+ ",cancelled"
+
             Publish( "debug", "Task "+task.id+" ["+state+"]")
             '
             If task.cancelled 
@@ -78,8 +83,8 @@ Type TMessageQueue Extends TObserver
                 task.state = STATE_RUNNING
                 UnlockMutex( TaskMutex )
                 Return task
-            'else
-            '    Publish( "Task "+task.id+" running")
+            Else
+                Publish( "$$ Task "+task.id+" running")
             End If
         Next
         UnlockMutex( TaskMutex )
@@ -92,12 +97,21 @@ Type TMessageQueue Extends TObserver
         taskqueue.remove( task.id )
         UnlockMutex( TaskMutex )
     End Method
-    
+End Rem
+
     ' Retrieve a message from send queue
     Method popSendQueue:String()
         LockMutex( sendMutex )
         Local result:String = String( sendqueue.dequeue() )
         UnlockMutex( sendMutex )
+        Return result
+    End Method
+    
+    ' Retrieve a message from task queue
+    Method popTaskQueue:TMessage()
+        LockMutex( TaskMutex )
+        Local result:TMessage = TMessage( taskqueue.removefirst() )
+        UnlockMutex( TaskMutex )
         Return result
     End Method
 
@@ -138,13 +152,19 @@ Type TMessageQueue Extends TObserver
     Private
 
     ' Add a new message to the queue
-    Method pushTaskQueue( task:TMessage )
+    Method pushTaskQueue( message:TMessage )
         'Publish( "debug", "PushTaskQueue()" )
-        If Not task Return
+        If Not message Return
         'Publish( "debug", "- task is not null" )
         LockMutex( TaskMutex )
+
+		'Local JID:JSON = message.J.find("id")
+		'Local taskid:String = JID.tostring()
+		publish( "Pushing Message Task ("+message.msgid+", '"+ message.methd +"'" )
+		
         'Publish( "debug", "- task mutex locked" )
-        taskqueue.insert( task.id, task )
+        'taskqueue.insert( message.taskid, message )
+		taskqueue.addlast( message )
         'Publish( "debug", "- task inserted" )
         'PostSemaphore( taskCounter )
         'Publish( "debug", "- task Semaphore Incremented" )
@@ -169,34 +189,33 @@ Type TMessageQueue Extends TObserver
 
 	Public
 	
-	' V0.3 EVENT HANDLERS
+	'	V0.3 EVENT HANDLERS
+	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
+	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
 	
 	' Received a message from the client
-	Method onReceivedFromClient:Int( message:TMessage )		
+	Method onReceivedFromClient:TMessage( message:TMessage )		
 		Publish( "debug", "TMessageQueue.onReceivedFromClient()")
-
-		' Pre-mark message as complete
-		message.state = STATE_COMPLETE
 		
 		' Message.Extra contains the original JSON from client
 		Local J:JSON = JSON( message.extra )
 		If Not J 
 			client.send( Response_Error( ERR_INVALID_REQUEST, "Invalid request" ) )
-			Return False
+			Return Null
 		End If
 		
 		' Check for a method
 		Local node:JSON = J.find("method")
 		If Not node 
 			client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
-			Return False
+			Return Null
 		End If
 		
 		' Validate methd
 		Local methd:String = node.tostring()
 		If methd = "" 
 			client.send( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
-			Return False
+			Return Null
 		End If
 		
 		' Extract "Params" if it exists (which it should)
@@ -206,89 +225,86 @@ Type TMessageQueue Extends TObserver
 
 		Publish( "debug", "- ID:      "+message.getid() )
 		Publish( "debug", "- METHOD:  "+methd )
-		Publish( "debug", "- REQUEST:~n"+J.prettyprint() )
+		'Publish( "debug", "- REQUEST:~n"+J.Prettify() )
 		'Publish( "debug", "- PARAMS:  "+params.stringify() )
 
 		' An ID indicates a request message
 		If J.contains( "id" )
-			Publish( "debug", "- REQUEST" )
+			Publish( "debug", "- TYPE:    REQUEST" )
 			' This is a request, add to queue
 			Publish( "debug", "Pushing request '"+methd+"' to queue")
 			pushTaskQueue( New TMessage( methd, J, params ) )
-			Return False
+			Return Null
 		End If
 					
 		' The message is a notification, send it now.
-		Publish( "debug", "- NOTIFICATION" )
-		Publish( "debug", "Executing notification "+methd )
+		Publish( "debug", "- TYPE:    NOTIFICATION" )
+		'Publish( "debug", "Executing notification "+methd )
 		New TMessage( methd, J, params ).emit()
-		Return False
+		'Return Null
 	End Method
 	
 	' Sending a message to the client
-	Method onSendToClient:Int( message:TMessage )
+	Method onSendToClient:TMessage( message:TMessage )
 		'Publish( "debug", "TMessageQueue.OnSendtoClient()" )
-
-		' Pre-mark message as complete
-		message.state = STATE_COMPLETE
 
 		' Message.Extra contains the JSON being sent
 		Local J:JSON = JSON( message.extra )
-		If Not J Return False ' If it isn't there, do nothing!
+		If Not J
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
+			Return Null
+		End If
 		
 		' Extract message
 		Local text:String = J.stringify()
 		publish( "debug", "TMessageQueue.onSendToClient()~n"+text )
 		If text ; pushSendQueue( text )
-		Return False
+		'Return null
 	End Method	
 
 	' Cancel Request
-	Method OnCancelRequest:Int( message:TMessage )
-		' Pre-mark message as complete
-		message.state = STATE_COMPLETE
+	Method OnCancelRequest:TMessage( message:TMessage )
 
+logfile.debug( "~n"+message.j.Prettify() )
 		' Message.Extra contains the original JSON being sent
 		' Message.Params contains the parameters
-		If Not message Or Not message.params ; Return True
-
-		Local Jid:JSON = message.params.find( "id" )
-		If Not Jid
-			client.send( Response_Error( ERR_INVALID_REQUEST, "Missing ID" ) )
-			Return False
+		If Not message Or Not message.params
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
+			Return Null
 		End If
+		
+		'Local JID:JSON = message.params.find( "id" )
+		'If Not JID
+		'	client.send( Response_Error( ERR_INVALID_REQUEST, "Missing ID" ) )
+		'	Return Null
+		'End If
 		'
-		Local id:String = Jid.toString()
+		'Local id:String = JID.toString()
 		LockMutex( taskmutex )
-		For Local task:TMessage = EachIn taskqueue
-			If task.id = id 
-				task.cancelled = True
-				Exit
+		
+		Publish( "# CANCELLING MESSAGE: "+message.MsgID )
+		' Remove from queue
+		taskqueue.remove( message )
+		' Send confirmation back to client
+		client.send( Response_OK( message.MsgID ) )
+Rem
+' Tlist does this anyway!
+		For Local task:TMessage = EachIn taskqueue		
+			If task.MsgID = id 
+                Publish( "# CANCELLING TASK: "+task.MsgID )
+				' Remove from queue
+                taskqueue.remove( task )
+				' Send confirmation back to client
+				client.send( Response_OK( task.MsgID ) )
+				Exit ' loop
 			End If
 		Next
+End Rem		
 		UnlockMutex( taskMutex )
-		Return False
+		'Return null
 	End Method
 
 End Type
 
-Function Response_Error:JSON( code:String, message:String, id:String="null" )
-    Publish( "log", "ERRR", message )
-    Local response:JSON = New JSON()
-    response.set( "id", id )
-    response.set( "jsonrpc", JSONRPC )
-    response.set( "error", [["code",code],["message","~q"+message+"~q"]] )
-    Return response	'.stringify()
-End Function
-
-Function Response_OK:JSON( id:String="null" )
-    Publish( "log", "INFO", "ResponseOK" )
-	Local response:JSON = New JSON()
-	response.set( "id", id )
-	response.set( "jsonrpc", JSONRPC )
-	response.set( "result", "null" )
-    Return response '.stringify()
-	'Return "{~qid~q:"+id+",~qjsonrpc~q:"+JSONRPC+",~qresult~q:null}"
-End Function
 
 

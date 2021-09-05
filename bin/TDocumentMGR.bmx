@@ -22,9 +22,12 @@ Type TDocumentMGR Extends TEventHandler
 	Method New()
 		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
 		listen()
+		'
+		'	REGISTER CAPABILITIES
 		
-		' Register Capabilities
+		' Incremental document sync
 		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind_Incremental )
+		' Register for definition provide events
 		lsp.capabilities.set( "definitionProvider", "true" )
 	End Method
 
@@ -85,19 +88,24 @@ Type TDocumentMGR Extends TEventHandler
 		Until CompareAndSwap( manager.QuitDocThread, quit, True )
 	End Function
 	
-	' V0.3 EVENT HANDLERS
-	' Message.Extra contains the original JSON being sent
-	' Message.Params contains the parameters
+	'	V0.3 EVENT HANDLERS
+	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
+	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
 	
-	Method onDidChangeContent:Int( message:TMessage )
-Publish( "log", "DBG", "TDocumentMGR.onDidChangeContent()" )
-		message.state = STATE_COMPLETE
-		Return False
+	'	Message.Extra contains the original JSON being sent
+	'	Message.Params contains the parameters
+	
+	Method onDidChange:TMessage( message:TMessage )
+Publish( "log", "DBG", "TDocumentMGR.onDidChange()" )
+		'Return Null
 	End Method
 	
-	Method onDidOpen:Int( message:TMessage )
+	Method onDidOpen:TMessage( message:TMessage )
 Publish( "log", "DBG", "TDocumentMGR.onDidOpen()" )
-		If Not message Or Not message.params ; Return True
+		If Not message Or Not message.params
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
+			Return Null
+		End If
 		'
 		Local params:JSON = message.params
 		
@@ -112,35 +120,44 @@ Publish( "log", "DBG", "TDocumentMGR.onDidOpen()" )
 			documents.insert( uri, document )
 		End If
 
+		' NOTIFICATION: No response required.
+		' client.send( Response_ok() )
+		
+		' Wake up the Document Thread
+		PostSemaphore( semaphore )
 		'
-		message.state = STATE_COMPLETE
-		Return False
 	End Method
 	
-	Method onWillSave:Int( message:TMessage )
+	Method onWillSave:TMessage( message:TMessage )
 Publish( "log", "DBG", "TDocumentMGR.onWillSave()" )
-		message.state = STATE_COMPLETE
-		Return False
+
 	End Method
 	
-	Method onWillSaveWaitUntil:Int( message:TMessage )
+	Method onWillSaveWaitUntil:TMessage( message:TMessage )
 Publish( "log", "DBG", "TDocumentMGR.onWillSaveWaitUntil()" )
-		message.state = STATE_COMPLETE
-		Return False
+
 	End Method
 	
-	Method onDidSave:Int( message:TMessage )
+	Method onDidSave:TMessage( message:TMessage )
 Publish( "log", "DBG", "TDocumentMGR.onDidSave()" )
-		message.state = STATE_COMPLETE
-		Return False
+
 	End Method
 	
-	Method onDidClose:Int( message:TMessage )
+	Method onDidClose:TMessage( message:TMessage )
 Publish( "log", "DBG", "TDocumentMGR.onDidClose()" )
-		message.state = STATE_COMPLETE
-		Return False
+
 	End Method
-	
+
+	Method onDefinition:TMessage( message:TMessage )
+		Publish( "log", "DBG", "TDocumentMGR.onDefinition()" )
+		If Not message Or Not message.J
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return Null
+		End If
+		logfile.info( "~n"+message.j.Prettify() )
+		' We have NOT dealt with it, so return message
+		Return message
+	End Method
 End Type
 
 Type TDocument
