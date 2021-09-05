@@ -31,3 +31,36 @@ Const STATE_COMPLETE:Int = 2
     Const EOL:String = "~r~n"
 ?
 
+Type CompletionItemKind
+	Const _Text:Int = 1
+	Const _Method:Int = 2
+	Const _Function:Int = 3
+	Const _Constructor:Int = 4
+	Const _Field:Int = 5
+	Const _Variable:Int = 6
+	Const _Class:Int = 7
+	Const _Interface:Int = 8
+	Const _Module:Int = 9
+	Const _Property:Int = 10
+	Const _Unit:Int = 11
+	Const _Value:Int = 12
+	Const _Enum:Int = 13
+	Const _Keyword:Int = 14
+	Const _Snippet:Int = 15
+	Const _Color:Int = 16
+	Const _File:Int = 17
+	Const _Reference:Int = 18
+	Const _Folder:Int = 19
+	Const _EnumMember:Int= 20
+	Const _Constant:Int = 21
+	Const _Struct:Int = 22
+	Const _Event:Int = 23
+	Const _Operator:Int = 24
+	Const _TypeParameter:Int = 25
+End Type
+
+Type TextDocumentSyncKind
+	Const _None:Int = 0
+	Const _Full:Int = 1
+	Const _Incremental:Int = 2
+End Type

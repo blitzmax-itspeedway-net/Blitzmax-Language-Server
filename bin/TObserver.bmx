@@ -54,14 +54,18 @@ Type TEventHandler
 
 			Case EV_DidChangeConfiguration	;	Return onDidChangeConfiguration( message )
 
+			' COMPLETIONITEM/
+			Case EV_completionItem_resolve			;	Return onCompletionResolve( message )
+
 			' TEXTDOCUMENT/
-			Case EV_DidChange				;	Return onDidChange( message )
-			Case EV_DidOpen					;	Return onDidOpen( message )
-			Case EV_WillSave				;	Return onWillSave( message )
-			Case EV_WillSaveWaitUntil		;	Return onWillSaveWaitUntil( message )
-			Case EV_DidSave					;	Return onDidSave( message )
-			Case EV_DidClose				;	Return onDidClose( message )
-			Case EV_Definition				;	Return onDefinition( message )
+			Case EV_textDocument_didChange			;	Return onDidChange( message )
+			Case EV_textDocument_didOpen			;	Return onDidOpen( message )
+			Case EV_textDocument_willSave			;	Return onWillSave( message )
+			Case EV_textDocument_willSaveWaitUntil	;	Return onWillSaveWaitUntil( message )
+			Case EV_textDocument_didSave			;	Return onDidSave( message )
+			Case EV_textDocument_didClose			;	Return onDidClose( message )
+			Case EV_textDocument_definition			;	Return onDefinition( message )
+			Case EV_textDocument_completion			;	Return onCompletion( message )
 			
 			' DOLLAR/
 			Case EV_CancelRequest			;	Return onCancelRequest( message )
@@ -98,7 +102,9 @@ Type TEventHandler
 	Method onDidSave:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onDidClose:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onDefinition:TMessage( message:TMessage ) ; Return message ; End Method
-	
+	Method onCompletion:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onCompletionResolve:TMessage( message:TMessage ) ; Return message ; End Method
+			
 	Method onCancelRequest:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onSetTraceNotification:TMessage( message:TMessage ) ; Return message ; End Method
 	

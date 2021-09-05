@@ -18,14 +18,17 @@ Global EV_SetTraceNotification:Int = AllocUserEventId( "$/setTraceNotification" 
 
 Global EV_DidChangeConfiguration:Int = AllocUserEventId( "didChangeConfiguration" )
 
+Global EV_completionItem_resolve:Int = AllocUserEventId( "completionItem/resolve" )
+
 ' TEXTDOCUMENT
-Global EV_DidChange:Int = AllocUserEventId( "textDocument/didChange" )
-Global EV_DidOpen:Int = AllocUserEventId( "textDocument/didOpen" )
-Global EV_WillSave:Int = AllocUserEventId( "textDocument/willSave" )
-Global EV_WillSaveWaitUntil:Int = AllocUserEventId( "textDocument/willSaveWaitUntil" )
-Global EV_DidSave:Int = AllocUserEventId( "textDocument/didSave" )
-Global EV_DidClose:Int = AllocUserEventId( "textDocument/didClose" )
-Global EV_Definition:Int = AllocUserEventId( "textDocument/definition" )
+Global EV_textDocument_didChange:Int = AllocUserEventId( "textDocument/didChange" )
+Global EV_textDocument_didOpen:Int = AllocUserEventId( "textDocument/didOpen" )
+Global EV_textDocument_willSave:Int = AllocUserEventId( "textDocument/willSave" )
+Global EV_textDocument_willSaveWaitUntil:Int = AllocUserEventId( "textDocument/willSaveWaitUntil" )
+Global EV_textDocument_didSave:Int = AllocUserEventId( "textDocument/didSave" )
+Global EV_textDocument_didClose:Int = AllocUserEventId( "textDocument/didClose" )
+Global EV_textDocument_definition:Int = AllocUserEventId( "textDocument/definition" )
+Global EV_textDocument_completion:Int = AllocUserEventId( "textDocument/completion" )
 
 ' MESSAGE V0.3
 Type TMessage Extends TEvent
@@ -63,14 +66,18 @@ Type TMessage Extends TEvent
 		Case "initialized" 						; id = EV_initialized
 		Case "shutdown" 						; id = EV_shutdown
 		Case "exit" 							; id = EV_exit
+
+		Case "completionItem/resolve"			; id = EV_completionItem_resolve
 		
-		Case "textDocument/didChange" 			; id = EV_DidChange
-		Case "textDocument/didOpen" 			; id = EV_DidOpen
-		Case "textDocument/willSave" 			; id = EV_WillSave
-		Case "textDocument/willSaveWaitUntil"	; id = EV_WillSaveWaitUntil
-		Case "textDocument/didSave" 			; id = EV_DidSave
-		Case "textDocument/didClose" 			; id = EV_DidClose	
-		Case "textDocument/definition"			; id = EV_Definition
+		Case "textDocument/didChange" 			; id = EV_textDocument_didChange
+		Case "textDocument/didOpen" 			; id = EV_textDocument_didOpen
+		Case "textDocument/willSave" 			; id = EV_textDocument_willSave
+		Case "textDocument/willSaveWaitUntil"	; id = EV_textDocument_willSaveWaitUntil
+		Case "textDocument/didSave" 			; id = EV_textDocument_didSave
+		Case "textDocument/didClose" 			; id = EV_textDocument_didClose	
+		
+		Case "textDocument/completion"			; id = EV_textDocument_completion
+		Case "textDocument/definition"			; id = EV_textDocument_definition
 		
 		Case "$/cancelRequest"					; id = EV_cancelRequest
 		Case "$/setTraceNotification"			; id = EV_setTraceNotification

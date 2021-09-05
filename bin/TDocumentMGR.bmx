@@ -9,9 +9,7 @@ Global documents:TDocumentMGR = New TDocumentMGR()
 Type TDocumentMGR Extends TEventHandler
 	Global documents:TMap = New TMap()
 
-	Const TextDocumentSyncKind_None:Int=0
-	Const TextDocumentSyncKind_Full:Int=1
-	Const TextDocumentSyncKind_Incremental:Int=2
+
 		
 	' Threads
 	
@@ -26,9 +24,11 @@ Type TDocumentMGR Extends TEventHandler
 		'	REGISTER CAPABILITIES
 		
 		' Incremental document sync
-		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind_Incremental )
-		' Register for definition provide events
+		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind._Incremental )
+		' Register for code completion events
 		lsp.capabilities.set( "definitionProvider", "true" )
+		' Register for definition provide events
+		lsp.capabilities.set( "completionProvider|resolveProvider", "true" )
 	End Method
 
 	Method Close()
@@ -158,6 +158,88 @@ Publish( "log", "DBG", "TDocumentMGR.onDidClose()" )
 		' We have NOT dealt with it, so return message
 		Return message
 	End Method
+	
+	Method onCompletion:TMessage( message:TMessage )
+		Publish( "log", "DBG", "TDocumentMGR.onCompletion()" )
+		If Not message Or Not message.J
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return Null
+		End If
+		logfile.info( "~n"+message.j.Prettify() )
+		'
+		' Generate response
+		Local response:JSON = New JSON()
+		Local items:JSON = New JSON( JSON_ARRAY )
+		Local item:JSON
+		response.set( "id", message.MsgID )
+		response.set( "jsonrpc", JSONRPC )
+		response.set( "result|isIncomplete", "true" )
+		response.set( "result|items", items )
+		
+		item = New JSON()
+		item.set( "label", "Scaremonger" )
+		item.set( "kind", CompletionItemKind._Text )
+		item.set( "data", 1 )	' INDEX
+		items.addlast( item )
+		
+		item = New JSON()
+		item.set( "label", "BlitzMax" )
+		item.set( "kind", CompletionItemKind._Text )
+		item.set( "data", 2 )	' INDEX
+		items.addlast( item )
+
+		' Reply to the client
+		client.send( response )
+	End Method
+	
+	'	Provide additional information for item selected in the completion list
+	Method onCompletionResolve:TMessage( message:TMessage )
+		Publish( "log", "DBG", "TDocumentMGR.onCompletion()" )
+		If Not message Or Not message.J Or Not message.params
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return Null
+		End If
+		logfile.info( "~n"+message.j.Prettify() )
+		
+		' Extract requested information
+		Local data:Int = message.params.find("data").toint()
+		Local inserttextformat:Int = message.params.find("insertTextFormat").toint()
+		Local kind:Int = message.params.find("kind").toint()
+		Local label:String = message.params.find("label").toString()
+
+		
+		' Generate response
+		Local response:JSON = New JSON()
+		Local items:JSON = New JSON( JSON_ARRAY )
+		Local item:JSON
+		response.set( "id", message.MsgID )
+		response.set( "jsonrpc", JSONRPC )
+		response.set( "result|items", items )
+
+		' HERE WE SHOULD LOOK UP THE COMPLETION ITEM USING INDEX OF "data"
+		
+		If data=1	' SCAREMONGER
+				
+			item = New JSON()
+			item.set( "detail", "Scaremonger details" )
+			item.set( "documentation", "He is a very tall geek" )
+			items.addlast( item )
+
+		ElseIf data=2	' BLITZMAX
+
+			item = New JSON()
+			item.set( "detail", "Blitzmax detail" )
+			item.set( "documentation", "Blitzmax documentation" )
+			items.addlast( item )
+
+		End If
+		
+		' Reply to the client
+		client.send( response )  
+		
+		'Return message	' UNHANDLED EVENT  
+	End Method
+	
 End Type
 
 Type TDocument

@@ -285,8 +285,6 @@ logfile.debug( "~n"+message.j.Prettify() )
 		Publish( "# CANCELLING MESSAGE: "+message.MsgID )
 		' Remove from queue
 		taskqueue.remove( message )
-		' Send confirmation back to client
-		client.send( Response_OK( message.MsgID ) )
 Rem
 ' Tlist does this anyway!
 		For Local task:TMessage = EachIn taskqueue		
@@ -301,6 +299,9 @@ Rem
 		Next
 End Rem		
 		UnlockMutex( taskMutex )
+		
+		'	NOTIFICATION - No response required
+		'client.send( Response_OK( message.MsgID ) )
 		'Return null
 	End Method
 
