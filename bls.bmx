@@ -25,9 +25,9 @@ AppTitle = "BlitzMax Language Server"	' BLS
 
 'DebugStop
 ' Load order - FIRST
-Include "bin/Arguments.bmx"		' Must be before TLSP
 Include "bin/TConfig.bmx"		' Must be before TLogger		
-Include "bin/TLogger.bmx"		' Must be before TLSP		
+Include "bin/TLogger.bmx"		' Must be before TLSP, after Config	
+Include "bin/Arguments.bmx"		' Must be before TLSP, but after TLogger
 
 ' Load order - SECOND
 Include "bin/TLSP.bmx"
@@ -53,10 +53,14 @@ Include "bin/TDocumentMGR.bmx"
 Include "bin/constants.bmx"
 
 '   GLOBALS
-Global DEBUGGER:Int = True
-
-'Local Logfile:TLogger = New TLogger()         ' Please use Observer
-
+Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
+Global Config:TConfig = New TConfig					' Configuration manager
+Global Logfile:TLogger = New TLogger()				' Log File Manager
+Global Args:TArgMap = New TArgMap()					' Arguments
+Global Client:TClient = New TClient()				' Client Manager
+' This will be based on arguments in the future, but for now we only support STDIO
+Global LSP:TLSP = New TLSP_StdIO()					' Language Server
+Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager
 
 '   INCREMENT BUILD NUMBER
 

@@ -2,8 +2,6 @@
 '   LANGUAGE SERVER FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-Global client:TClient = New TClient()
-
 Type TClient Extends TMessageQueue
 	Field capabilities:JSON = New JSON()
 	Field documentSettings:JSON = New JSON()

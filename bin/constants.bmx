@@ -25,6 +25,16 @@ Const STATE_COMPLETE:Int = 2
 'const STATE_CANCELLED:int = 3
 'Const STATE_UNHANDLED:Int = 4
 
+' LOGGER
+Const LOG_EMERGENCY:Int = 0 
+Const LOG_ALERT:Int     = 1
+Const LOG_CRITICAL:Int  = 2
+Const LOG_ERROR:Int     = 3
+Const LOG_WARNING:Int   = 4
+Const LOG_NOTICE:Int    = 5
+Const LOG_INFO:Int      = 6
+Const LOG_DEBUG:Int     = 7
+
 ?win32
     Const EOL:String = "~n"
 ?Not win32

@@ -4,13 +4,9 @@
 
 '	Document Manager (Added in V0.2)
 
-Global documents:TDocumentMGR = New TDocumentMGR()
-
 Type TDocumentMGR Extends TEventHandler
 	Global documents:TMap = New TMap()
-
-
-		
+	
 	' Threads
 	
 	Field DocThread:TThread
@@ -29,6 +25,7 @@ Type TDocumentMGR Extends TEventHandler
 		lsp.capabilities.set( "definitionProvider", "true" )
 		' Register for definition provide events
 		lsp.capabilities.set( "completionProvider|resolveProvider", "true" )
+		'
 	End Method
 
 	Method Close()
@@ -238,6 +235,10 @@ Publish( "log", "DBG", "TDocumentMGR.onDidClose()" )
 		client.send( response )  
 		
 		'Return message	' UNHANDLED EVENT  
+	End Method
+	
+	Method onDocumentSymbol:TMessage( message:TMessage )
+	Return message
 	End Method
 	
 End Type

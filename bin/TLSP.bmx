@@ -5,11 +5,6 @@
 Include "TLSP_Stdio.bmx"
 Include "TLSP_TCP.bmx"
 
-Global LSP:TLSP
-
-' This will be based on arguments in the future, but for now we only support STDIO
-LSP = New TLSP_StdIO()
-
 Type TLSP Extends TObserver
     Global instance:TLSP
 

@@ -1,9 +1,21 @@
-'SuperStrict
-'   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
+
+'   BLITZMAX LANGUAGE SERVER
 '   (c) Copyright Si Dunford, July 2021, All Right Reserved
 
+'	COMMAND LINE ARGUMENTS
+
+Rem
+	IMPLEMENTED ARGUMENTS
+	
+	-ex:<option>	Enable experminental option
+	
+End Rem
+
+
+' NOT IMPLEMENTED:
 '	ARGUMENTS:	
 '   -C XXX      - Capabilities
+
 '   
 
 ' *** NONE OF THESE ARE CURRENTLY SUPPORTED ***
@@ -33,37 +45,50 @@
 '		--lint:ifthen=10	' Enforce THEN is not used
 '		--lint:ifthen=11	' Enforce THEN is used
 
-Global Args:TArgMap = New TArgMap()
-
 Type TArgMap Extends TMap
 
 	Method New()
-		
+'DebugStop
 		'   ARGUMENTS
-		'Publish "log", "DEBG", "ARGS: ("+AppArgs.length+")"     '+(" ".join(AppArgs))
+		Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
 		
-		insert( "app",AppArgs[0] )
+		' Set the application argument in case we need it later
+		CONFIG[ "app" ] = AppArgs[0]
+		
+		' Parse all the arguments, splitting them by ":"
 		For Local n:Int=1 Until AppArgs.length
-			Local items:String[] = AppArgs[n].split("=")
-			If items.length>1
-				insert( items[0], "=".join( items[1..] ) )
-			Else
-				insert( AppArgs[n], "true" )
-			End If
-			'Publish "log", "DEBG", n+") "+AppArgs[n]
+			' Split argument into KEY/VALUE pair
+			Local items:String[] = AppArgs[n].split(":")
+			Local key:String = Lower( items[0] )
+			Local value:String = ""
+			If items.length>1 ; value = ":".join( items[1..] )
+			'
+			Select key
+			Case "-ex"		' EXPERIMENTAL
+				CONFIG["experimental|"+value] = "true"  
+			Case "-h","-help"
+				CONFIG["cli|help"] = "true"  
+			Case "-v","-ver","-version"
+				CONFIG["cli|version"] = "true"
+			Default
+				' Invalid argument!
+				Print( "Argument '"+AppArgs[n] + "' is invalid" )
+			End Select
 		Next
 
-		If contains( "-h" ) Or contains( "--help" )
+		' Parse CLI commands
+		If CONFIG.contains( "cli|help" )
 			help()
 			exit_(1)
 		EndIf
 
-		If contains( "-v" ) Or contains( "--version" )
+		If CONFIG.contains( "cli|version" )
 			Print AppTitle
 			Print "Version "+version+"."+build
 			exit_(1)
 		EndIf
 
+		Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
 	End Method
 	
 	Method operator []:String(key:String)

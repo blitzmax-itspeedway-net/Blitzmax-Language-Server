@@ -66,6 +66,7 @@ Type TEventHandler
 			Case EV_textDocument_didClose			;	Return onDidClose( message )
 			Case EV_textDocument_definition			;	Return onDefinition( message )
 			Case EV_textDocument_completion			;	Return onCompletion( message )
+			Case EV_textDocument_documentSymbol		;	Return onDocumentSymbol( message )
 			
 			' DOLLAR/
 			Case EV_CancelRequest			;	Return onCancelRequest( message )
@@ -104,7 +105,8 @@ Type TEventHandler
 	Method onDefinition:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onCompletion:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onCompletionResolve:TMessage( message:TMessage ) ; Return message ; End Method
-			
+	Method onDocumentSymbol:TMessage( message:TMessage ) ; Return message ; End Method
+	
 	Method onCancelRequest:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onSetTraceNotification:TMessage( message:TMessage ) ; Return message ; End Method
 	

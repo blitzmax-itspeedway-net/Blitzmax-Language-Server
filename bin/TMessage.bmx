@@ -29,6 +29,7 @@ Global EV_textDocument_didSave:Int = AllocUserEventId( "textDocument/didSave" )
 Global EV_textDocument_didClose:Int = AllocUserEventId( "textDocument/didClose" )
 Global EV_textDocument_definition:Int = AllocUserEventId( "textDocument/definition" )
 Global EV_textDocument_completion:Int = AllocUserEventId( "textDocument/completion" )
+Global EV_textDocument_documentSymbol:Int = AllocUserEventId( "textDocument_documentSymbol/completion" )
 
 ' MESSAGE V0.3
 Type TMessage Extends TEvent
@@ -78,7 +79,8 @@ Type TMessage Extends TEvent
 		
 		Case "textDocument/completion"			; id = EV_textDocument_completion
 		Case "textDocument/definition"			; id = EV_textDocument_definition
-		
+		Case "textDocument/documentSymbol"		; id = EV_textDocument_documentSymbol
+				
 		Case "$/cancelRequest"					; id = EV_cancelRequest
 		Case "$/setTraceNotification"			; id = EV_setTraceNotification
 		

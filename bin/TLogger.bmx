@@ -2,16 +2,6 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 '   LOGGING
 
-Const LOG_EMERGENCY:Int = 0 
-Const LOG_ALERT:Int     = 1
-Const LOG_CRITICAL:Int  = 2
-Const LOG_ERROR:Int     = 3
-Const LOG_WARNING:Int   = 4
-Const LOG_NOTICE:Int    = 5
-Const LOG_INFO:Int      = 6
-Const LOG_DEBUG:Int     = 7
-
-Global Logfile:TLogger = New TLogger()
 Type TLogger Extends TObserver
     Field file:TStream
     Field loglevel:Int = LOG_DEBUG
@@ -23,6 +13,8 @@ Type TLogger Extends TObserver
         Try
             Local filename:String = Trim(CONFIG["logfile"])
             'filename="/home/si/dev/LSP/runlog.txt"
+'Print "FILENAME: "+filename
+'Print "LOGLEVEL: "+loglevel
             If filename<>"" 
                 'file = AppendStream:TStream( filename )
 				file = OpenStream( filename, False, WRITE_MODE_APPEND )
