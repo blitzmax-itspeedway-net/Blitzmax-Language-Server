@@ -20,7 +20,7 @@ Type TDocumentMGR Extends TEventHandler
 		'	REGISTER CAPABILITIES
 		
 		' Incremental document sync
-		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind._Incremental )
+		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
 		' Register for code completion events
 		lsp.capabilities.set( "definitionProvider", "true" )
 		' Register for definition provide events
@@ -52,8 +52,8 @@ Type TDocumentMGR Extends TEventHandler
 
 		Local document:TDocument = TDocument( documents.valueforkey( uri ) )
 		If Not document
-			Local text:JSON = textDocument.find( "text" )
-			document = New TDocument( uri, text.tostring() )
+			Local Text:JSON = textDocument.find( "text" )
+			document = New TDocument( uri, Text.tostring() )
 			documents.insert( uri, document )
 		End If
 		
@@ -112,8 +112,8 @@ Publish( "log", "DBG", "TDocumentMGR.onDidOpen()" )
 
 		Local document:TDocument = TDocument( documents.valueforkey( uri ) )
 		If Not document
-			Local text:String = params.find( "textDocument|text" ).tostring()
-			document = New TDocument( uri, text )
+			Local Text:String = params.find( "textDocument|text" ).tostring()
+			document = New TDocument( uri, Text )
 			documents.insert( uri, document )
 		End If
 
@@ -175,13 +175,13 @@ Publish( "log", "DBG", "TDocumentMGR.onDidClose()" )
 		
 		item = New JSON()
 		item.set( "label", "Scaremonger" )
-		item.set( "kind", CompletionItemKind._Text )
+		item.set( "kind", CompletionItemKind._Text.ordinal() )
 		item.set( "data", 1 )	' INDEX
 		items.addlast( item )
 		
 		item = New JSON()
 		item.set( "label", "BlitzMax" )
-		item.set( "kind", CompletionItemKind._Text )
+		item.set( "kind", CompletionItemKind._Text.ordinal() )
 		item.set( "data", 2 )	' INDEX
 		items.addlast( item )
 
@@ -263,12 +263,12 @@ Type TDocument
 		
 		ismodified = True
 		
-		If Not range Or (Not range.isValid()) Return
+		'If Not range Or (Not range.isValid()) Return
 		
-		Local start_pos:Int = range.rangeStart.character
-		Local start_line:Int = range.rangeStart.line
-		Local end_pos:Int = range.rangeEnd.character
-		Local end_line:Int = range.rangeEnd.line
+		'Local start_pos:Int = range.rangeStart.character
+		'Local start_line:Int = range.rangeStart.line
+		'Local end_pos:Int = range.rangeEnd.character
+		'Local end_line:Int = range.rangeEnd.line
 		
 		'sourcecode = ""
 		
@@ -295,6 +295,7 @@ Type TDocument
 	
 End Type
 
+Rem 20/10/21, Replaced with "language-server-protocol.bmx" version
 Type TRange
 	Field rangeStart:TPosition = New TPosition
 	Field rangeEnd:TPosition = New TPosition
@@ -321,3 +322,4 @@ Type TPosition
 		line = position.find("line").toInt()
 	End Method	
 End Type
+End Rem 

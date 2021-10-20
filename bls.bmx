@@ -20,14 +20,18 @@ Import pub.freeprocess
 '   INCLUDE APPLICATION COMPONENTS
 
 Import bmx.json
+'import bmx.blitzmaxparser
 
 AppTitle = "BlitzMax Language Server"	' BLS
 
 'DebugStop
 ' Load order - FIRST
-Include "bin/TConfig.bmx"		' Must be before TLogger		
-Include "bin/TLogger.bmx"		' Must be before TLSP, after Config	
-Include "bin/Arguments.bmx"		' Must be before TLSP, but after TLogger
+Include "bin/TConfig.bmx"		
+Include "bin/TLogger.bmx"		
+Include "bin/TArguments.bmx"
+
+' Language Server Protocol Interface
+Include "bin/language-server-protocol.bmx"
 
 ' Load order - SECOND
 Include "bin/TLSP.bmx"
@@ -44,7 +48,36 @@ Include "bin/TClient.bmx"		' Represents the remote IDE
 'Include "bin/sandbox.bmx"
 
 ' Text Document Manager
-Include "bin/TDocumentMGR.bmx"
+Include "bin/TSymbolTable.bmx"	
+Include "bin/TTextDocument.bmx"	
+Include "bin/TWorkspace.bmx"
+Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - Will be replaced by TWorkspace
+
+' BlitzMax Parser
+' Included here until stable release pushed back into module
+'Include "bmx/lexer-const-bmx.bmx"
+'Include "bmx/TBlitzMaxAST.bmx"
+'Include "bmx/TBlitzMaxLexer.bmx"
+'Include "bmx/TBlitzMaxParser.bmx"
+
+' SANDBOX LEXER
+Include "lexer/TLexer.bmx"
+Include "lexer/TToken.bmx"
+Include "lexer/TException.bmx"
+
+' SANDBOX PARSER
+Include "parser/TParser.bmx"
+Include "parser/TASTNode.bmx"
+Include "parser/TASTBinary.bmx"
+Include "parser/TASTCompound.bmx"
+Include "parser/TVisitor.bmx"
+Include "parser/TParseValidator.bmx"
+
+' SANDBOX BLITZMAX LEXER/PARSER
+Include "bmx/lexer-const-bmx.bmx"
+Include "bmx/TBlitzMaxAST.bmx"
+Include "bmx/TBlitzMaxLexer.bmx"
+Include "bmx/TBlitzMaxParser.bmx"
 
 'debugstop
 ' Message Handlers
@@ -52,15 +85,23 @@ Include "bin/TDocumentMGR.bmx"
 
 Include "bin/constants.bmx"
 
+DebugStop
 '   GLOBALS
 Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
 Global Config:TConfig = New TConfig					' Configuration manager
+' Apply Command line arguments
+New TArguments()			' Arguments
 Global Logfile:TLogger = New TLogger()				' Log File Manager
-Global Args:TArgMap = New TArgMap()					' Arguments
 Global Client:TClient = New TClient()				' Client Manager
+Global LSP:TLSP 									' Language Server
 ' This will be based on arguments in the future, but for now we only support STDIO
-Global LSP:TLSP = New TLSP_StdIO()					' Language Server
+' if Config['transport']="stdio"
+	LSP = New TLSP_StdIO()
+' else
+'	LSP = New TLSP_TCP()
+' end if
 Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager
+Global Workspaces:TWorkspaces = New TWorkspaces()
 
 '   INCREMENT BUILD NUMBER
 

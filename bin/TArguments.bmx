@@ -45,7 +45,7 @@ End Rem
 '		--lint:ifthen=10	' Enforce THEN is not used
 '		--lint:ifthen=11	' Enforce THEN is used
 
-Type TArgMap Extends TMap
+Type TArguments
 
 	Method New()
 'DebugStop
@@ -91,10 +91,10 @@ Type TArgMap Extends TMap
 		Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
 	End Method
 	
-	Method operator []:String(key:String)
-		'Local value:
-		Return String(ValueForKey( key ))
-	End Method
+	'Method operator []:String(key:String)
+	'	'Local value:
+	'	Return String(ValueForKey( key ))
+	'End Method
 
 	Method help()
 		Print AppTitle+"~n"

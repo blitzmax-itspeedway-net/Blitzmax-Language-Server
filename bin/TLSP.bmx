@@ -289,4 +289,8 @@ EndRem
 		' This is a notification, so we dont need a reply.
 		'Return Null
 	End Method
+	
+	Method did_change_workspace_folders:TMessage( message:TMessage )
+	End Method
+	
 End Type

@@ -41,6 +41,7 @@ Const LOG_DEBUG:Int     = 7
     Const EOL:String = "~r~n"
 ?
 
+Rem 20/10/21, Replaced with "language-server-protocol.bmx" version
 Type CompletionItemKind
 	Const _Text:Int = 1
 	Const _Method:Int = 2
@@ -68,9 +69,12 @@ Type CompletionItemKind
 	Const _Operator:Int = 24
 	Const _TypeParameter:Int = 25
 End Type
+EndRem
 
+Rem 20/10/21, Replaced with "language-server-protocol.bmx" version
 Type TextDocumentSyncKind
 	Const _None:Int = 0
 	Const _Full:Int = 1
 	Const _Incremental:Int = 2
 End Type
+EndRem

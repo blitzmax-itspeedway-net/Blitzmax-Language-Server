@@ -27,6 +27,7 @@ Type TConfig Extends TMap
             Publish( "log", "ERRR", "ERROR: "+exception )
         End Try
 		defaults()
+		'
     End Method
 
     Method defaults()
@@ -45,13 +46,13 @@ Type TConfig Extends TMap
     Method readconfig( filename:String )
 		Local file:TStream = ReadFile( filename )
 		If Not file Return
-		Local text:String
+		Local Text:String
 		While Not Eof(file)
-			text :+ ReadLine(file)+EOL
+			Text :+ ReadLine(file)+EOL
 		Wend
 		CloseStream file
 
-		J = JSON.Parse( text )
+		J = JSON.Parse( Text )
     End Method
 
 Rem
