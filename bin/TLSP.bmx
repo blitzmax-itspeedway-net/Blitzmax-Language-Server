@@ -10,9 +10,14 @@ Type TLSP Extends TObserver
 
     Field exitcode:Int = 0
 
-	Field initialized:Int = False   	' Set by "iniialized" message
+	Field initialised:Int = False   	' Set by "iniialized" message
     Field shutdown:Int = False      	' Set by "shutdown" message
 	Field setTrace:String = "off"		' Set by $/setTrace
+	
+	' Fields from initialise message
+	Field rooturi:String
+	
+	Field workspace:TWorkspace			' Current workspace
 	
     'Field client:TClient = New TClient()		' Moved to a global
 
@@ -34,7 +39,7 @@ Type TLSP Extends TObserver
 
     
 	' System
-	Field capabilities:JSON = New JSON()	' Empty object
+	'Field capabilities:JSON = New JSON()	' Empty object
 	Field handlers:TMap = New TMap
 	
     Method run:Int() Abstract
@@ -237,48 +242,129 @@ Rem 31/8/21 Depreciated
 		Return TMessageHandler( handlers.valueForkey( methd ) )
 	End Method
 EndRem
+	
+	Method sendPreInitialisedError:Object( id:String )
+		client.send( Response_Error:JSON( ERR_SERVER_NOT_INITIALIZED, "Server is not initialised", id ) )
+		Return Null
+	End Method
 
 	'	V0.3 EVENT HANDLERS
 	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
 	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
 	
-	Method onExit:TMessage( message:TMessage )
+	'	##### GENERAL MESSAGES #####
+
+	Method onExit:TMessage( message:TMessage )						' NOTIFICATION
 		publish( "log", "DBG", "EVENT onExit()" )
 		' QUIT MAIN LOOP
         AtomicSwap( QuitMain, False )
-		message.state = STATE_COMPLETE
-		'Return null
+		'message.state = STATE_COMPLETE
+		' NOTIFICATION: No response necessary
 	End Method
 	
-	Method onInitialized:TMessage( message:TMessage )
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialize
+	Method onInitialize:TMessage( message:TMessage )				' REQUEST
+		Local id:String = message.getid()
+		Local params:JSON = message.params
+		
+		' Client must extract capabilities etc.
+		client.initialise( params )			' Will extract "capabilities" and "clientInfo"
+		
+		' Workspace must extract rootURI and anything else of interest
+		'workspaces.initialise( params )		' Will extract "rootPath" and "workspaceFolders"
+		rooturi = params.find( "rootUri" ).toString()
+		Local workspaceFolders:JSON = params.find( "workspaceFolders" )
+		
+		' Standardise the rootUri path
+		rootUri = URI.parse( rootUri ).toString()
+		Publish( "log","DBG", "ROOTURI: "+rootUri ) 
+		
+		' Create a workspace and add it to the workspace manager
+		workspace = New TWorkspace( rootUri )
+		workspaces.add_workspace( rooturi, workspace )
+		
+		' Extract other information that we may need
+		' clientProcessID = params.find( "processId" )
+		' locale = params.find( "locale" )
+		' initializationOptions = params.find( "initializationOptions" )
+		' trace = params.find( "trace" )
+		
+		' Respond to the client
+		Local serverCapabilities:JSON = New JSON()
+		serverCapabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
+		serverCapabilities.set( "completionProvider|resolveProvider", "true" )
+		serverCapabilities.set( "definitionProvider", "true" )
+		'serverCapabilities.set( "hoverProvider", "true" )
+		'serverCapabilities.set( "signatureHelpProvider", [] )
+		'serverCapabilities.set( "declarationProvider", [] )
+		'serverCapabilities.set( "definitionProvider", [] )
+		'serverCapabilities.set( "typeDefinitionProvider", [] )
+		'serverCapabilities.set( "implementationProvider", [] )
+		'serverCapabilities.set( "referencesProvider", [] )
+		'serverCapabilities.set( "documentHighlightProvider", [] )
+		'serverCapabilities.set( "documentSymbolProvider", [] )
+		'serverCapabilities.set( "codeActionProvider", [] )
+		'serverCapabilities.set( "codeLensProvider", [] )
+		'serverCapabilities.set( "documentLinkProvider", [] )
+		'serverCapabilities.set( "colorProvider", [] )
+		'serverCapabilities.set( "documentFormattingProvider", [] )
+		'serverCapabilities.set( "documentRangeFormattingProvider", [] )
+		'serverCapabilities.set( "documentOnTypeFormattingProvider", [] )
+		'serverCapabilities.set( "renameProvider", [] )
+		'serverCapabilities.set( "foldingRangeProvider", [] )
+		'serverCapabilities.set( "executeCommandProvider", [] )
+		'serverCapabilities.set( "selectionRangeProvider", [] )
+		'serverCapabilities.set( "linkedEditingRangeProvider", [] )
+		'serverCapabilities.set( "callHierarchyProvider", [] )
+		'serverCapabilities.set( "monikerProvider", [] )
+		'serverCapabilities.set( "workspaceSymbolProvider", [] )
+		If client.has( "workspace|workspaceFolders" ) serverCapabilities.set( "workspace|workspaceFolders|support", True )
+		serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", True )
+		serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", "file" )
+		serverCapabilities.set( "workspace|fileOperations|willCreate|filters|scheme", "file" )
+		serverCapabilities.set( "workspace|fileOperations|didRename|filters|scheme", "file" )
+		serverCapabilities.set( "workspace|fileOperations|willRename|filters|scheme", "file" )
+		serverCapabilities.set( "workspace|fileOperations|didDelete|filters|scheme", "file" )
+		serverCapabilities.set( "workspace|fileOperations|willDelete|filters|scheme", "file" )
+		'serverCapabilities.set( "experimental", [] )
+		
+		Local InitializeResult:JSON = Response_OK( id )
+
+        'InitializeResult.set( "result|capabilities", lsp.capabilities )
+        InitializeResult.set( "result|capabilities", serverCapabilities )
+        InitializeResult.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
+
+		Publish( "log", "DEBG", "CAPABLITIES: "+serverCapabilities.Prettify() )
+
+		' SEND RESPONSE
+		client.send( InitializeResult )
+
+		' Enable all other message processing
+		initialised = True
+	End Method
+	
+	Method onInitialized:TMessage( message:TMessage )		' NOTIFICATION
 		publish( "log", "DBG", "EVENT onInitialized()" )
-		client.send( Response_Ok( message.getid() ) )
-		'
-		message.state = STATE_COMPLETE
 		
-		' Register for configuration changes
-		client.RegisterForConfigChanges()
+		' Dynamically Register Capabilities
+		client.RegisterForConfigChanges()		' Register for configuration changes
+		'message.state = STATE_COMPLETE
 		
-		Return Null
+		' NOTIFICATION: No response necessary
 	End Method 
 
-	Method onShutdown:TMessage( message:TMessage )
+	Method onShutdown:TMessage( message:TMessage )			' REQUEST
+		Local id:String = message.getid()
 		publish( "log", "DBG", "EVENT onShutdown()" )
 		shutdown = True
-
-		' Send response to Client
-        Local response:JSON = New JSON()
-        response.set( "id", message.getid() )
-        response.set( "jsonrpc", JSONRPC )
-        response.set( "result", "null" )
-		client.send( response )
 		'
-		message.state = STATE_COMPLETE
-        'Return Null
+		'message.state = STATE_COMPLETE
+		' SEND RESPONSE
+		client.send( Response_OK( id ) )
 	End Method
 	
 	' Trace notifications
-	Method OnSetTraceNotification:TMessage( message:TMessage )
+	Method OnSetTraceNotification:TMessage( message:TMessage )			' NOTIFICATION
 		publish( "log", "DBG", "EVENT onSetTraceNotification()" )
 		' Set our value to match params:
 		Local J:JSON = message.J.find( "params|value" )
@@ -286,11 +372,311 @@ EndRem
 			Publish( "log","DBG", J.prettify() )
 			setTrace = J.toString()
 		End If
-		' This is a notification, so we dont need a reply.
-		'Return Null
+		' NOTIFICATION: No response necessary
 	End Method
 	
-	Method did_change_workspace_folders:TMessage( message:TMessage )
+	'	##### WORKSPACE MESSAGES #####
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders
+	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWorkspaceFolders()~n"+message.J.Prettify() )
+	End Method
+
+	'https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
+	Method onDidChangeWorkspaceFolders:TMessage( message:TMessage )		' NOTIFICATION
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
+	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
+	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeConfiguration()~n"+message.J.Prettify() )
+	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
+	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
+		Local id:String = message.getid()
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWorkspaceConfiguraion()~n"+message.J.Prettify() )
+		client.send( Response_OK( id ) )
+	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
+	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeWatchedFiles()~n"+message.J.Prettify() )
+	End Method
+
+	'	##### TEST DOCUMENT SYNC #####
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didOpen
+	' textDocument/didOpen
+	Method onDidOpen:TMessage( message:TMessage )						' NOTIFICATION
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidOpen()~n"+message.J.Prettify() )
+		If Not message Or Not message.params
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
+			Return Null
+		End If
+		'
+		Local params:JSON = message.params
+		
+		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
+		'Local version:String = params.find( "textDocument|version" ).toString()
+
+Rem 
+		Local document:TDocument = TDocument( documents.valueforkey( uri ) )
+		If Not document
+			Local Text:String = params.find( "textDocument|text" ).tostring()
+			document = New TDocument( uri, Text )
+			documents.insert( uri, document )
+		End If
+
+		' NOTIFICATION: No response required.
+End Rem		
+		' Wake up the Document Thread
+		'PostSemaphore( semaphore )
+		'
+	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didChange
+	' textDocument/didChange
+	Method onDidChange:TMessage( message:TMessage )						' NOTIFICATION
+Rem
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didChange",
+  "params": {
+    "contentChanges": [
+      {
+        "range": {
+          "end": {
+            "character": 1,
+            "line": 9
+          },
+          "start": {
+            "character": 0,
+            "line": 9
+          }
+        },
+        "rangeLength": 1,
+        "text": ""
+      }
+    ],
+    "textDocument": {
+      "uri": "file: ///home/si/dev/sandbox/transpiler/visualiser.bmx",
+      "version": 9
+    }
+  }
+}
+End Rem
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChange()~n"+message.J.Prettify() )
 	End Method
 	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
+	' textDocument/willSave
+	Method onWillSave:TMessage( message:TMessage )						' NOTIFICATION
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWillSave()~n"+message.J.Prettify() )
+	End Method
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSaveWaitUntil
+	' textDocument/willSaveWaitUntil
+	Method onWillSaveWaitUntil:TMessage( message:TMessage )				' REQUEST
+		Local id:String = message.getid()
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWillSaveWaitUntil()~n"+message.J.Prettify() )
+		client.send( Response_OK( id ) )
+	End Method
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
+	' textDocument/didSave
+	Method onDidSave:TMessage( message:TMessage )						' NOTIFICATION
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidSave()~n"+message.J.Prettify() )
+	End Method
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didClose
+	' textDocument/didClose
+	Method onDidClose:TMessage( message:TMessage )						' NOTIFICATION
+Rem
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didClose",
+  "params": {
+    "textDocument": {
+      "uri": "file: ///home/si/dev/sandbox/transpiler/visualiser.bmx"
+    }
+  }
+}
+End Rem
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidClose()~n"+message.J.Prettify() )
+		Local params:JSON = message.params
+		
+		'Local fileuri:String = params.find("uri").toString()
+		'Local workspace:TWorkspace = Workspaces.findUri( fileuri )
+		'workspace.remove( fileuri )
+		
+	End Method
+
+	'	##### LANGUAGE FEATURES #####
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_completion
+	Method onCompletion:TMessage( message:TMessage )					' REQUEST
+Rem
+{
+  "id": 4,
+  "jsonrpc": "2.0",
+  "method": "textDocument/completion",
+  "params": {
+    "context": {
+      "triggerKind": 1
+    },
+    "position": {
+      "character": 1,
+      "line": 9
+    },
+    "textDocument": {
+      "uri": "file: ///home/si/dev/sandbox/transpiler/visualiser.bmx"
+    }
+  }
+}
+End Rem
+		Publish( "log", "DBG", "TLSP.onCompletion()~n"+message.J.stringify() )
+		If Not message Or Not message.J
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return Null
+		End If
+		logfile.info( "~n"+message.j.Prettify() )
+		'
+		' Generate response
+		Local response:JSON = New JSON()
+		Local items:JSON = New JSON( JSON_ARRAY )
+		Local item:JSON
+		response.set( "id", message.MsgID )
+		response.set( "jsonrpc", JSONRPC )
+		response.set( "result|isIncomplete", "true" )
+		response.set( "result|items", items )
+		
+		item = New JSON()
+		item.set( "label", "Scaremonger" )
+		item.set( "kind", CompletionItemKind._Text.ordinal() )
+		item.set( "data", 1 )	' INDEX
+		items.addlast( item )
+		
+		item = New JSON()
+		item.set( "label", "BlitzMax" )
+		item.set( "kind", CompletionItemKind._Text.ordinal() )
+		item.set( "data", 2 )	' INDEX
+		items.addlast( item )
+
+		' Reply to the client
+		client.send( response )
+	End Method
+	
+	'	Provide additional information for item selected in the completion list
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#completionItem_resolve
+	Method onCompletionResolve:TMessage( message:TMessage )					' REQUEST
+Rem
+{
+  "id": 5,
+  "jsonrpc": "2.0",
+  "method": "completionItem/resolve",
+  "params": {
+    "data": 1,
+    "insertTextFormat": 1,
+    "kind": 1,
+    "label": "Scaremonger"
+  }
+}
+End Rem
+		Publish( "log", "DBG", "TLSP.onCompletion()" )
+		If Not message Or Not message.J Or Not message.params
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return Null
+		End If
+		logfile.info( "~n"+message.j.Prettify() )
+		
+		' Extract requested information
+		Local data:Int = message.params.find("data").toint()
+		Local inserttextformat:Int = message.params.find("insertTextFormat").toint()
+		Local kind:Int = message.params.find("kind").toint()
+		Local label:String = message.params.find("label").toString()
+
+		
+		' Generate response
+		Local response:JSON = New JSON()
+		Local items:JSON = New JSON( JSON_ARRAY )
+		Local item:JSON
+		response.set( "id", message.MsgID )
+		response.set( "jsonrpc", JSONRPC )
+		response.set( "result|items", items )
+
+		' HERE WE SHOULD LOOK UP THE COMPLETION ITEM USING INDEX OF "data"
+		
+		If data=1	' SCAREMONGER
+				
+			item = New JSON()
+			item.set( "detail", "Scaremonger details" )
+			item.set( "documentation", "He is a very tall geek" )
+			items.addlast( item )
+
+		ElseIf data=2	' BLITZMAX
+
+			item = New JSON()
+			item.set( "detail", "Blitzmax detail" )
+			item.set( "documentation", "Blitzmax documentation" )
+			items.addlast( item )
+
+		End If
+		
+		' Reply to the client
+		client.send( response )  
+		
+		'Return message	' UNHANDLED EVENT  
+	End Method
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover
+	Method onHover:TMessage( message:TMessage )							' REQUEST
+		Local id:String = message.getid()
+		Publish( "log", "DBG", "TLSP.onDefinition()" )
+		If Not message Or Not message.J
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return Null
+		End If
+		logfile.info( "~n"+message.j.Prettify() )
+		' We have NOT dealt with it, so return message
+		client.send( Response_OK( id ) )
+	End Method
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_definition
+	' NOTE: Press F12
+	Method onDefinition:TMessage( message:TMessage )					' REQUEST
+Rem
+{
+  "id": 3,
+  "jsonrpc": "2.0",
+  "method": "textDocument/definition",
+  "params": {
+    "position": {
+      "character": 28,
+      "line": 0
+    },
+    "textDocument": {
+      "uri": "file: ///home/si/dev/sandbox/transpiler/visualiser.bmx"
+    }
+  }
+}
+End Rem
+		Local id:String = message.getid()
+		Publish( "log", "DBG", "TLSP.onDefinition()" )
+		If Not message Or Not message.J
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return Null
+		End If
+		logfile.info( "~n"+message.j.Prettify() )
+		client.send( Response_OK( id ) )
+	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
+	Method onDocumentSymbol:TMessage( message:TMessage )				' REQUEST
+		Local id:String = message.getid()
+		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWillSaveWaitUntil()~n"+message.J.Prettify() )
+		client.send( Response_OK( id ) )
+	End Method
+
 End Type

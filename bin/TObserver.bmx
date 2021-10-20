@@ -42,20 +42,26 @@ Type TEventHandler
 			'Local running:Int = False
 			
 			'publish( "log", "DBG", "# DISTRIBUTING: "+message.methd+ " ("+id+")")
-			Select id
+			Select id '		Defined in TMEssage
 
+			' INTERNAL IO
 			Case EV_receivedFromClient		;	Return onReceivedFromClient( message )
 			Case EV_sendToClient			;	Return onSendToClient( message )
 
+			' DOLLAR
+			Case EV_CancelRequest			;	Return onCancelRequest( message )
+			Case EV_SetTraceNotification	;	Return onSetTraceNotification( message )	
+
+			' GENERAL MESSAGES
 			Case EV_initialize				;	Return onInitialize( message )
 			Case EV_initialized				;	Return onInitialized( message )
 			Case EV_shutdown				;	Return onShutdown( message )
 			Case EV_exit					;	Return onExit( message )
 
-			Case EV_DidChangeConfiguration	;	Return onDidChangeConfiguration( message )
-
-			' COMPLETIONITEM/
-			Case EV_completionItem_resolve			;	Return onCompletionResolve( message )
+			' WORKSPACE/
+			Case EV_didChangeWorkspaceFolders	;	Return onDidChangeWorkspaceFolders( message )
+			Case EV_didChangeConfiguration		;	Return onDidChangeConfiguration( message )
+			Case EV_didChangeWatchedFiles		;	Return onDidChangeWatchedFiles( message )
 
 			' TEXTDOCUMENT/
 			Case EV_textDocument_didChange			;	Return onDidChange( message )
@@ -64,14 +70,13 @@ Type TEventHandler
 			Case EV_textDocument_willSaveWaitUntil	;	Return onWillSaveWaitUntil( message )
 			Case EV_textDocument_didSave			;	Return onDidSave( message )
 			Case EV_textDocument_didClose			;	Return onDidClose( message )
+
+			' LANGAGE FEATURES
+			Case EV_completionItem_resolve			;	Return onCompletionResolve( message )
 			Case EV_textDocument_definition			;	Return onDefinition( message )
 			Case EV_textDocument_completion			;	Return onCompletion( message )
 			Case EV_textDocument_documentSymbol		;	Return onDocumentSymbol( message )
 			
-			' DOLLAR/
-			Case EV_CancelRequest			;	Return onCancelRequest( message )
-			Case EV_SetTraceNotification	;	Return onSetTraceNotification( message )	
-
 			'Case NEXTONE			;	NEXTONE( message )
 			Default
 				publish( "log", "DBG", "# TEventHandler: Missing '"+message.methd+"'" )			
@@ -86,30 +91,54 @@ Type TEventHandler
 	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
 	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
 
+	' MESSAGE IO
 	Method onReceivedFromClient:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onSendToClient:TMessage( message:TMessage ) ; Return message ; End Method	
-	
+
+	' PROTOCOL INDEPENDENT IMPLEMENTATION ( $/ NOTIFCATIONS )
+	Method onCancelRequest:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onSetTraceNotification:TMessage( message:TMessage ) ; Return message ; End Method
+
+	' GENERAL MESSAGES
 	Method onExit:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onInitialize:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onInitialized:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onShutdown:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method onLogTrace:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method setTrace:TMessage( message:TMessage ) ; Return message ; End Method
 
-	Method onDidChangeConfiguration:TMessage( message:TMessage ) ; Return message ; End Method
+	' WINDOW
+	'Method onShowMessage:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method onMessageRequest:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method onShowDocument:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method onLogMessage:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method onProcessCreate:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method onProcessCancel:TMessage( message:TMessage ) ; Return message ; End Method
 	
+	' CLIENT
+	'Method onRegisterCapability:TMessage( message:TMessage ) ; Return message ; End Method
+	'Method onUnRegisterCapability:TMessage( message:TMessage ) ; Return message ; End Method
+	
+	' WORKSPACE EVENTS
+	Method onDidChangeWorkspaceFolders:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onDidChangeConfiguration:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onDidChangeWatchedFiles:TMessage( message:TMessage ) ; Return message ; End Method
+
+	' TEXT SYNCHRONISATION
 	Method onDidChange:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onDidOpen:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onWillSave:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onWillSaveWaitUntil:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onDidSave:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onDidClose:TMessage( message:TMessage ) ; Return message ; End Method
+	
+	'LANGUAGE FEATURES
 	Method onDefinition:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onCompletion:TMessage( message:TMessage ) ; Return message ; End Method
 	Method onCompletionResolve:TMessage( message:TMessage ) ; Return message ; End Method
-	Method onDocumentSymbol:TMessage( message:TMessage ) ; Return message ; End Method
+	Method onDocumentSymbol:TMessage( message:TMessage ) ; Return message ; End Method	
 	
-	Method onCancelRequest:TMessage( message:TMessage ) ; Return message ; End Method
-	Method onSetTraceNotification:TMessage( message:TMessage ) ; Return message ; End Method
-	
+	' EVENT HOOK HANDLER
 	Function EventHandler:Object( id:Int, data:Object, context:Object )
 'DebugStop
 		Try

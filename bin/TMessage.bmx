@@ -5,28 +5,38 @@
 ' EVENT TYPES
 Global EV_UNKNOWN:Int = AllocUserEventId( "UNKNOWN" )
 
+' INTERNAL IO
 Global EV_receivedFromClient:Int = AllocUserEventId( "ReceivedFromClient" )
 Global EV_sendToClient:Int = AllocUserEventId( "SendToClient" )
 
+' DOLLAR
+Global EV_CancelRequest:Int = AllocUserEventId( "$/cancelRequest" )
+Global EV_SetTraceNotification:Int = AllocUserEventId( "$/setTraceNotification" )
+
+' GENERAL MESSAGES
 Global EV_initialize:Int = AllocUserEventId( "initialize" )
 Global EV_initialized:Int = AllocUserEventId( "initialized" )
 Global EV_shutdown:Int = AllocUserEventId( "shutdown" )
 Global EV_exit:Int = AllocUserEventId( "exit" )
+'Global EV_logTrace:Int = AllocUserEventId( "logTrace" )
+'Global EV_setTrace:Int = AllocUserEventId( "setTrace" )
 
-Global EV_CancelRequest:Int = AllocUserEventId( "$/cancelRequest" )
-Global EV_SetTraceNotification:Int = AllocUserEventId( "$/setTraceNotification" )
-
+' WORKSPACE
+Global EV_workspace_workspaceFolders:Int = AllocUserEventId( "workspace/workspaceFolders" )
+Global EV_didChangeWorkspaceFolders:Int = AllocUserEventId( "didChangeWorkspaceFolders" )
+Global EV_didChangeWatchedFiles:Int = AllocUserEventId( "didChangeWatchedFiles" )
 Global EV_DidChangeConfiguration:Int = AllocUserEventId( "didChangeConfiguration" )
 
-Global EV_completionItem_resolve:Int = AllocUserEventId( "completionItem/resolve" )
-
-' TEXTDOCUMENT
+' TEXT SYNCHRONISATION
 Global EV_textDocument_didChange:Int = AllocUserEventId( "textDocument/didChange" )
 Global EV_textDocument_didOpen:Int = AllocUserEventId( "textDocument/didOpen" )
 Global EV_textDocument_willSave:Int = AllocUserEventId( "textDocument/willSave" )
 Global EV_textDocument_willSaveWaitUntil:Int = AllocUserEventId( "textDocument/willSaveWaitUntil" )
 Global EV_textDocument_didSave:Int = AllocUserEventId( "textDocument/didSave" )
 Global EV_textDocument_didClose:Int = AllocUserEventId( "textDocument/didClose" )
+
+' LANGUAGE FEATURES
+Global EV_completionItem_resolve:Int = AllocUserEventId( "completionItem/resolve" )
 Global EV_textDocument_definition:Int = AllocUserEventId( "textDocument/definition" )
 Global EV_textDocument_completion:Int = AllocUserEventId( "textDocument/completion" )
 Global EV_textDocument_documentSymbol:Int = AllocUserEventId( "textDocument_documentSymbol/completion" )
@@ -60,16 +70,28 @@ Type TMessage Extends TEvent
 		'Publish( "log", "DBG", "** TMSG: '"+methd+"'" )
 		Select methd
 		
+		' MESSAGE IO
 		Case "SEND-TO-CLIENT" 					; id = EV_sendToClient
 		Case "RECEIVE-FROM-CLIENT" 				; id = EV_receivedFromClient
 		
+		' DOLLAR NOTIFICATIONS
+		Case "$/cancelRequest"					; id = EV_cancelRequest
+		Case "$/setTraceNotification"			; id = EV_setTraceNotification
+
+		' GENERAL MESSAGES
 		Case "initialize" 						; id = EV_initialize
 		Case "initialized" 						; id = EV_initialized
 		Case "shutdown" 						; id = EV_shutdown
 		Case "exit" 							; id = EV_exit
 
-		Case "completionItem/resolve"			; id = EV_completionItem_resolve
+		' WORKSPACE
+		Case "didChangeWorkspaceFolders"		; id = EV_didChangeWorkspaceFolders
+		Case "didChangeWatchedFiles"			; id = EV_didChangeWatchedFiles
+		Case "didChangeConfiguration"			; id = EV_DidChangeConfiguration
 		
+		Case "workspace/workspaceFolders"		; id = EV_workspace_workspaceFolders
+
+		' TEXT SYNCHRONISATION
 		Case "textDocument/didChange" 			; id = EV_textDocument_didChange
 		Case "textDocument/didOpen" 			; id = EV_textDocument_didOpen
 		Case "textDocument/willSave" 			; id = EV_textDocument_willSave
@@ -77,13 +99,12 @@ Type TMessage Extends TEvent
 		Case "textDocument/didSave" 			; id = EV_textDocument_didSave
 		Case "textDocument/didClose" 			; id = EV_textDocument_didClose	
 		
+		' LANGUAGE FEATURES
+		Case "completionItem/resolve"			; id = EV_completionItem_resolve
 		Case "textDocument/completion"			; id = EV_textDocument_completion
 		Case "textDocument/definition"			; id = EV_textDocument_definition
 		Case "textDocument/documentSymbol"		; id = EV_textDocument_documentSymbol
-				
-		Case "$/cancelRequest"					; id = EV_cancelRequest
-		Case "$/setTraceNotification"			; id = EV_setTraceNotification
-		
+						
 		'Case "NEXTONE" 		; id = NEXTONE
 		Default
 			Publish( "log", "DBG", "** TMessage: UNKNOWN EVENT '"+methd+"'" )

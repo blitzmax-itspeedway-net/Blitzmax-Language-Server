@@ -129,7 +129,7 @@ Type TPosition
 	End Method
 	
 	Method New( token:TToken )
-		If Not token return
+		If Not token Return
 		Self.line = token.line
 		Self.character = token.pos
 	End Method
@@ -162,7 +162,6 @@ End Type
 ' BASED ON:
 '	https://github.com/microsoft/vscode-uri/blob/6fc6458aba65ea67458897d3331a37784c08e590/src/uri.ts#L589
 
-
 Type URI
 	'	  foo://example.com:8042/over/there?name=ferret#nose
 	'	  \_/   \______________/\_________/ \_________/ \__/
@@ -174,6 +173,7 @@ Type URI
 	
 	Const REGEX:String = "^(([^:/?#]+?):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
 	Field scheme:String, authority:String, path:String, query:String, fragment:String
+	Field formatted:String	' cached
 	
 	Method New( value:String )
 		parse( value )
@@ -185,6 +185,53 @@ Type URI
 		Self.path = path
 		Self.query = query
 		Self.fragment = fragment
+	End Method
+	
+	Method toString:String()
+		If formatted ; Return formatted
+		
+		If scheme ; formatted :+ scheme + ":"
+		If authority Or scheme = "file" ; formatted :+ "//"
+		If authority
+			Local index:Int = Instr( authority, "@" )
+			If index>0
+				Local user:String = authority[..index]
+				authority = authority[(index+1)..]
+				index = Instr( user, ":" )
+				If index>0
+					formatted :+ user
+				Else
+					formatted :+ user[..index] + ":" + user[index..]
+				End If
+				formatted :+ "@"
+			End If
+			authority = Lower( authority )
+			index = Instr( authority, ":" )
+			If index>0
+				formatted :+ authority
+			Else
+				formatted :+ authority[..index] + authority[index..]
+			End If
+		End If
+		If path  
+			' Lower-Case windows drive letters in /C:/fff Or C:/fff
+			If path.length >= 3 And path[0..1] = "/" And path[2..3] = ":"
+				Local code:String = path[1..2]
+				If code >= "A" And code <= "Z" ; path = "/"+Lower(code)+":"+path[3..]
+			ElseIf path.length >= 2 And path[1..2] = ":"
+				Local code:String = path[0..1]
+				If code >= "A" And code <= "Z" ; path = Lower(code)+":"+path[2..]
+			End If
+			' Encode the rest of the path
+			formatted :+ encoder(path, True)
+		End If
+		If query ; formatted :+ "?" + encoder(query, False)
+		If fragment ; formatted :+ "#" + fragment
+		Return formatted		
+	End Method
+	
+	Method encoder:String( Text:String, allowslash:Int = False )
+		Return Text
 	End Method
 	
 	Function parse:URI( value:String )

@@ -18,13 +18,14 @@ Type TDocumentMGR Extends TEventHandler
 		listen()
 		'
 		'	REGISTER CAPABILITIES
+		' 20/10/21, Moved to TLSP.onInitialize()
 		
 		' Incremental document sync
-		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
+		'lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
 		' Register for code completion events
-		lsp.capabilities.set( "definitionProvider", "true" )
+		'lsp.capabilities.set( "definitionProvider", "true" )
 		' Register for definition provide events
-		lsp.capabilities.set( "completionProvider|resolveProvider", "true" )
+		'lsp.capabilities.set( "completionProvider|resolveProvider", "true" )
 		'
 	End Method
 
@@ -92,154 +93,7 @@ Type TDocumentMGR Extends TEventHandler
 	'	Message.Extra contains the original JSON being sent
 	'	Message.Params contains the parameters
 	
-	Method onDidChange:TMessage( message:TMessage )
-Publish( "log", "DBG", "TDocumentMGR.onDidChange()" )
-		'Return Null
-	End Method
-	
-	Method onDidOpen:TMessage( message:TMessage )
-Publish( "log", "DBG", "TDocumentMGR.onDidOpen()" )
-		If Not message Or Not message.params
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
-			Return Null
-		End If
-		'
-		Local params:JSON = message.params
-		
-		Local uri:String  = params.find( "textDocument|uri" ).tostring()
-		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
-		'Local version:String = params.find( "textDocument|version" ).toString()
 
-		Local document:TDocument = TDocument( documents.valueforkey( uri ) )
-		If Not document
-			Local Text:String = params.find( "textDocument|text" ).tostring()
-			document = New TDocument( uri, Text )
-			documents.insert( uri, document )
-		End If
-
-		' NOTIFICATION: No response required.
-		' client.send( Response_ok() )
-		
-		' Wake up the Document Thread
-		PostSemaphore( semaphore )
-		'
-	End Method
-	
-	Method onWillSave:TMessage( message:TMessage )
-Publish( "log", "DBG", "TDocumentMGR.onWillSave()" )
-
-	End Method
-	
-	Method onWillSaveWaitUntil:TMessage( message:TMessage )
-Publish( "log", "DBG", "TDocumentMGR.onWillSaveWaitUntil()" )
-
-	End Method
-	
-	Method onDidSave:TMessage( message:TMessage )
-Publish( "log", "DBG", "TDocumentMGR.onDidSave()" )
-
-	End Method
-	
-	Method onDidClose:TMessage( message:TMessage )
-Publish( "log", "DBG", "TDocumentMGR.onDidClose()" )
-
-	End Method
-
-	Method onDefinition:TMessage( message:TMessage )
-		Publish( "log", "DBG", "TDocumentMGR.onDefinition()" )
-		If Not message Or Not message.J
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-			Return Null
-		End If
-		logfile.info( "~n"+message.j.Prettify() )
-		' We have NOT dealt with it, so return message
-		Return message
-	End Method
-	
-	Method onCompletion:TMessage( message:TMessage )
-		Publish( "log", "DBG", "TDocumentMGR.onCompletion()" )
-		If Not message Or Not message.J
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-			Return Null
-		End If
-		logfile.info( "~n"+message.j.Prettify() )
-		'
-		' Generate response
-		Local response:JSON = New JSON()
-		Local items:JSON = New JSON( JSON_ARRAY )
-		Local item:JSON
-		response.set( "id", message.MsgID )
-		response.set( "jsonrpc", JSONRPC )
-		response.set( "result|isIncomplete", "true" )
-		response.set( "result|items", items )
-		
-		item = New JSON()
-		item.set( "label", "Scaremonger" )
-		item.set( "kind", CompletionItemKind._Text.ordinal() )
-		item.set( "data", 1 )	' INDEX
-		items.addlast( item )
-		
-		item = New JSON()
-		item.set( "label", "BlitzMax" )
-		item.set( "kind", CompletionItemKind._Text.ordinal() )
-		item.set( "data", 2 )	' INDEX
-		items.addlast( item )
-
-		' Reply to the client
-		client.send( response )
-	End Method
-	
-	'	Provide additional information for item selected in the completion list
-	Method onCompletionResolve:TMessage( message:TMessage )
-		Publish( "log", "DBG", "TDocumentMGR.onCompletion()" )
-		If Not message Or Not message.J Or Not message.params
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-			Return Null
-		End If
-		logfile.info( "~n"+message.j.Prettify() )
-		
-		' Extract requested information
-		Local data:Int = message.params.find("data").toint()
-		Local inserttextformat:Int = message.params.find("insertTextFormat").toint()
-		Local kind:Int = message.params.find("kind").toint()
-		Local label:String = message.params.find("label").toString()
-
-		
-		' Generate response
-		Local response:JSON = New JSON()
-		Local items:JSON = New JSON( JSON_ARRAY )
-		Local item:JSON
-		response.set( "id", message.MsgID )
-		response.set( "jsonrpc", JSONRPC )
-		response.set( "result|items", items )
-
-		' HERE WE SHOULD LOOK UP THE COMPLETION ITEM USING INDEX OF "data"
-		
-		If data=1	' SCAREMONGER
-				
-			item = New JSON()
-			item.set( "detail", "Scaremonger details" )
-			item.set( "documentation", "He is a very tall geek" )
-			items.addlast( item )
-
-		ElseIf data=2	' BLITZMAX
-
-			item = New JSON()
-			item.set( "detail", "Blitzmax detail" )
-			item.set( "documentation", "Blitzmax documentation" )
-			items.addlast( item )
-
-		End If
-		
-		' Reply to the client
-		client.send( response )  
-		
-		'Return message	' UNHANDLED EVENT  
-	End Method
-	
-	Method onDocumentSymbol:TMessage( message:TMessage )
-	Return message
-	End Method
 	
 End Type
 

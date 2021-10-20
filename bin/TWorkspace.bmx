@@ -2,32 +2,19 @@
 '	WORKSPACE MANAGER
 '	(c) Copyright Si Dunford, October 2021, All Rights Reserved
 
-Type TWorkspaces
+Type TWorkspaces Extends TEventHandler
 
 	Global list:TMap = New TMap()
-	
-'TODO: Need to generate a UUID here:
-	field ChangeNotificationID:String = "00-123456-123456-abcdef"
-	
-	Method New()
-		' Incremental document sync
-		lsp.capabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
-		' Register for code completion events
-		lsp.capabilities.set( "definitionProvider", "true" )
-		' Register for definition provide events
-		lsp.capabilities.set( "completionProvider|resolveProvider", "true" )
 		
-'TODO: Only enable is client supports them
-		' Register for Workspace support
-' NEED TO SEND THIS - IT IS NOT A MESSAGE:
-		'lsp.capabilities.set( "workspace|workspaceFolders|supported", "true" )
-		'lsp.capabilities.set( "workspace|workspaceFolders|changeNotifications", ChangeNotificationID )
-		
-		'lsp.capabilities.set( "workspace|workspaceFolders|supported", "true" )
-		
-				
-
+	Method add_workspace( uri:String, workspace:TWorkspace )
+		list[ uri ] = workspace
 	End Method
+	
+	' Called duriong "initialise" message
+	'Method initialise( params:JSON )
+	'	' Need to extract "rootPath" and "workspaceFolders"
+	'	publish( "log", "DBG", "NOT IMPLEMENTED:~n* TWorkSpaces.initialise()" )
+	'End Method
 	
 	' workspace/did_change_workspace_folders
 	Function didChangeWorkspaceFolders( event:String )	':JSON )

@@ -3,9 +3,13 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
 Type TClient Extends TMessageQueue
-	Field capabilities:JSON = New JSON()
 	Field documentSettings:JSON = New JSON()
 	Field initialized:Int = False
+	
+	' Fields taken from "initialize" message
+	Field clientname:String = "Unknown"
+	Field clientver:String = ""
+	Field capabilities:JSON = New JSON()
 	
 	Method New()
 		listen()
@@ -22,6 +26,37 @@ Type TClient Extends TMessageQueue
 	
 	Method Close()
 		unlisten()
+	End Method
+	
+	'Method onInitialize:TMessage( message:TMessage )
+	Method initialise( params:JSON )
+		publish( "log", "DBG", "TClient.initialize()" )
+		initialized = True
+		
+		If Not params Return
+		'logfile.write( "PARAMS EXIST" )
+
+		'Local id:String = message.getid()
+		'Local params:JSON = message.params
+		'publish( "log", "DBG", "MESSAGE~n"+params.Prettify() )
+		
+		' Extract Client Capabilities
+		capabilities = params.find( "capabilities" )
+		'publish( "log", "DBG", "CLIENT CAPABILITIES~n"+capabilities.Prettify() )
+		
+        ' Save Client information
+		Local clientinfo:JSON = params.find( "clientInfo" )    ' VSCODE=clientInfo
+		If clientinfo
+			'logfile.write( "CLIENT INFO EXISTS" )
+			clientname = clientinfo["name"]
+			clientver = clientinfo["version"]
+			logfile.info "CLIENT INFORMATION:"
+			logfile.info "  NAME:    "+clientname
+			logfile.info "  VERSION: "+clientver
+		Else
+			logfile.info( "NO CLIENT INFO EXISTS" )
+		End If
+		
 	End Method
 	
 	Method getDocumentSettings:JSON( resource:String )
@@ -70,80 +105,6 @@ Type TClient Extends TMessageQueue
 		Else
 			' Fallback to global (or local) settings
 		End If
-	End Method
-
-	'	V0.3 EVENT HANDLERS
-	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
-	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
-
-	Method onInitialize:TMessage( message:TMessage )
-		publish( "log", "DBG", "TClient.onInitialize()" )
-		initialized = True
-		Local id:String = message.getid()
-		Local params:JSON = message.params
-		'publish( "log", "DBG", "MESSAGE~n"+params.Prettify() )
-		
-		' Extract Client Capabilities
-		capabilities = params.find( "capabilities" )
-		'publish( "log", "DBG", "CLIENT CAPABILITIES~n"+capabilities.Prettify() )
-		
-        ' Save Client information
-        If params
-            'logfile.write( "PARAMS EXIST" )
-            'if params.isvalid() logfile.write( "PARAMS IS VALID" )
-            Local clientinfo:JSON = params.find( "clientInfo" )    ' VSCODE=clientInfo
-            If clientinfo
-                'logfile.write( "CLIENT INFO EXISTS" )
-                Local clientname:String = clientinfo["name"]
-                Local clientver:String = clientinfo["version"]
-                logfile.info "CLIENT INFORMATION:"
-				logfile.info "  NAME:    "+clientname
-				logfile.info "  VERSION: "+clientver
-            Else
-                logfile.info( "NO CLIENT INFO EXISTS" )
-            End If
-
-        End If
-
-        ' RESPONSE 
-
-		'V0.2, Capabilities are managed by the LSP
-		'Local cap:JSON = lsp.capabilities
-
-		logfile.info( "PUBLISHING SERVER CAPABILITIES:" )
-		logfile.info( "  "+lsp.capabilities.stringify() )
-		
-        Local response:JSON = New JSON()
-        response.set( "id", id )
-        response.set( "jsonrpc", JSONRPC )
-        'response.set( "result|capabilities", [["hover","true"]] )
-        'response.set( "result|capabilities", [["hoverProvider","true"]] )
-
-        response.set( "result|capabilities", lsp.capabilities )
-
-        response.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
-
-		'Publish( "log", "DEBG", "RESULT: "+response.stringify() )
-
-		send( response )
-		'
-		message.state = STATE_COMPLETE
-		
-        'Return null
-
-	End Method
-
-	Method onDidChangeConfiguration:TMessage( message:TMessage )
-		publish( "log", "DBG", "TClient.onDidChangeConfiguration()~n"+message.J.Prettify() )
-		'documentSettings = message.value
-	End Method
-
-	Method onDidChangeWorkspaceFolders:TMessage( message:TMessage )
-		publish( "log", "DBG", "TClient.onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
-	End Method
-
-	Method onDidChangeWatchedFiles:TMessage( message:TMessage )
-		publish( "log", "DBG", "TClient.onDidChangeWatchedFiles()~n"+message.J.Prettify() )
 	End Method
 
 End Type
