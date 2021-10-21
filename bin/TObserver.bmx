@@ -36,6 +36,13 @@ Type TEventHandler
 		
 	Method distribute:TMessage( id:Int, message:TMessage )
 'DebugStop
+	
+		' Dont bother sending if the message is invalid
+		If Not message Or Not message.J
+			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+			Return null
+		End If
+		
 		Try
 			Local this:TTypeId = TTypeId.ForObject(Self)
 			'publish( "log", "DBG", "# "+this.name+".distribute("+message.methd+")" )		

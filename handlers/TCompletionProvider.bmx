@@ -4,6 +4,8 @@
 
 '	completionProvider (NOT IMPLEMENTED)
 
+' LEGACY VERSION
+
 Type TCompletionProvider Extends TMessageHandler
 
 	Method New()
@@ -27,3 +29,6 @@ Type TCompletionProvider Extends TMessageHandler
 	End Method
 
 End Type
+
+
+

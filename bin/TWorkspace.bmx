@@ -5,49 +5,18 @@
 Type TWorkspaces Extends TEventHandler
 
 	Global list:TMap = New TMap()
-		
-	Method add_workspace( uri:String, workspace:TWorkspace )
+	
+	' Add a Workspace
+	Method add( uri:String, workspace:TWorkspace )
 		list[ uri ] = workspace
 	End Method
 	
-	' Called duriong "initialise" message
-	'Method initialise( params:JSON )
-	'	' Need to extract "rootPath" and "workspaceFolders"
-	'	publish( "log", "DBG", "NOT IMPLEMENTED:~n* TWorkSpaces.initialise()" )
-	'End Method
-	
-	' workspace/did_change_workspace_folders
-	Function didChangeWorkspaceFolders( event:String )	':JSON )
-		
-		'added = event.find( "added" )
-		'removed = event.find( "removed" )
-		
-		Rem
-		for local item:string = eachin removed
-			list.remove( item )
-		next
-		
-		for local item:string = eachin added
-			local file_uri:string = item.find("uri")
-			list.insert( 
-			
-			' workspaceconfig = config.config( file_uri, default_options )
-			list.insert( file_uri, new TWorkspace( file_uri )
-		next
-		
-		
-		End Rem
-		
-	End Function
-	
-	Function didChangeConfiguration( event:String )
-	End Function
-	
-	Function didChangeWatchedFiles( event:String )
-	End Function
-	
+	' Remove a Workspace
+	Method remove( uri:String )
+		list.remove( uri )
+	End Method
 
-	' Find a workspace for a given file
+	' Find a workspace
 	Method get:TWorkspace( file_uri:String )
 		If Not file_uri ; Return Null
 		
@@ -64,6 +33,12 @@ Type TWorkspaces Extends TEventHandler
 		
 	End Method
 	
+	' Retrieve the first workspace
+	Method getFirst:TWorkspace()
+		For Local workspace:TWorkspace = EachIn list
+			Return workspace
+		Next
+	End Method
 
 End Type
 
@@ -72,22 +47,29 @@ Type TWorkspace
 	Field workspace:URI
 
 	Field documents:TMap
-	Field rooturi:String
+	Field uri:String
 
-	Method New( rooturi:String )
-		Self.rooturi = rooturi
+	Method New( uri:String )
+		Self.uri = uri
 		documents = New TMap()
-		
-		
-		
 	End Method
 
 	Method all:TMap()
 		Return documents
 	End Method
+
+	' Add a document
+	Method document_add( doc_uri:String, document:TTextDocument )
+		documents[ doc_uri ] = document
+	End Method
+	
+	' Remove a document
+	Method document_remove( doc_uri:String )
+		documents.remove( doc_uri )
+	End Method
 	
 	' Return or Create a given document
-	Method get:TTextDocument( doc_uri:String )
+	Method document_get:TTextDocument( doc_uri:String )
 		Local document:TTextDocument = TTextDocument( documents.valueForKey( doc_uri ) )
 		If document ; Return document
 		'Return CreateDocument( doc_uri )

@@ -15,9 +15,8 @@ Type TLSP Extends TObserver
 	Field setTrace:String = "off"		' Set by $/setTrace
 	
 	' Fields from initialise message
-	Field rooturi:String
-	
-	Field workspace:TWorkspace			' Current workspace
+	Field rooturi:String					' Root URI
+	Field rootworkspace:TWorkspace			' Root workspace
 	
     'Field client:TClient = New TClient()		' Moved to a global
 
@@ -280,8 +279,8 @@ EndRem
 		Publish( "log","DBG", "ROOTURI: "+rootUri ) 
 		
 		' Create a workspace and add it to the workspace manager
-		workspace = New TWorkspace( rootUri )
-		workspaces.add_workspace( rooturi, workspace )
+		rootworkspace = New TWorkspace( rootUri )
+		workspaces.add( rooturi, rootworkspace )
 		
 		' Extract other information that we may need
 		' clientProcessID = params.find( "processId" )
@@ -385,11 +384,63 @@ EndRem
 	'https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
 	Method onDidChangeWorkspaceFolders:TMessage( message:TMessage )		' NOTIFICATION
 		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
+		
+		Local params:JSON = message.params
+		Local added:JSON[] = params.find( "added" ).toArray()
+		Local removed:JSON[] = params.find( "remove" ).toArray()
+		
+		For Local item:JSON = EachIn added
+			Local uri:String = item.find( "uri" ).toString()
+			If uri
+				Workspaces.add( uri, New TWorkspace( uri ) )
+			End If
+		Next
+
+		For Local item:JSON = EachIn removed
+			Local uri:String = item.find( "uri" ).toString()
+			If uri ; Workspaces.remove( uri )
+			
+			' Check if we just removed the root workspace
+			If rooturi = uri
+				
+				If added.length >0
+					' Use the newly added record as new root uri
+					rooturi = added[0].find( "uri" ).toString()
+					rootworkspace = Workspaces.get( rooturi )
+				Else
+					Local workspace:TWorkspace = Workspaces.getfirst()
+					If Not workspace ; Continue	' This seems to only occur when server shutting down
+					rooturi = workspace.uri
+					rootworkspace = workspace
+				End If
+				
+			End If
+		Next
+		If Not rootworkspace Return Null
+		
+		' Check if any documents in the root workspace should be moved
+		For Local document:TTextDocument = EachIn rootworkspace.all()
+			Local workspace:TWorkspace = Workspaces.get( document.uri )
+			If Not workspace ; Continue
+			' Candidate found, so move it...
+			workspace.document_add( document.uri, document )
+			rootworkspace.document_remove( document.uri )
+		Next
+
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
 	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
 		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeConfiguration()~n"+message.J.Prettify() )
+		Local params:JSON = message.params
+		
+		'Local workspace:TWorkspace = Workspaces.findUri( uri )
+		'workspace.config_update( cfg )
+		
+		' Lint all files in workspace using new config settings
+		' foreach document in workspace
+		'	document.lint()
+		' next
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
@@ -402,6 +453,26 @@ EndRem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
 	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
 		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeWatchedFiles()~n"+message.J.Prettify() )
+		
+		Local params:JSON = message.params
+		
+		' PSUDOCODE UNTIL I SEE A REAL MESSAGE
+		
+		' local changes:JSON[] = params.find( "changes" ).toArray()
+		' for local change:JSON = eachin changes
+		'	local uri:String = change.find( "uri" )
+		'	local extension:string = extractExt( uri )
+		'	Local workspace:TWorkspace = Workspaces.findUri( uri )
+		'	CAN BE BMX OR CONFIGURATION
+		'	select extension
+		'	case "bmx"
+		'		add, remove or delete!
+		'	case "???" ' Will this be an xml or json etc?
+		'	end select
+		'		
+		
+		'workspace.config_update( cfg )
+		
 	End Method
 
 	'	##### TEST DOCUMENT SYNC #####
@@ -416,24 +487,21 @@ EndRem
 		End If
 		'
 		Local params:JSON = message.params
-		
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
 		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
-		'Local version:String = params.find( "textDocument|version" ).toString()
-
-Rem 
-		Local document:TDocument = TDocument( documents.valueforkey( uri ) )
-		If Not document
-			Local Text:String = params.find( "textDocument|text" ).tostring()
-			document = New TDocument( uri, Text )
-			documents.insert( uri, document )
-		End If
-
-		' NOTIFICATION: No response required.
-End Rem		
+		Local Text:String = params.find( "textDocument|text" ).toString()
+		Local version:String = params.find( "textDocument|version" ).toString()
+		
+		'local document:TFullTextDocument = new TFullTextDocument( uri, text, version )
+		'Local workspace:TWorkspace = Workspaces.findUri( uru )
+		'workspace.document_add( uri, document )
+		
+		' Run Linter
+		'lint( document )
+	
 		' Wake up the Document Thread
 		'PostSemaphore( semaphore )
-		'
+		' NOTIFICATION: No response required.
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didChange
@@ -468,6 +536,18 @@ Rem
 }
 End Rem
 		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChange()~n"+message.J.Prettify() )
+		
+		Local params:JSON = message.params
+		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
+		Local Text:String = params.find( "textDocument|text" ).toString()
+		Local contentChanges:JSON[] = params.find( "contentChanges" ).toArray()
+
+		'Local workspace:TWorkspace = Workspaces.findUri( uri )
+		'workspace.document_update( uri, contentChanges )	
+
+		' Run Linter
+		'lint( document )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
@@ -488,6 +568,11 @@ End Rem
 	' textDocument/didSave
 	Method onDidSave:TMessage( message:TMessage )						' NOTIFICATION
 		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidSave()~n"+message.J.Prettify() )
+		Local params:JSON = message.params
+		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+		'local document:TFullTextDocument = Workspaces.document_get( uri )
+		' Run Linter
+		'lint( document )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didClose
@@ -506,134 +591,25 @@ Rem
 End Rem
 		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidClose()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
-		
-		'Local fileuri:String = params.find("uri").toString()
-		'Local workspace:TWorkspace = Workspaces.findUri( fileuri )
-		'workspace.remove( fileuri )
+
+		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+		'Local workspace:TWorkspace = Workspaces.findUri( uri )
+		'workspace.document.remove( uri )
 		
 	End Method
 
 	'	##### LANGUAGE FEATURES #####
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_completion
-	Method onCompletion:TMessage( message:TMessage )					' REQUEST
-Rem
-{
-  "id": 4,
-  "jsonrpc": "2.0",
-  "method": "textDocument/completion",
-  "params": {
-    "context": {
-      "triggerKind": 1
-    },
-    "position": {
-      "character": 1,
-      "line": 9
-    },
-    "textDocument": {
-      "uri": "file: ///home/si/dev/sandbox/transpiler/visualiser.bmx"
-    }
-  }
-}
-End Rem
-		Publish( "log", "DBG", "TLSP.onCompletion()~n"+message.J.stringify() )
-		If Not message Or Not message.J
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-			Return Null
-		End If
-		logfile.info( "~n"+message.j.Prettify() )
-		'
-		' Generate response
-		Local response:JSON = New JSON()
-		Local items:JSON = New JSON( JSON_ARRAY )
-		Local item:JSON
-		response.set( "id", message.MsgID )
-		response.set( "jsonrpc", JSONRPC )
-		response.set( "result|isIncomplete", "true" )
-		response.set( "result|items", items )
-		
-		item = New JSON()
-		item.set( "label", "Scaremonger" )
-		item.set( "kind", CompletionItemKind._Text.ordinal() )
-		item.set( "data", 1 )	' INDEX
-		items.addlast( item )
-		
-		item = New JSON()
-		item.set( "label", "BlitzMax" )
-		item.set( "kind", CompletionItemKind._Text.ordinal() )
-		item.set( "data", 2 )	' INDEX
-		items.addlast( item )
-
-		' Reply to the client
-		client.send( response )
-	End Method
+	Method onCompletion:TMessage( message:TMessage )		; 	bls_textDocument_completion( message )	; 	End Method
 	
-	'	Provide additional information for item selected in the completion list
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#completionItem_resolve
-	Method onCompletionResolve:TMessage( message:TMessage )					' REQUEST
-Rem
-{
-  "id": 5,
-  "jsonrpc": "2.0",
-  "method": "completionItem/resolve",
-  "params": {
-    "data": 1,
-    "insertTextFormat": 1,
-    "kind": 1,
-    "label": "Scaremonger"
-  }
-}
-End Rem
-		Publish( "log", "DBG", "TLSP.onCompletion()" )
-		If Not message Or Not message.J Or Not message.params
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-			Return Null
-		End If
-		logfile.info( "~n"+message.j.Prettify() )
-		
-		' Extract requested information
-		Local data:Int = message.params.find("data").toint()
-		Local inserttextformat:Int = message.params.find("insertTextFormat").toint()
-		Local kind:Int = message.params.find("kind").toint()
-		Local label:String = message.params.find("label").toString()
-
-		
-		' Generate response
-		Local response:JSON = New JSON()
-		Local items:JSON = New JSON( JSON_ARRAY )
-		Local item:JSON
-		response.set( "id", message.MsgID )
-		response.set( "jsonrpc", JSONRPC )
-		response.set( "result|items", items )
-
-		' HERE WE SHOULD LOOK UP THE COMPLETION ITEM USING INDEX OF "data"
-		
-		If data=1	' SCAREMONGER
-				
-			item = New JSON()
-			item.set( "detail", "Scaremonger details" )
-			item.set( "documentation", "He is a very tall geek" )
-			items.addlast( item )
-
-		ElseIf data=2	' BLITZMAX
-
-			item = New JSON()
-			item.set( "detail", "Blitzmax detail" )
-			item.set( "documentation", "Blitzmax documentation" )
-			items.addlast( item )
-
-		End If
-		
-		' Reply to the client
-		client.send( response )  
-		
-		'Return message	' UNHANDLED EVENT  
-	End Method
+	Method onCompletionResolve:TMessage( message:TMessage )	;	bls_textDocument_completion( message )	;	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover
 	Method onHover:TMessage( message:TMessage )							' REQUEST
 		Local id:String = message.getid()
-		Publish( "log", "DBG", "TLSP.onDefinition()" )
+		Publish( "log", "DBG", "TLSP.onHover()" )
 		If Not message Or Not message.J
 			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
 			Return Null
@@ -644,33 +620,7 @@ End Rem
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_definition
-	' NOTE: Press F12
-	Method onDefinition:TMessage( message:TMessage )					' REQUEST
-Rem
-{
-  "id": 3,
-  "jsonrpc": "2.0",
-  "method": "textDocument/definition",
-  "params": {
-    "position": {
-      "character": 28,
-      "line": 0
-    },
-    "textDocument": {
-      "uri": "file: ///home/si/dev/sandbox/transpiler/visualiser.bmx"
-    }
-  }
-}
-End Rem
-		Local id:String = message.getid()
-		Publish( "log", "DBG", "TLSP.onDefinition()" )
-		If Not message Or Not message.J
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-			Return Null
-		End If
-		logfile.info( "~n"+message.j.Prettify() )
-		client.send( Response_OK( id ) )
-	End Method
+	Method onDefinition:TMessage( message:TMessage )	; bls_textDocument_definition( message )	;	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	Method onDocumentSymbol:TMessage( message:TMessage )				' REQUEST

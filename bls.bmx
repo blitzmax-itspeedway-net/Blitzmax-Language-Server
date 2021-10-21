@@ -81,7 +81,7 @@ Include "bmx/TBlitzMaxParser.bmx"
 
 'debugstop
 ' Message Handlers
-'Include "handlers/handlers.bmx"
+Include "handlers/handlers.bmx"
 
 Include "bin/constants.bmx"
 
