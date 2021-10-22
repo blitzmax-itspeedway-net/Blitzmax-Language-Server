@@ -317,7 +317,10 @@ EndRem
 		'serverCapabilities.set( "callHierarchyProvider", [] )
 		'serverCapabilities.set( "monikerProvider", [] )
 		'serverCapabilities.set( "workspaceSymbolProvider", [] )
-		If client.has( "workspace|workspaceFolders" ) serverCapabilities.set( "workspace|workspaceFolders|support", True )
+		If client.has( "workspace|workspaceFolders" ) 
+			Publish( "log", "DBG", "# Client HAS workspace|workspaceFolders" )
+			serverCapabilities.set( "workspace|workspaceFolders|supported", True )
+		End If
 		serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", True )
 		serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", "file" )
 		serverCapabilities.set( "workspace|fileOperations|willCreate|filters|scheme", "file" )
@@ -333,7 +336,7 @@ EndRem
         InitializeResult.set( "result|capabilities", serverCapabilities )
         InitializeResult.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
 
-		Publish( "log", "DEBG", "CAPABLITIES: "+serverCapabilities.Prettify() )
+		'Publish( "log", "DEBG", "CAPABLITIES: "+serverCapabilities.Prettify() )
 
 		' SEND RESPONSE
 		client.send( InitializeResult )
@@ -378,12 +381,12 @@ EndRem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders
 	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWorkspaceFolders()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onWorkspaceFolders()~n"+message.J.Prettify() )
 	End Method
 
 	'https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
 	Method onDidChangeWorkspaceFolders:TMessage( message:TMessage )		' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
 		Local added:JSON[] = params.find( "added" ).toArray()
@@ -431,7 +434,7 @@ EndRem
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
 	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeConfiguration()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidChangeConfiguration()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 		
 		'Local workspace:TWorkspace = Workspaces.findUri( uri )
@@ -446,13 +449,13 @@ EndRem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
 	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
 		Local id:String = message.getid()
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWorkspaceConfiguraion()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onWorkspaceConfiguraion()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
 	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChangeWatchedFiles()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidChangeWatchedFiles()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
 		
@@ -480,17 +483,15 @@ EndRem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didOpen
 	' textDocument/didOpen
 	Method onDidOpen:TMessage( message:TMessage )						' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidOpen()~n"+message.J.Prettify() )
-		If Not message Or Not message.params
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
-			Return Null
-		End If
+		publish( "log", "DBG", "NOT IMPLEMENTED: onDidOpen()" )
 		'
 		Local params:JSON = message.params
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
 		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
 		Local Text:String = params.find( "textDocument|text" ).toString()
 		Local version:String = params.find( "textDocument|version" ).toString()
+		
+		publish( "log", "DBG", "DOCUMENT: "+uri )
 		
 		'local document:TFullTextDocument = new TFullTextDocument( uri, text, version )
 		'Local workspace:TWorkspace = Workspaces.findUri( uru )
@@ -535,39 +536,74 @@ Rem
   }
 }
 End Rem
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidChange()~n"+message.J.Prettify() )
+		logfile.warning( "## NOT IMPLEMENTED: onDidChange()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+logfile.debug( "0)" )
+logfile.debug( "onDidChange() - params, uri" )
+
+logfile.debug( "A)" )
+		Local Text:String
+logfile.debug( "B)" )
+		Try
+logfile.debug( "C)" )
 		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
-		Local Text:String = params.find( "textDocument|text" ).toString()
+		Local j:JSON = params.find( "textDocument|text" )
+logfile.debug( "Ci)" )
+		If j=Null 
+logfile.debug( "Cii)" )
+			logfile.debug("J is null")
+logfile.debug( "Ciii)" )
+		Else
+logfile.debug( "Civ)" )
+			logfile.debug("J is NOT null")
+logfile.debug( "Cv)" )
+			Print J.toString()
+logfile.debug( "Cvi)" )
+			Text = j.tostring()
+logfile.debug( "Cvii)" )
+		End If
+logfile.debug( "D)" )
+Catch exception:Object
+logfile.debug( "E)" )
+	Print exception.tostring()
+logfile.debug( "F)" )
+End Try
+logfile.debug( "G)" )
+logfile.debug( "onDidChange() - text = "+Text )
+logfile.debug( "H)" )
+
 		Local contentChanges:JSON[] = params.find( "contentChanges" ).toArray()
+logfile.debug( "I)" )
+logfile.debug( "onDidChange() - contentChanges" )
 
 		'Local workspace:TWorkspace = Workspaces.findUri( uri )
 		'workspace.document_update( uri, contentChanges )	
 
 		' Run Linter
 		'lint( document )
+logfile.debug( "onDidChange() - FINISHED" )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
 	' textDocument/willSave
 	Method onWillSave:TMessage( message:TMessage )						' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWillSave()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onWillSave()~n"+message.J.Prettify() )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSaveWaitUntil
 	' textDocument/willSaveWaitUntil
 	Method onWillSaveWaitUntil:TMessage( message:TMessage )				' REQUEST
 		Local id:String = message.getid()
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWillSaveWaitUntil()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
 	' textDocument/didSave
 	Method onDidSave:TMessage( message:TMessage )						' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidSave()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidSave()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
 		'local document:TFullTextDocument = Workspaces.document_get( uri )
@@ -589,7 +625,7 @@ Rem
   }
 }
 End Rem
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onDidClose()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidClose()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
@@ -625,7 +661,7 @@ End Rem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	Method onDocumentSymbol:TMessage( message:TMessage )				' REQUEST
 		Local id:String = message.getid()
-		publish( "log", "DBG", "NOT IMPLEMENTED:~n* onWillSaveWaitUntil()~n"+message.J.Prettify() )
+		publish( "log", "DBG", "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
 

@@ -256,9 +256,11 @@ End Rem
 		End If
 		
 		' Extract message
-		Local text:String = J.stringify()
-		publish( "debug", "TMessageQueue.onSendToClient()~n"+text )
-		If text ; pushSendQueue( text )
+		Local Text:String = J.stringify()
+		'publish( "debug", "TMessageQueue.onSendToClient()~n"+text )
+		logfile.debug( "TMessageQueue.onSendToClient()~n"+Text )
+		
+		If Text ; pushSendQueue( Text )
 		'Return null
 	End Method	
 

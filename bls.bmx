@@ -24,6 +24,10 @@ Import bmx.json
 
 AppTitle = "BlitzMax Language Server"	' BLS
 
+?debug
+Print"~n~n~t~tWARNING:~n~t~tYou are compiling in DEBUG mode~n~n"
+?
+
 'DebugStop
 ' Load order - FIRST
 Include "bin/TConfig.bmx"		
