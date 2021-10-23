@@ -40,6 +40,14 @@ Type TWorkspaces Extends TEventHandler
 		Next
 	End Method
 
+	' DEBUGGING METHOD
+	Method reveal:String()
+		Local str:String=""
+		For Local workspace:TWorkspace = EachIn list
+			str :+ workspace.uri + "~n" + workspace.reveal()
+		Next	
+	End Method
+	
 End Type
 
 Type TWorkspace
@@ -92,5 +100,14 @@ Type TWorkspace
 	
 	Function finduri( uri:String )
     End Function
-	
+
+	' DEBUGGING METHOD
+	Method reveal:String()
+		Local str:String=""
+		For Local document:TTextDocument = EachIn documents
+			str :+ "..."+document.uri + ", version="+document.version
+		Next
+		Return str
+	End Method
+		
 End Type

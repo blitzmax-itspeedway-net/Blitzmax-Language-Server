@@ -275,12 +275,16 @@ EndRem
 		Local workspaceFolders:JSON = params.find( "workspaceFolders" )
 		
 		' Standardise the rootUri path
+		logfile.debug( "ROOTURI:~n  Original: "+rootUri ) 
+		logfile.debug( "-~tOriginal: "+rootUri ) 
 		rootUri = URI.parse( rootUri ).toString()
-		Publish( "log","DBG", "ROOTURI: "+rootUri ) 
+		logfile.debug( "-~tStandard: "+rootUri ) 
 		
 		' Create a workspace and add it to the workspace manager
 		rootworkspace = New TWorkspace( rootUri )
 		workspaces.add( rooturi, rootworkspace )
+		
+		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		
 		' Extract other information that we may need
 		' clientProcessID = params.find( "processId" )
@@ -419,8 +423,13 @@ EndRem
 				
 			End If
 		Next
-		If Not rootworkspace Return Null
 		
+logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+
+		If Not rootworkspace Return Null
+
+logfile.debug( ">> REVIEWING WORKSPACES" )
+
 		' Check if any documents in the root workspace should be moved
 		For Local document:TTextDocument = EachIn rootworkspace.all()
 			Local workspace:TWorkspace = Workspaces.get( document.uri )
@@ -429,6 +438,8 @@ EndRem
 			workspace.document_add( document.uri, document )
 			rootworkspace.document_remove( document.uri )
 		Next
+
+logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	End Method
 
@@ -496,6 +507,7 @@ EndRem
 		'local document:TFullTextDocument = new TFullTextDocument( uri, text, version )
 		'Local workspace:TWorkspace = Workspaces.findUri( uru )
 		'workspace.document_add( uri, document )
+		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		
 		' Run Linter
 		'lint( document )
@@ -539,51 +551,15 @@ End Rem
 		logfile.warning( "## NOT IMPLEMENTED: onDidChange()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
-		Local uri:String  = params.find( "textDocument|uri" ).tostring()
-logfile.debug( "0)" )
-logfile.debug( "onDidChange() - params, uri" )
-
-logfile.debug( "A)" )
-		Local Text:String
-logfile.debug( "B)" )
-		Try
-logfile.debug( "C)" )
-		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
-		Local j:JSON = params.find( "textDocument|text" )
-logfile.debug( "Ci)" )
-		If j=Null 
-logfile.debug( "Cii)" )
-			logfile.debug("J is null")
-logfile.debug( "Ciii)" )
-		Else
-logfile.debug( "Civ)" )
-			logfile.debug("J is NOT null")
-logfile.debug( "Cv)" )
-			Print J.toString()
-logfile.debug( "Cvi)" )
-			Text = j.tostring()
-logfile.debug( "Cvii)" )
-		End If
-logfile.debug( "D)" )
-Catch exception:Object
-logfile.debug( "E)" )
-	Print exception.tostring()
-logfile.debug( "F)" )
-End Try
-logfile.debug( "G)" )
-logfile.debug( "onDidChange() - text = "+Text )
-logfile.debug( "H)" )
-
+		Local uri:String = params.find( "textDocument|uri" ).tostring()
+		Local ver:Int = params.find( "textDocument|uri" ).toint()
 		Local contentChanges:JSON[] = params.find( "contentChanges" ).toArray()
-logfile.debug( "I)" )
-logfile.debug( "onDidChange() - contentChanges" )
 
 		'Local workspace:TWorkspace = Workspaces.findUri( uri )
 		'workspace.document_update( uri, contentChanges )	
 
 		' Run Linter
 		'lint( document )
-logfile.debug( "onDidChange() - FINISHED" )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
@@ -631,7 +607,7 @@ End Rem
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
 		'Local workspace:TWorkspace = Workspaces.findUri( uri )
 		'workspace.document.remove( uri )
-		
+		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	End Method
 
 	'	##### LANGUAGE FEATURES #####
