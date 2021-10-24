@@ -14,9 +14,9 @@ Type TLSP Extends TObserver
     Field shutdown:Int = False      	' Set by "shutdown" message
 	Field setTrace:String = "off"		' Set by $/setTrace
 	
-	' Fields from initialise message
-	Field rooturi:String					' Root URI
-	Field rootworkspace:TWorkspace			' Root workspace
+	' ROOT URI and ROOT WORKSPACE are now saved into TWorkspaces
+	'Field rooturi:String					' Root URI
+	'Field rootworkspace:TWorkspace			' Root workspace
 	
     'Field client:TClient = New TClient()		' Moved to a global
 
@@ -266,24 +266,53 @@ EndRem
 		Local id:String = message.getid()
 		Local params:JSON = message.params
 		
+		'logfile.debug( "onInitialise()~n"+message.J.prettify() )
+		
 		' Client must extract capabilities etc.
 		client.initialise( params )			' Will extract "capabilities" and "clientInfo"
 		
 		' Workspace must extract rootURI and anything else of interest
 		'workspaces.initialise( params )		' Will extract "rootPath" and "workspaceFolders"
-		rooturi = params.find( "rootUri" ).toString()
-		Local workspaceFolders:JSON = params.find( "workspaceFolders" )
 		
 		' Standardise the rootUri path
-		logfile.debug( "ROOTURI:~n  Original: "+rootUri ) 
-		logfile.debug( "-~tOriginal: "+rootUri ) 
-		rootUri = URI.parse( rootUri ).toString()
-		logfile.debug( "-~tStandard: "+rootUri ) 
+		
+		' Add the rootURI to workspaces
+		'	(If multi-workspace is disabled, this will be set, otherwise it will be file:///"
+		Local uri:TURI = New TURI( params.find( "rootUri" ).toString() )
+		'logfile.debug( "ROOTURI:" ) 
+		'logfile.debug( "-~tOriginal: "+uri ) 
+'		uri = TURI.parse( uri ).toString()			' Normalise the uri
+		'logfile.debug( "-~tStandard: "+uri )
+		'logfile.debug( "Adding 'root' workspace: "+uri )
+		workspaces.add( uri, New TWorkspace( "root", uri ) )
 		
 		' Create a workspace and add it to the workspace manager
-		rootworkspace = New TWorkspace( rootUri )
-		workspaces.add( rooturi, rootworkspace )
-		
+Rem
+"workspaceFolders": [
+      {
+        "name": "example",
+        "uri": "file: ///home/si/dev/example"
+      },
+      {
+        "name": "testing",
+        "uri": "file: ///home/si/dev/sandbox/transpiler/testing"
+      }
+    ]
+EndRem
+		Local workspaceFolders:JSON[] = params.find( "workspaceFolders" ).toArray()
+		'logfile.debug( "WORKSPACEFOLDERS:~n"+params.find( "workspaceFolders" ).prettify() )
+		'logfile.debug( "ARRAY:"+workspaceFolders[0].prettify() )
+		'logfile.debug( workspacefolders.length + " WORKSPACES" )
+		For Local workspace:JSON = EachIn workspaceFolders
+			Local name:String = workspace.find( "name" ).toString()
+			uri = New TURI( workspace.find( "uri" ).toString())
+			'uri = TURI.parse( uri ).toString()			' Normalise the uri
+			'logfile.debug( "ADDING '"+name+"' at "+uri )
+			If name And uri
+				'logfile.debug( ".. Adding" )
+				workspaces.add( uri, New TWorkspace( name, uri ) )
+			End If
+		Next
 		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		
 		' Extract other information that we may need
@@ -324,8 +353,8 @@ EndRem
 		If client.has( "workspace|workspaceFolders" ) 
 			Publish( "log", "DBG", "# Client HAS workspace|workspaceFolders" )
 			serverCapabilities.set( "workspace|workspaceFolders|supported", True )
+			serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", True )
 		End If
-		serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", True )
 		serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", "file" )
 		serverCapabilities.set( "workspace|fileOperations|willCreate|filters|scheme", "file" )
 		serverCapabilities.set( "workspace|fileOperations|didRename|filters|scheme", "file" )
@@ -355,6 +384,13 @@ EndRem
 		' Dynamically Register Capabilities
 		client.RegisterForConfigChanges()		' Register for configuration changes
 		'message.state = STATE_COMPLETE
+		
+		' Request Workspace folders that are open
+		Local workspaceFolders:JSON = New JSON()
+		workspaceFolders.set( "jsonrpc", JSONRPC )
+		workspaceFolders.set( "method", "workspace/workspaceFolders" )
+		workspaceFolders.set( "params", "null" )
+		client.send( workspaceFolders )
 		
 		' NOTIFICATION: No response necessary
 	End Method 
@@ -397,47 +433,48 @@ EndRem
 		Local removed:JSON[] = params.find( "remove" ).toArray()
 		
 		For Local item:JSON = EachIn added
+			Local name:String = item.find( "name" ).toString()
 			Local uri:String = item.find( "uri" ).toString()
 			If uri
-				Workspaces.add( uri, New TWorkspace( uri ) )
+				'Workspaces.add( uri, New TWorkspace( name, uri ) )
 			End If
 		Next
 
 		For Local item:JSON = EachIn removed
-			Local uri:String = item.find( "uri" ).toString()
+			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
 			If uri ; Workspaces.remove( uri )
 			
 			' Check if we just removed the root workspace
-			If rooturi = uri
-				
-				If added.length >0
-					' Use the newly added record as new root uri
-					rooturi = added[0].find( "uri" ).toString()
-					rootworkspace = Workspaces.get( rooturi )
-				Else
-					Local workspace:TWorkspace = Workspaces.getfirst()
-					If Not workspace ; Continue	' This seems to only occur when server shutting down
-					rooturi = workspace.uri
-					rootworkspace = workspace
-				End If
-				
-			End If
+			'If rooturi = uri
+			'	
+			'	If added.length >0
+			'		' Use the newly added record as new root uri
+			'		rooturi = added[0].find( "uri" ).toString()
+			'		rootworkspace = Workspaces.get( rooturi )
+			'	Else
+			'		Local workspace:TWorkspace = Workspaces.getfirst()
+			'		If Not workspace ; Continue	' This seems to only occur when server shutting down
+			'		rooturi = workspace.uri
+			'		rootworkspace = workspace
+			'	End If
+			'	
+			'End If
 		Next
 		
 logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
-		If Not rootworkspace Return Null
+		'If Not rootworkspace Return Null
 
 logfile.debug( ">> REVIEWING WORKSPACES" )
 
 		' Check if any documents in the root workspace should be moved
-		For Local document:TTextDocument = EachIn rootworkspace.all()
-			Local workspace:TWorkspace = Workspaces.get( document.uri )
-			If Not workspace ; Continue
-			' Candidate found, so move it...
-			workspace.document_add( document.uri, document )
-			rootworkspace.document_remove( document.uri )
-		Next
+		'For Local document:TTextDocument = EachIn rootworkspace.all()
+		'	Local workspace:TWorkspace = Workspaces.get( document.uri )
+		'	If Not workspace ; Continue
+		'	' Candidate found, so move it...
+		'	workspace.document_add( document.uri, document )
+		'	rootworkspace.document_remove( document.uri )
+		'Next
 
 logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
@@ -496,24 +533,34 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	Method onDidOpen:TMessage( message:TMessage )						' NOTIFICATION
 		publish( "log", "DBG", "NOT IMPLEMENTED: onDidOpen()" )
 		'
+Try
 		Local params:JSON = message.params
-		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+		Local uri:TURI = New TURI( params.find( "textDocument|uri" ).tostring() )
 		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
 		Local Text:String = params.find( "textDocument|text" ).toString()
-		Local version:String = params.find( "textDocument|version" ).toString()
+		Local version:UInt = params.find( "textDocument|version" ).toint()
 		
-		publish( "log", "DBG", "DOCUMENT: "+uri )
+		logfile.debug( "DOCUMENT: "+uri.tostring() )
+		Local document:TFullTextDocument = New TFullTextDocument( uri, Text, version )
+		logfile.debug( "Created document" )
+		Local workspace:TWorkspace = Workspaces.get( uri )
+	If Not workspace logfile.debug( "WORKSPACE IS NULL" )
+	If Not document logfile.debug( "DOCUMENT IS NULL" )
+		If workspace And document
+			logfile.debug( "Got workspace" )
+			workspace.add( uri, document )
+	'logfile( "Document is in workspace: "+workspace.name )
+			logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+			' Run Linter
+			'lint( document )
 		
-		'local document:TFullTextDocument = new TFullTextDocument( uri, text, version )
-		'Local workspace:TWorkspace = Workspaces.findUri( uru )
-		'workspace.document_add( uri, document )
-		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+			' Wake up the Document Thread
+			'PostSemaphore( semaphore )
+		End If
+	Catch Exception:Object
+			logfile.debug( Exception.toString() )
+	End Try
 		
-		' Run Linter
-		'lint( document )
-	
-		' Wake up the Document Thread
-		'PostSemaphore( semaphore )
 		' NOTIFICATION: No response required.
 	End Method
 
@@ -604,9 +651,9 @@ End Rem
 		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidClose()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 
-		Local uri:String  = params.find( "textDocument|uri" ).tostring()
-		'Local workspace:TWorkspace = Workspaces.findUri( uri )
-		'workspace.document.remove( uri )
+		Local uri:TURI = New TURI( params.find( "textDocument|uri" ).tostring() )
+		Local workspace:TWorkspace = Workspaces.get( uri )
+		workspace.remove( uri )
 		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	End Method
 

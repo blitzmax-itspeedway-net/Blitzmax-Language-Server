@@ -162,7 +162,7 @@ End Type
 ' BASED ON:
 '	https://github.com/microsoft/vscode-uri/blob/6fc6458aba65ea67458897d3331a37784c08e590/src/uri.ts#L589
 
-Type URI
+Type TURI
 	'	  foo://example.com:8042/over/there?name=ferret#nose
 	'	  \_/   \______________/\_________/ \_________/ \__/
 	'	   |           |            |            |        |
@@ -175,16 +175,53 @@ Type URI
 	Field scheme:String, authority:String, path:String, query:String, fragment:String
 	Field formatted:String	' cached
 	
-	Method New( value:String )
-		parse( value )
-	End Method
+	Method New( value:String, FileUri:Int = False )
 	
+	'Local this:TURI = Self
+	
+		If FileURI
+			scheme    = "file"
+			authority = ""
+			
+			' Normalise slashes
+			path = Replace( value, "\", "/" )
+
+			' UNC paths
+			If path[0..2]="//"
+				Local idx:Int = Instr( path, "/", 2 )
+				If idx = 0
+					authority = path[2..]
+					path = "/"
+				Else
+					authority = path[2..idx]
+					path = path[idx..]
+					If path="" ; path = "/"
+				End If
+			End If
+			
+			query     = ""
+			fragment  = ""
+		
+		Else
+	
+			Local regex:TRegEx = TRegEx.Create( REGEX )
+			Local match:TRegExMatch = regex.Find( value )
+			If match 
+				scheme    = match.SubExp(2)
+				authority = match.SubExp(4)
+				path      = match.SubExp(5)
+				query     = match.SubExp(7)
+				fragment  = match.SubExp(9)
+			End If
+		End If
+	End Method
+
 	Method New( scheme:String, authority:String, path:String, query:String, fragment:String )
-		Self.scheme = scheme
+		Self.scheme    = scheme
 		Self.authority = authority
-		Self.path = path
-		Self.query = query
-		Self.fragment = fragment
+		Self.path      = path
+		Self.query     = query
+		Self.fragment  = fragment
 	End Method
 	
 	Method toString:String()
@@ -234,45 +271,38 @@ Type URI
 		Return Text
 	End Method
 	
-	Function parse:URI( value:String )
-		Local regex:TRegEx = TRegEx.Create( REGEX )
-		Local match:TRegExMatch = regex.Find( value )
-		If Not match Return New URI()	' Or should this return NULL?
-		'
-'DebugStop
-		'Local count:Int = match.subcount()
-        'For Local i:Int = 0 Until match.SubCount()	;	Print i + ": " + match.SubExp(i)	;	Next
-		'Local result:URI = New URI()
-		'result.scheme = match.SubExp(2)
-		'result.authority = match.subexp(4)
-		'result.path = match.subexp(5)
-		'result.query = match.subexp(7)
-		'result.fragment = match.subexp(9)
-		'Return result
-		Return New URI( match.SubExp(2), match.SubExp(4), match.SubExp(5), match.SubExp(7), match.SubExp(9) )
-	End Function
+	' Path contains a filename, we dont always want this...
+	Method folder:String()
+		Return ExtractDir( path )
+	End Method
+
+	' Retrieve only the filename from the path
+	Method filename:String()
+		Return StripDir( path )
+	End Method	
 	
-	Function file:URI( path:String )
-		Local authority:String = ""
+	
+	'Function file:TURI( path:String )
+	'	Local authority:String = ""
 		
-		' Normalise slashes
-		path = Replace( path, "\", "/" )
+	'	' Normalise slashes
+	'	path = Replace( path, "\", "/" )
 
-		' UNC paths
-		If path[0..2]="//"
-			Local idx:Int = Instr( path, "/", 2 )
-			If idx = 0
-				authority = path[2..]
-				path = "/"
-			Else
-				authority = path[2..idx]
-				path = path[idx..]
-				If path="" ; path = "/"
-			End If
-		End If
-
-		Return New URI( "file", authority, path, "", "" )
-	End Function
+	'	' UNC paths
+	'	If path[0..2]="//"
+	'		Local idx:Int = Instr( path, "/", 2 )
+	'		If idx = 0
+	'			authority = path[2..]
+	'			path = "/"
+	'		Else
+	'			authority = path[2..idx]
+	'			path = path[idx..]
+	'			If path="" ; path = "/"
+	'		End If
+	'	End If
+'
+	'	Return New TURI( "file", authority, path, "", "" )
+	'End Function
 	
 End Type
 

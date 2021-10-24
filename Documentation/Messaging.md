@@ -81,7 +81,7 @@ Message Handling
 | EV_SetTraceNotification           | tbc |
 | | |
 | **GENERAL** | |
-| EV_initialize                     | TLSP, TClient |
+| EV_initialize                     | TLSP |
 | EV_initialized                    | TLSP |
 | EV_shutdown                       | TLSP |
 | EV_exit                           | TLSP |

@@ -7,26 +7,39 @@ Type TWorkspaces Extends TEventHandler
 	Global list:TMap = New TMap()
 	
 	' Add a Workspace
-	Method add( uri:String, workspace:TWorkspace )
-		list[ uri ] = workspace
+	Method add( uri:TURI, workspace:TWorkspace )
+		list[ uri.toString() ] = workspace
+		
+		'logfile.debug( "Workspaces now contain:" )
+		'For Local key:String = EachIn list.keys()
+		'	logfile.debug( key )
+		'Next
 	End Method
 	
 	' Remove a Workspace
-	Method remove( uri:String )
-		list.remove( uri )
+	Method remove( uri:TURI )
+		list.remove( uri.toString() )
 	End Method
 
-	' Find a workspace
-	Method get:TWorkspace( file_uri:String )
-		If Not file_uri ; Return Null
+	' Find a workspace for a file uri
+	Method get:TWorkspace( uri:TURI )
+		If Not uri; Return Null
 		
-		Local doc:URI = URI.file( file_uri )
+		'Local uri:TURI = TURI.file( file_uri )
+		
+		
+		' Extract filepath from uri path (Drop the filename)
+		'logfile.debug( "FOLDER IS:" + ExtractDir( uri.path ) )
+		Local path:String = uri.folder()
+		logfile.debug( "Finding URI: "+ uri.toString()+"~n  SCHEME:"+uri.scheme+"~n  AUTHORITY:"+uri.authority+"~n  PATH: "+path )
 		
 		' Match workspaces
-		For Local workspace:TWorkspace = EachIn list
-			If workspace.workspace.scheme = doc.scheme And ..
-			   workspace.workspace.authority = doc.authority And ..
-			   workspace.workspace.path = doc.path Then
+		For Local key:String = EachIn list.keys()
+			Local workspace:TWorkspace = TWorkspace( list[key] )
+			logfile.debug( "Comparing: "+ workspace.uri.toString()+"~n  SCHEME:"+workspace.uri.scheme+"~n  AUTHORITY:"+workspace.uri.authority+"~n  PATH: "+workspace.uri.path )
+			If workspace.uri.scheme = uri.scheme And ..
+			   workspace.uri.authority = uri.authority And ..
+			   workspace.uri.path = path Then
 				Return workspace
 			End If
 		Next
@@ -43,21 +56,25 @@ Type TWorkspaces Extends TEventHandler
 	' DEBUGGING METHOD
 	Method reveal:String()
 		Local str:String=""
-		For Local workspace:TWorkspace = EachIn list
-			str :+ workspace.uri + "~n" + workspace.reveal()
-		Next	
+		For Local key:String = EachIn list.keys()
+			Local workspace:TWorkspace = TWorkspace( list[key] )
+			str :+ workspace.uri.tostring() + "~n" + workspace.reveal()
+		Next
+		Return str
 	End Method
 	
 End Type
 
 Type TWorkspace
 
-	Field workspace:URI
+	Field uri:TURI
 
 	Field documents:TMap
-	Field uri:String
+	Field name:String
+	'Field uri:String
 
-	Method New( uri:String )
+	Method New( name:String, uri:TURI )
+		Self.name = name
 		Self.uri = uri
 		documents = New TMap()
 	End Method
@@ -67,30 +84,29 @@ Type TWorkspace
 	End Method
 
 	' Add a document
-	Method document_add( doc_uri:String, document:TTextDocument )
-		documents[ doc_uri ] = document
+	Method add( uri:TURI, document:TTextDocument )
+		logfile.debug( "Adding document!" )
+		If Not uri logfile.debug( "uri IS NULL" )
+		logfile.debug( "Adding document to "+ uri.tostring() )
+		documents[ uri.toString() ] = document
 	End Method
 	
 	' Remove a document
-	Method document_remove( doc_uri:String )
-		documents.remove( doc_uri )
+	Method remove( uri:TURI )
+		documents.remove( uri.toString() )
 	End Method
 	
 	' Return or Create a given document
-	Method document_get:TTextDocument( doc_uri:String )
+	Method get:TTextDocument( doc_uri:String )
 		Local document:TTextDocument = TTextDocument( documents.valueForKey( doc_uri ) )
 		If document ; Return document
 		'Return CreateDocument( doc_uri )
 	End Method
 	
-	Method Create:TTextDocument( doc_uri:String, content:String = "", version:ULong = 0 )
-		Return New TTextDocument( doc_uri, content, version )
+	Method Create:TTextDocument( uri:TURI, content:String = "", version:ULong = 0 )
+		Return New TTextDocument( uri, content, version )
 	End Method
-	
-	Method remove( doc_uri:String )
-		documents.remove( doc_uri )
-	End Method
-	
+		
 	Method update( doc_uri:String, change:String, version:ULong=0 )
 		Local document:TFullTextDocument = TFullTextDocument( documents.valueForKey( doc_uri ) )
 		If Not document ; Return
@@ -104,8 +120,9 @@ Type TWorkspace
 	' DEBUGGING METHOD
 	Method reveal:String()
 		Local str:String=""
-		For Local document:TTextDocument = EachIn documents
-			str :+ "..."+document.uri + ", version="+document.version
+		For Local key:String = EachIn documents.keys()
+			Local document:TTextDocument = TTextDocument( documents[key] )
+			str :+ "  "+document.uri.filename() + ", version="+document.version+"~n"
 		Next
 		Return str
 	End Method

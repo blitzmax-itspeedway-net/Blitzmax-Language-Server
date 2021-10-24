@@ -18,7 +18,7 @@ Type TTextDocument Implements ITextDocument
 
 	Private
 	
-	Field uri : String
+	Field uri : TURI
 	Field languageId : String
 	Field version : ULong		' Incremented after each change including Undo/Redo
 	'Field lineCount: UInt
@@ -30,14 +30,14 @@ Type TTextDocument Implements ITextDocument
 
 	Field content:String
 
-	Method New( uri:String, content:String="", version:ULong = 0 )
+	Method New( uri:TURI, content:String="", version:ULong = 0 )
 		Self.uri = uri
 		Self.content = content
 		Self.version = version
 	End Method
 
 	Method get_languageId:String()	;	Return languageId				;	End Method
-	Method get_uri:String()			;	Return uri						;	End Method
+	Method get_uri:TURI()			;	Return uri						;	End Method
 	Method get_version:Int()		;	Return version					;	End Method
 
 	Method getText:String( range:TRange = Null ) 	;	End Method
@@ -60,7 +60,7 @@ Type TFullTextDocument Extends TTextDocument
 		
 	Public
 	
-	Method New( uri:String, languageId:String, content:String, version:ULong )
+	Method New( uri:TURI, languageId:String, content:String, version:ULong )
 		Self.uri = uri
 		Self.languageId = languageId
 		Self.version = version
@@ -199,10 +199,10 @@ End Rem
 'DebugStop	
 		ast = parser.parse_ast()
 
-Print "FILE '"+uri+"':"
-Print lexer.reveal()
-Print parser.reveal()
-Print ast.reveal()
+logfile.debug( "FILE '"+uri.tostring()+"':" )
+logfile.debug( lexer.reveal() )
+logfile.debug( parser.reveal() )
+logfile.debug( ast.reveal() )
 
 	End Method
 
