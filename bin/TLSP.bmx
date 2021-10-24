@@ -12,7 +12,7 @@ Type TLSP Extends TObserver
 
 	Field initialised:Int = False   	' Set by "iniialized" message
     Field shutdown:Int = False      	' Set by "shutdown" message
-	Field setTrace:String = "off"		' Set by $/setTrace
+	Field dollar_trace:String = "off"		' Set by $/setTrace or OnTraceNotification
 	
 	' ROOT URI and ROOT WORKSPACE are now saved into TWorkspaces
 	'Field rooturi:String					' Root URI
@@ -250,6 +250,11 @@ EndRem
 	'	V0.3 EVENT HANDLERS
 	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
 	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
+
+	' Message has arrived from the client.
+	Method on_ReceiveFromClient:TMessage( message:TMessage )			' NOTIFICATION
+		
+	End Method
 	
 	'	##### GENERAL MESSAGES #####
 
@@ -267,6 +272,7 @@ EndRem
 		Local params:JSON = message.params
 		
 		'logfile.debug( "onInitialise()~n"+message.J.prettify() )
+		'logfile.debug( "ONINITIALISE ID="+id )
 		
 		' Client must extract capabilities etc.
 		client.initialise( params )			' Will extract "capabilities" and "clientInfo"
@@ -352,9 +358,11 @@ EndRem
 		'serverCapabilities.set( "workspaceSymbolProvider", [] )
 		If client.has( "workspace|workspaceFolders" ) 
 			Publish( "log", "DBG", "# Client HAS workspace|workspaceFolders" )
-			serverCapabilities.set( "workspace|workspaceFolders|supported", True )
-			serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", True )
+			serverCapabilities.set( "workspace|workspaceFolders|supported", "true" )
+			serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", "true" )
+			serverCapabilities.set( "workspace|workspaceFolders|changeNotification", "true" )
 		End If
+		serverCapabilities.set( "workspace|configuration", "file" )
 		serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", "file" )
 		serverCapabilities.set( "workspace|fileOperations|willCreate|filters|scheme", "file" )
 		serverCapabilities.set( "workspace|fileOperations|didRename|filters|scheme", "file" )
@@ -388,6 +396,7 @@ EndRem
 		' Request Workspace folders that are open
 		Local workspaceFolders:JSON = New JSON()
 		workspaceFolders.set( "jsonrpc", JSONRPC )
+		'workspaceFolders.set( "jsonrpc", JSONRPC )
 		workspaceFolders.set( "method", "workspace/workspaceFolders" )
 		workspaceFolders.set( "params", "null" )
 		client.send( workspaceFolders )
@@ -412,7 +421,7 @@ EndRem
 		Local J:JSON = message.J.find( "params|value" )
 		If J 
 			Publish( "log","DBG", J.prettify() )
-			setTrace = J.toString()
+			dollar_trace = J.toString()
 		End If
 		' NOTIFICATION: No response necessary
 	End Method
@@ -429,19 +438,37 @@ EndRem
 		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
-		Local added:JSON[] = params.find( "added" ).toArray()
-		Local removed:JSON[] = params.find( "remove" ).toArray()
 		
+		Local add:JSON = params.find( "event|added" )
+logfile.debug( add.getClassName()+":"+add.stringify() )
+		Local sub:JSON = params.find( "event|removed" )
+logfile.debug( sub.getClassName()+":"+sub.stringify() )
+		
+		Local added:JSON[] = params.find( "event|added" ).toArray()
+		Local removed:JSON[] = params.find( "event|removed" ).toArray()
+
+logfile.debug( "ADDED: "+added.length )
+If added.length>0 ; logfile.debug( added[0].stringify() )
+logfile.debug( "REMOVED: "+removed.length )
+If removed.length>0 ; logfile.debug( removed[0].stringify() )
+
+
+		' Add new Workspaces
 		For Local item:JSON = EachIn added
 			Local name:String = item.find( "name" ).toString()
-			Local uri:String = item.find( "uri" ).toString()
-			If uri
-				'Workspaces.add( uri, New TWorkspace( name, uri ) )
-			End If
+			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
+			logfile.debug( "Adding "+name+" - "+ uri.tostring() )
+			logfile.debug( item.stringify() )
+			If uri ; Workspaces.add( uri, New TWorkspace( name, uri ) )
 		Next
 
+		' Remove Workspaces (and files within them)
 		For Local item:JSON = EachIn removed
+			Local name:String = item.find( "name" ).toString()
 			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
+			logfile.debug( "Removing "+name+" - "+ uri.tostring() )
+			logfile.debug( item.stringify() )
+
 			If uri ; Workspaces.remove( uri )
 			
 			' Check if we just removed the root workspace
@@ -465,7 +492,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 		'If Not rootworkspace Return Null
 
-logfile.debug( ">> REVIEWING WORKSPACES" )
+'logfile.debug( ">> REVIEWING WORKSPACES" )
 
 		' Check if any documents in the root workspace should be moved
 		'For Local document:TTextDocument = EachIn rootworkspace.all()
@@ -476,7 +503,7 @@ logfile.debug( ">> REVIEWING WORKSPACES" )
 		'	rootworkspace.document_remove( document.uri )
 		'Next
 
-logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+'logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	End Method
 

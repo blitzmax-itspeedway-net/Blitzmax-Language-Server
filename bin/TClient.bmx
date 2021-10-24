@@ -99,6 +99,7 @@ Type TClient Extends TMessageQueue
 			' Create a response and add items to params
 			Local response:JSON = New JSON()
 			response.set( "jsonrpc", JSONRPC )
+			'response.set( "id",10 )
 			response.set( "method", "workspace/configuration" )
 			response.set( "params|items", items )			
 			send( response )

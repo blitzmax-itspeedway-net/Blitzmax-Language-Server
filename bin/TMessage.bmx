@@ -85,11 +85,12 @@ Type TMessage Extends TEvent
 		Case "exit" 							; id = EV_exit
 
 		' WORKSPACE
-		Case "didChangeWorkspaceFolders"		; id = EV_didChangeWorkspaceFolders
+		Case "workspace/didChangeWorkspaceFolders"	; id = EV_didChangeWorkspaceFolders
 		Case "didChangeWatchedFiles"			; id = EV_didChangeWatchedFiles
 		Case "didChangeConfiguration"			; id = EV_DidChangeConfiguration
 		
 		Case "workspace/workspaceFolders"		; id = EV_workspace_workspaceFolders
+
 
 		' TEXT SYNCHRONISATION
 		Case "textDocument/didChange" 			; id = EV_textDocument_didChange
@@ -120,9 +121,25 @@ Type TMessage Extends TEvent
 		If Not J Return "null"
 		Return J.toString()
 	End Method
+	
+	Method reflect:TASTNode()
+		Local this:TTypeId = TTypeId.ForObject( LSP )
+		
+		Local callable:String = Replace("on_"+methd,"-","")
+		
+		Local call:TMethod = this.FindMethod( callable )
+'DebugStop
+		If call 
+			logfile.debug( "CALLING: "+callable+"()" )
+			call.invoke( Self, [Self] )
+		Else
+			logfile.debug( "UNABLE TO CALL: "+callable+"()" )
+		End If
+	End Method
 
 	' Override Emit(), so that we can deal with unhandled events
 	' data should be NULL if event has been handled.
+	
 	Method Emit()
 		Local data:Object = RunHooks( EmitEventHook, Self )		
 		If data
