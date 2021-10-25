@@ -15,7 +15,8 @@ Type TDocumentMGR Extends TEventHandler
 	
 	Method New()
 		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
-		listen()
+		'listen()
+		register()
 		'
 		'	REGISTER CAPABILITIES
 		' 20/10/21, Moved to TLSP.onInitialize()
@@ -33,8 +34,8 @@ Type TDocumentMGR Extends TEventHandler
 		AtomicSwap( QuitDocThread, False )  ' Inform thread it must exit
 		PostSemaphore( semaphore )  		' Wake the thread from it's slumber
         DetachThread( DocThread )
-        Publish( "debug", "Document thread closed" )
-		unlisten()
+        logfile.debug( "Document thread closed" )
+		'unlisten()
 	End Method
 	
 	' Invalidate the document list forcing a re-validation
@@ -72,16 +73,16 @@ Type TDocumentMGR Extends TEventHandler
         Local quit:Int = False          ' Always got to know when to quit!
 		Repeat
 			Try
-                Publish( "debug", "DocumentMGR: Resting..")
+                logfile.debug( "DocumentMGR: Resting..")
 				WaitSemaphore( manager.semaphore )
-                Publish( "debug", "DocumentMGR: Awoken.." )
+                logfile.debug( "DocumentMGR: Awoken.." )
 				
 				' VALIDATE DOCUMENTS
 				manager.validate()
 				
             Catch Exception:String 
                 'DebugLog( Exception )
-                Publish( "log", "CRIT", Exception )
+                logfile.critical( Exception )
             End Try
 		Until CompareAndSwap( manager.QuitDocThread, quit, True )
 	End Function

@@ -5,7 +5,7 @@
 Include "TLSP_Stdio.bmx"
 Include "TLSP_TCP.bmx"
 
-Type TLSP Extends TObserver
+Type TLSP Extends TEventHandler
     Global instance:TLSP
 
     Field exitcode:Int = 0
@@ -41,6 +41,12 @@ Type TLSP Extends TObserver
 	'Field capabilities:JSON = New JSON()	' Empty object
 	Field handlers:TMap = New TMap
 	
+	Method New()
+'DebugStop
+		' V4 - Register handler
+		register()
+	End Method
+	
     Method run:Int() Abstract
     Method getRequest:String() Abstract     ' Waits for a message from client
 
@@ -49,7 +55,8 @@ Type TLSP Extends TObserver
 	'V0.0
     Function ExitProcedure()
         'Publish( "debug", "Exit Procedure running" )
-        Publish( "exitnow" )
+        'Publish( "exitnow" )
+		logfile.info( "Running Exit Procedure" )
         instance.Close()
         'Logfile.Close()
     End Function
@@ -81,8 +88,10 @@ Type TLSP Extends TObserver
 					errtext = "ERROR: Parse returned null"
 				End If
                 ' Send error message to LSP Client
-				Publish( "debug", errtext )
-                Publish( "send", Response_Error( ERR_PARSE_ERROR, errtext ) )
+				'Publish( "debug", errtext )
+                'Publish( "send", Response_Error( ERR_PARSE_ERROR, errtext ) )
+				logfile.debug( errtext )
+				client.send( Response_Error( ERR_PARSE_ERROR, errtext ) )
                 Continue
             End If
 			'Publish( "debug", "Parse successful" )
@@ -93,7 +102,18 @@ Type TLSP Extends TObserver
             'logfile.write( "  "+debug )
 
 			' V0.3 Event Creation
-			New TMessage( "RECEIVE-FROM-CLIENT", J ).emit()		' Send Message Received event	
+			
+BUG
+Rem
+Message is sent as a receiveFromClient, but it has an ID from the original message
+so it becomes a REQEST.
+receiveFromClient doesn't return a result and TMessage.send() identifies it as a request and 
+returns a failure back to the client which forces the IDE to close the BLS.
+
+I can either modify message in receiveFromClient (and sendto Client) so that it is a notification
+Or I can process the message here and send it without using "receiveFromClient" (Much cleaner)
+End Rem
+			New TMessage( "receiveFromClient", J ).send()		' Send Message Received event	
    
 Rem V0.2 depreciated
             ' Check for a method
@@ -182,9 +202,12 @@ EndRem
         'DebugLog( "SenderThread()" )
         Repeat
             Try
-                Publish( "debug", "TLSP.SenderThread going to sleep")
+                'Publish( "debug", "TLSP.SenderThread going to sleep")
+                logfile.debug("TLSP.SenderThread going To sleep")
+				
                 WaitSemaphore( client.sendcounter )
-                Publish( "debug", "TLSP.SenderThread is awake" )
+                'Publish( "debug", "TLSP.SenderThread is awake" )
+                logfile.debug( "TLSP.SenderThread is awake" )
                 ' Create a Response from message
                 Local content:String = client.popSendQueue()
                 'Publish( "log", "DEBG", "Sending '"+content+"'" )
@@ -203,10 +226,12 @@ EndRem
                 End If
             Catch Exception:String 
                 'DebugLog( Exception )
-                Publish( "log", "CRIT", Exception )
+                'Publish( "log", "CRIT", Exception )
+				logfile.critical( Exception )
             End Try
         Until CompareAndSwap( lsp.QuitSender, quit, True )
-        Publish( "debug", "SenderThread - Exit" )
+        'Publish( "debug", "SenderThread - Exit" )
+        logfile.debug( "SenderThread - Exit" )
     End Function  
 
 
@@ -252,14 +277,15 @@ EndRem
 	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
 
 	' Message has arrived from the client.
-	Method on_ReceiveFromClient:TMessage( message:TMessage )			' NOTIFICATION
-		
+	Method on_ReceiveFromClient:JSON( message:TMessage )
+		logfile.debug( "-> TLSP.on_ReceiveFromClient()" )
 	End Method
-	
+		
 	'	##### GENERAL MESSAGES #####
 
 	Method onExit:TMessage( message:TMessage )						' NOTIFICATION
-		publish( "log", "DBG", "EVENT onExit()" )
+		'publish( "log", "DBG", "EVENT onExit()" )
+		logfile.debug( "TLSP.onExit()" )
 		' QUIT MAIN LOOP
         AtomicSwap( QuitMain, False )
 		'message.state = STATE_COMPLETE
@@ -357,7 +383,8 @@ EndRem
 		'serverCapabilities.set( "monikerProvider", [] )
 		'serverCapabilities.set( "workspaceSymbolProvider", [] )
 		If client.has( "workspace|workspaceFolders" ) 
-			Publish( "log", "DBG", "# Client HAS workspace|workspaceFolders" )
+			'Publish( "log", "DBG", "# Client HAS workspace|workspaceFolders" )
+			'logfile.debug( "# Client HAS workspace|workspaceFolders" )
 			serverCapabilities.set( "workspace|workspaceFolders|supported", "true" )
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", "true" )
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotification", "true" )
@@ -387,7 +414,8 @@ EndRem
 	End Method
 	
 	Method onInitialized:TMessage( message:TMessage )		' NOTIFICATION
-		publish( "log", "DBG", "EVENT onInitialized()" )
+		'publish( "log", "DBG", "EVENT onInitialized()" )
+		logfile.debug( "TLSP.onInitialized()" )
 		
 		' Dynamically Register Capabilities
 		client.RegisterForConfigChanges()		' Register for configuration changes
@@ -406,7 +434,8 @@ EndRem
 
 	Method onShutdown:TMessage( message:TMessage )			' REQUEST
 		Local id:String = message.getid()
-		publish( "log", "DBG", "EVENT onShutdown()" )
+		'publish( "log", "DBG", "EVENT onShutdown()" )
+		logfile.debug( "TLSP.onShutdown()" )
 		shutdown = True
 		'
 		'message.state = STATE_COMPLETE
@@ -416,11 +445,13 @@ EndRem
 	
 	' Trace notifications
 	Method OnSetTraceNotification:TMessage( message:TMessage )			' NOTIFICATION
-		publish( "log", "DBG", "EVENT onSetTraceNotification()" )
+		'publish( "log", "DBG", "EVENT onSetTraceNotification()" )
+		logfile.debug( "TLSP.onSetTraceNotification()" )
 		' Set our value to match params:
 		Local J:JSON = message.J.find( "params|value" )
 		If J 
-			Publish( "log","DBG", J.prettify() )
+			'Publish( "log","DBG", J.prettify() )
+			logfile.debug( J.prettify() )
 			dollar_trace = J.toString()
 		End If
 		' NOTIFICATION: No response necessary
@@ -430,12 +461,12 @@ EndRem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders
 	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onWorkspaceFolders()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onWorkspaceFolders()~n"+message.J.Prettify() )
 	End Method
 
 	'https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
 	Method onDidChangeWorkspaceFolders:TMessage( message:TMessage )		' NOTIFICATION
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
+		logfile.debug( "## Not IMPLEMENTED: onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
 		
@@ -509,7 +540,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
 	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidChangeConfiguration()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onDidChangeConfiguration()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 		
 		'Local workspace:TWorkspace = Workspaces.findUri( uri )
@@ -524,13 +555,13 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
 	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
 		Local id:String = message.getid()
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onWorkspaceConfiguraion()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onWorkspaceConfiguraion()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
 	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidChangeWatchedFiles()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onDidChangeWatchedFiles()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
 		
@@ -558,7 +589,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didOpen
 	' textDocument/didOpen
 	Method onDidOpen:TMessage( message:TMessage )						' NOTIFICATION
-		publish( "log", "DBG", "NOT IMPLEMENTED: onDidOpen()" )
+		logfile.debug( "NOT IMPLEMENTED: onDidOpen()" )
 		'
 Try
 		Local params:JSON = message.params
@@ -639,21 +670,21 @@ End Rem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
 	' textDocument/willSave
 	Method onWillSave:TMessage( message:TMessage )						' NOTIFICATION
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onWillSave()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onWillSave()~n"+message.J.Prettify() )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSaveWaitUntil
 	' textDocument/willSaveWaitUntil
 	Method onWillSaveWaitUntil:TMessage( message:TMessage )				' REQUEST
 		Local id:String = message.getid()
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
 	' textDocument/didSave
 	Method onDidSave:TMessage( message:TMessage )						' NOTIFICATION
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidSave()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onDidSave()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
 		'local document:TFullTextDocument = Workspaces.document_get( uri )
@@ -675,7 +706,7 @@ Rem
   }
 }
 End Rem
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onDidClose()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onDidClose()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 
 		Local uri:TURI = New TURI( params.find( "textDocument|uri" ).tostring() )
@@ -695,7 +726,7 @@ End Rem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover
 	Method onHover:TMessage( message:TMessage )							' REQUEST
 		Local id:String = message.getid()
-		Publish( "log", "DBG", "TLSP.onHover()" )
+		logfile.debug( "TLSP.onHover()" )
 		If Not message Or Not message.J
 			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
 			Return Null
@@ -711,7 +742,7 @@ End Rem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	Method onDocumentSymbol:TMessage( message:TMessage )				' REQUEST
 		Local id:String = message.getid()
-		publish( "log", "DBG", "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
+		logfile.debug( "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
 

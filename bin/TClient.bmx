@@ -11,8 +11,8 @@ Type TClient Extends TMessageQueue
 	Field clientver:String = ""
 	Field capabilities:JSON = New JSON()
 	
-	Method New()
-		listen()
+	'Method New()
+		'listen()
 		'
 		'	REGISTER CAPABILITIES
 		
@@ -22,15 +22,15 @@ Type TClient Extends TMessageQueue
 		' Enable onDidChangeConfiguration
 		'lsp.capabilities.set( "workspace|workspaceFolders|changeNotification", "true" )
 
-	End Method
+	'End Method
 	
-	Method Close()
-		unlisten()
-	End Method
+	'Method Close()
+	'	unlisten()
+	'End Method
 	
 	'Method onInitialize:TMessage( message:TMessage )
 	Method initialise( params:JSON )
-		publish( "log", "DBG", "TClient.initialize()" )
+		logfile.debug( "TClient.initialize()" )
 		initialized = True
 		
 		If Not params Return
@@ -73,14 +73,14 @@ Type TClient Extends TMessageQueue
 	
 	' HELPER: Send a message to client
 	Method Send( message:JSON )
-		New TMessage( "SEND-TO-CLIENT", message ).emit()		' Send message to client
+		New TMessage( "sendToClient", message ).send()		' Send message to client
 	End Method
 
 	' Get the client to register for configuration updates
 	Method RegisterForConfigChanges()
 		' Register for Configuration updates (If supported by client)
 		If has( "workspace|configuration" )
-			Publish( "log", "DGB", "# Client supports workspace configuration" )
+			logfile.debug( "# Client supports workspace configuration" )
 			
 			' Create an array for the configuration updates we need
 			Local items:JSON = New JSON( JSON_ARRAY )

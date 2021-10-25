@@ -27,8 +27,8 @@ Rem EXAMPLE
 }
 End Rem
 
-function bls_textDocument_completion( message:TMessage )
-    Publish( "log", "DBG", "bls_textDocument_completion() - TEST CODE~n"+message.J.stringify() )
+Function bls_textDocument_completion( message:TMessage )
+    logfile.debug( "bls_textDocument_completion() - TEST CODE~n"+message.J.stringify() )
     logfile.info( "~n"+message.j.Prettify() )
 	
     Local id:String = message.getid()
@@ -59,7 +59,7 @@ function bls_textDocument_completion( message:TMessage )
     ' Reply to the client
     client.send( response )
 
-end function
+End Function
 
 
 

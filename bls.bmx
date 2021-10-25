@@ -30,9 +30,9 @@ Print"~n~n~t~tWARNING:~n~t~tYou are compiling in DEBUG mode~n~n"
 
 'DebugStop
 ' Load order - FIRST
+Include "bin/TArguments.bmx"	' Uses TConfig, TLogger
 Include "bin/TConfig.bmx"		
-Include "bin/TLogger.bmx"		
-Include "bin/TArguments.bmx"
+Include "bin/TLogger.bmx"		' Uses TConfig
 
 ' Language Server Protocol Interface
 Include "bin/language-server-protocol.bmx"
@@ -42,7 +42,7 @@ Include "bin/TLSP.bmx"
 Include "bin/responses.bmx"
 
 ' Load order - ANY
-Include "bin/TObserver.bmx"
+Include "bin/TEventHandler.bmx"
 Include "bin/TMessage.bmx"
 Include "bin/TMessageQueue.bmx"
 Include "bin/TClient.bmx"		' Represents the remote IDE
@@ -89,13 +89,13 @@ Include "handlers/handlers.bmx"
 
 Include "bin/constants.bmx"
 
-DebugStop
+'DebugStop
 '   GLOBALS
 Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
 Global Config:TConfig = New TConfig					' Configuration manager
 ' Apply Command line arguments
-New TArguments()			' Arguments
 Global Logfile:TLogger = New TLogger()				' Log File Manager
+New TArguments()			' Arguments
 Global Client:TClient = New TClient()				' Client Manager
 Global LSP:TLSP 									' Language Server
 ' This will be based on arguments in the future, but for now we only support STDIO
@@ -112,10 +112,10 @@ Global Workspaces:TWorkspaces = New TWorkspaces()
 ' @bmk include build.bmk
 ' @bmk incrementVersion build.bmx
 Include "build.bmx"
-Publish "log", "INFO", AppTitle
-Publish "log", "INFO", "  VERSION:    "+version+"."+build
-Publish "log", "DEBG", "  CURRENTDIR: "+CurrentDir$()
-Publish "log", "DEBG", "  APPDIR:     "+AppDir
+logfile.info( AppTitle )
+logfile.info( "  VERSION:    "+version+"."+build )
+logfile.debug( "  CURRENTDIR: "+CurrentDir$() )
+logfile.debug( "  AppDir:     "+AppDir )
 
 Rem 31/8/21, Depreciated by new message queue
 '   Worker Thread
@@ -142,7 +142,7 @@ End Type
 End Rem
 
 '   Run the Application
-Publish( "log", "DEBG", "Starting Language Server..." )
+logfile.debug( "Starting Language Server..." )
 
 'DebugStop
 
@@ -152,5 +152,5 @@ Try
     exit_( LSP.run() )
     'Publish( "debug", "Exit Gracefully" )
 Catch exception:String
-    Publish( "log", "CRIT", exception )
+    logfile.critical( exception )
 End Try

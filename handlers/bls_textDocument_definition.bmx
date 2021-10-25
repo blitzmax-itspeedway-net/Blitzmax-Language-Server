@@ -7,7 +7,7 @@
 '
 '   Provide definition when you press F12 on a keyword
 
-REM EXAMPLE
+Rem EXAMPLE
 {
   "id": 3,
   "jsonrpc": "2.0",
@@ -24,8 +24,8 @@ REM EXAMPLE
 }
 End Rem
 
-function bls_textDocument_definition( message:TMessage )
-    Publish( "log", "DBG", "bls_textDocument_definition() - TEST CODE~n"+message.J.stringify() )
+Function bls_textDocument_definition( message:TMessage )
+    logfile.debug( "bls_textDocument_definition() - TEST CODE~n"+message.J.stringify() )
     logfile.info( "~n"+message.j.Prettify() )
 	
     Local id:String = message.getid()

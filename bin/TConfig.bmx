@@ -19,12 +19,14 @@ Type TConfig Extends TMap
 			    'writeconfig( filename )
             Case 2  ' Directory !!
             Default
-                Publish( "log", "WARN", "Invalid configuration file" )
+                'Publish( "log", "WARN", "Invalid configuration file" )
+				logfile.warning( "Invalid configuration file" )
             End Select
         Catch exception:String
             ' Show the error, but otherwise just continue
             'Logfile.write( exception, "CRITICAL" )
-            Publish( "log", "ERRR", "ERROR: "+exception )
+            'Publish( "log", "ERRR", "ERROR: "+exception )
+			logfile.error( exception )
         End Try
 		defaults()
 		'

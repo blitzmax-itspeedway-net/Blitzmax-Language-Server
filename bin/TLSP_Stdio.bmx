@@ -27,12 +27,12 @@ Type TLSP_Stdio Extends TLSP
         Local quit:Int = False     ' Local loop state
 
 		' V0.3, Start event listener
-		listen()
+		'listen()
 
         ' Open StandardIn
         StdIn = ReadStream( StandardIOStream )
         If Not StdIn
-            Publish( "log", "CRIT", "Failed to open StdIN" )
+            logfile.critical( "Failed To open StdIN" )
             Return 1
         End If
 
@@ -63,45 +63,46 @@ Type TLSP_Stdio Extends TLSP
 			Local message:TMessage = client.popTaskQueue()
 			
 			' Message is only returned if it needs to be emitted (Launched)
-			If message ; message.emit()
+			If message ; message.send()
 			
             Delay(100)
         'Until endprocess
         Until CompareAndSwap( lsp.QuitMain, quit, True )
-        Publish( "debug", "Mainloop - Exit" )
+        logfile.debug( "Mainloop - Exit" )
         
         ' Clean up and exit gracefully
         AtomicSwap( QuitReceiver, False )   ' Inform thread it must exit
         DetachThread( Receiver )
-        Publish( "debug", "Receiver thread closed" )
+        logfile.debug( "Receiver thread closed" )
 
         AtomicSwap( QuitSender, False )     ' Inform thread it must exit
         'PostSemaphore( queue.sendCounter )  ' Wake the thread from it's slumber
         DetachThread( Sender )
-        Publish( "debug", "Sender thread closed" )
+        logfile.debug( "Sender thread closed" )
 
 		' Close the document manager
         documents.Close()
 
         ThreadPool.shutdown()
-        Publish( "debug", "Worker thread pool closed" )
+        logfile.debug( "Worker thread pool closed" )
 
 		' V0.3, Stop event listener
-		unlisten()
+		'unlisten()
 		client.Close()
 
         Return exitcode
     End Method
     
     ' Observations
-    Method Notify( event:String, data:Object, extra:Object )
+' DEPRECIATED 25/10/21
+'    Method Notify( event:String, data:Object, extra:Object )
     '    Select event
     '    Case "receive"
     '        MessageReceiver( string( data ) )
     '    case "send"
     '        MessageSender( string( data ) )
     '    End Select
-    End Method
+'    End Method
 
     ' Read messages from the client
     Method getRequest:String()
@@ -128,13 +129,13 @@ Type TLSP_Stdio Extends TLSP
                     'Publish( "log", "DEBG", "WAITING FOR CONTENT...")
                     content = stdIN.ReadString$( contentlength )
                     'Publish( "log", "DEBG", "Received "+contentlength+" bytes:~n"+content )
-                    Publish( "log", "DEBG", "TLSP_Stdio.getRequest() received "+contentlength+" bytes" )
+                    logfile.debug( "TLSP_Stdio.getRequest() received "+contentlength+" bytes" )
                     Return content
                 Else
-                    Publish( "log", "DEBG", "Skipping: "+line )
+                    logfile.debug( "Skipping: "+line )
                 End If
             Catch Exception:String
-                Publish( "critical", Exception )
+                logfile.critical( Exception )
             End Try
         'Until endprocess
         Until CompareAndSwap( lsp.QuitMain, quit, True )

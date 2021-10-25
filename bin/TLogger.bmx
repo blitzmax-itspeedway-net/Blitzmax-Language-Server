@@ -2,7 +2,7 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 '   LOGGING
 
-Type TLogger Extends TObserver
+Type TLogger Extends TEventHandler
     Field file:TStream
     Field loglevel:Int = LOG_DEBUG
     Global levels:String[] = ["EMER","ALRT","CRIT","ERRR","WARN","NOTE","INFO","DEBG"]
@@ -30,7 +30,8 @@ Type TLogger Extends TObserver
         End Try
         '
         ' Start message observer
-        Subscribe( ["log","info","debug","error","critical","exitnow","cancelrequest"] )
+        'Subscribe( ["log","info","debug","error","critical","exitnow","cancelrequest"] )
+		Register()
     End Method
 
     Method timestamp:String()
@@ -54,38 +55,39 @@ Type TLogger Extends TObserver
     End Method
 
     ' Observations
-    Method Notify( event:String, data:Object, extra:Object )
-        Local datastr:String = String(data)
-        Local extrastr:String = String(extra)
+' DEPRECIATED 25/10/21
+'    Method Notify( event:String, data:Object, extra:Object )
+'        Local datastr:String = String(data)
+'        Local extrastr:String = String(extra)
         'debugstop
-        Select event
-        Case "log"
-            WriteFile( datastr[..4]+" "+extrastr )
-        Case "info"
-            WriteFile( "INFO "+datastr )
-            WriteErr( datastr )
-        Case "debug"
-            WriteFile( "DEBG "+datastr )
-            If DEBUGGER WriteErr( "# "+datastr )
-        Case "error"
-            WriteFile( "ERRR "+datastr )
-            WriteErr( "# "+datastr )
-        Case "critical"
-            WriteFile( "CRIT "+datastr )
-            WriteErr( "# "+datastr )
-        'case "receive","send"
-        '    debug( upper(event)+":" )
-        '    debug( extrastr )
-        Case "cancelrequest"
-            Local node:JSON = JSON( data )
-            If node debug( "CANCEL: "+node.toint() )
-        Case "exitnow"
-            debug( "TLogger is closing" )
-            Close()
-        Default
-            error( "TLogger: event '"+event+"' ignored")
-        End Select
-    End Method
+'        Select event
+'        Case "log"
+'            WriteFile( datastr[..4]+" "+extrastr )
+'        Case "info"
+'            WriteFile( "INFO "+datastr )
+'            WriteErr( datastr )
+'        Case "debug"
+'            WriteFile( "DEBG "+datastr )
+'            If DEBUGGER WriteErr( "# "+datastr )
+'        Case "error"
+'            WriteFile( "ERRR "+datastr )
+'            WriteErr( "# "+datastr )
+'        Case "critical"
+'            WriteFile( "CRIT "+datastr )
+'            WriteErr( "# "+datastr )
+'        'case "receive","send"
+'        '    debug( upper(event)+":" )
+'        '    debug( extrastr )
+'        Case "cancelrequest"
+'            Local node:JSON = JSON( data )
+'            If node debug( "CANCEL: "+node.toint() )
+'        Case "exitnow"
+'            debug( "TLogger is closing" )
+'            Close()
+'        Default
+'            error( "TLogger: event '"+event+"' ignored")
+'        End Select
+'    End Method
 
     Public
 
@@ -124,6 +126,13 @@ Type TLogger Extends TObserver
         If file file.Close()
         file = Null
     End Method
+
+	' V4 EVENT HANDLERS
+	
+	Method on_exit:JSON( message:TMessage )
+		Close()
+	End Method
+	
 End Type
 
 

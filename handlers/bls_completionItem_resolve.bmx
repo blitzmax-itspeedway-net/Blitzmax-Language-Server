@@ -22,7 +22,7 @@ Rem EXAMPLE
 End Rem
 
 Function bls_completionItem_resolve( message:TMessage )
-    Publish( "log", "DBG", "bls_completionItem_resolve() - TEST CODE~n"+message.J.stringify() )
+    logfile.debug( "bls_completionItem_resolve() - TEST CODE~n"+message.J.stringify() )
     logfile.info( "~n"+message.j.Prettify() )
 	
     Local id:String = message.getid()

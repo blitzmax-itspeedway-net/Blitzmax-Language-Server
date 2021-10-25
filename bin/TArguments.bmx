@@ -50,7 +50,8 @@ Type TArguments
 	Method New()
 'DebugStop
 		'   ARGUMENTS
-		Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
+		'Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
+		logfile.debug( "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs)) )
 		
 		' Set the application argument in case we need it later
 		CONFIG[ "app" ] = AppArgs[0]
@@ -88,7 +89,8 @@ Type TArguments
 			exit_(1)
 		EndIf
 
-		Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
+		'Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
+		logfile.debug( "CONFIG:~n"+CONFIG.J.Prettify() )
 	End Method
 	
 	'Method operator []:String(key:String)
