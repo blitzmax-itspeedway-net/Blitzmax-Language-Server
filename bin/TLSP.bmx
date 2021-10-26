@@ -81,6 +81,7 @@ Type TLSP Extends TEventHandler
             ' Report an error to the Client using stdOut
             If Not J Or J.isInvalid()
 				Local errtext:String
+				logfile.error( content )
 				If J.isInvalid()
 					errtext = "ERROR("+J.errNum+") "+J.errText+" at {"+J.errLine+","+J.errpos+"}"
 				Else
@@ -499,16 +500,18 @@ EndRem
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
 	Method on_dollar_setTrace:JSON( message:TMessage )					' NOTIFICATION
 		ImplementationIncomplete( message )
+		'logfile.debug( "TLSP.onSetTrace()~n"+message.J.prettify() )
 		trace = message.params.find( "value" ).toString()
+		logfile.info( "? setTrace is now: '"+trace+"'" )
 		' NOTIFICATION: No response necessary
 	End Method
 	
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
 	' Trace notifications
 	Method on_dollar_setTraceNotification:JSON( message:TMessage )			' NOTIFICATION
-		'publish( "log", "DBG", "EVENT onSetTraceNotification()" )
-		logfile.debug( "TLSP.onSetTraceNotification()" )
+		'logfile.debug( "TLSP.onSetTraceNotification()~n"+message.J.prettify() )
 		trace = message.params.find( "value" ).toString()
+		logfile.info( "? setTrace is now: '"+trace+"'" )
 		' NOTIFICATION: No response necessary
 	End Method
 	
@@ -516,12 +519,13 @@ EndRem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders
 	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
-		logfile.debug( "## NOT IMPLEMENTED: onWorkspaceFolders()~n"+message.J.Prettify() )
+		ImplementationIncomplete( message )
 	End Method
 
-	'https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
-	Method onDidChangeWorkspaceFolders:TMessage( message:TMessage )		' NOTIFICATION
-		logfile.debug( "## Not IMPLEMENTED: onDidChangeWorkspaceFolders()~n"+message.J.Prettify() )
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
+	' NOTIFICATION: workspace/didChangeWorkspaceFolders
+	Method on_workspace_didChangeWorkspaceFolders:JSON( message:TMessage )		
+		'ImplementationIncomplete( message )
 		
 		Local params:JSON = message.params
 		
@@ -595,7 +599,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
 	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
-		logfile.debug( "## NOT IMPLEMENTED: onDidChangeConfiguration()~n"+message.J.Prettify() )
+		ImplementationIncomplete( message )
 		Local params:JSON = message.params
 		
 		'Local workspace:TWorkspace = Workspaces.findUri( uri )
@@ -609,14 +613,14 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
 	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
+		ImplementationIncomplete( message )
 		Local id:String = message.getid()
-		logfile.debug( "## NOT IMPLEMENTED: onWorkspaceConfiguraion()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
 	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
-		logfile.debug( "## NOT IMPLEMENTED: onDidChangeWatchedFiles()~n"+message.J.Prettify() )
+		ImplementationIncomplete( message )
 		
 		Local params:JSON = message.params
 		
@@ -643,8 +647,8 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didOpen
 	' textDocument/didOpen
-	Method onDidOpen:TMessage( message:TMessage )						' NOTIFICATION
-		logfile.debug( "NOT IMPLEMENTED: onDidOpen()" )
+	Method on_textDocument_didOpen:JSON( message:TMessage )						' NOTIFICATION
+		'ImplementationIncomplete( message )
 		'
 Try
 		Local params:JSON = message.params
@@ -679,7 +683,8 @@ Try
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didChange
 	' textDocument/didChange
-	Method onDidChange:TMessage( message:TMessage )						' NOTIFICATION
+	Method on_textDocument_didChange:JSON( message:TMessage )						' NOTIFICATION
+		ImplementationIncomplete( message )
 Rem
 {
   "jsonrpc": "2.0",
@@ -708,7 +713,6 @@ Rem
   }
 }
 End Rem
-		logfile.warning( "## NOT IMPLEMENTED: onDidChange()~n"+message.J.Prettify() )
 		
 		Local params:JSON = message.params
 		Local uri:String = params.find( "textDocument|uri" ).tostring()
@@ -720,36 +724,13 @@ End Rem
 
 		' Run Linter
 		'lint( document )
+		' NOTIFICATION: No response necessary
 	End Method
-	
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
-	' textDocument/willSave
-	Method onWillSave:TMessage( message:TMessage )						' NOTIFICATION
-		logfile.debug( "## NOT IMPLEMENTED: onWillSave()~n"+message.J.Prettify() )
-	End Method
-	
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSaveWaitUntil
-	' textDocument/willSaveWaitUntil
-	Method onWillSaveWaitUntil:TMessage( message:TMessage )				' REQUEST
-		Local id:String = message.getid()
-		logfile.debug( "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
-		client.send( Response_OK( id ) )
-	End Method
-	
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
-	' textDocument/didSave
-	Method onDidSave:TMessage( message:TMessage )						' NOTIFICATION
-		logfile.debug( "## NOT IMPLEMENTED: onDidSave()~n"+message.J.Prettify() )
-		Local params:JSON = message.params
-		Local uri:String  = params.find( "textDocument|uri" ).tostring()
-		'local document:TFullTextDocument = Workspaces.document_get( uri )
-		' Run Linter
-		'lint( document )
-	End Method
-	
+
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didClose
-	' textDocument/didClose
-	Method onDidClose:TMessage( message:TMessage )						' NOTIFICATION
+	' NOTIFICATION: textDocument/didClose
+	Method on_textDocument_didClose:JSON( message:TMessage )
+		'ImplementationIncomplete( message )
 Rem
 {
   "jsonrpc": "2.0",
@@ -761,14 +742,41 @@ Rem
   }
 }
 End Rem
-		logfile.debug( "## NOT IMPLEMENTED: onDidClose()~n"+message.J.Prettify() )
 		Local params:JSON = message.params
 
 		Local uri:TURI = New TURI( params.find( "textDocument|uri" ).tostring() )
 		Local workspace:TWorkspace = Workspaces.get( uri )
 		workspace.remove( uri )
 		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+		' NOTIFICATION: No response necessary
 	End Method
+		
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
+	' textDocument/willSave
+	Method onWillSave:TMessage( message:TMessage )						' NOTIFICATION
+		ImplementationIncomplete( message )
+	End Method
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSaveWaitUntil
+	' textDocument/willSaveWaitUntil
+	Method onWillSaveWaitUntil:TMessage( message:TMessage )				' REQUEST
+		ImplementationIncomplete( message )
+		Local id:String = message.getid()
+		client.send( Response_OK( id ) )
+	End Method
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
+	' NOTIFICATION: textDocument/didSave
+	Method on_textDocument_didSave:TMessage( message:TMessage )						' 
+		ImplementationIncomplete( message )
+		Local params:JSON = message.params
+		Local uri:String  = params.find( "textDocument|uri" ).tostring()
+		'local document:TFullTextDocument = Workspaces.document_get( uri )
+		' Run Linter
+		'lint( document )
+	End Method
+	
+
 
 	'	##### LANGUAGE FEATURES #####
 	
@@ -780,6 +788,7 @@ End Rem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover
 	Method onHover:TMessage( message:TMessage )							' REQUEST
+		ImplementationIncomplete( message )
 		Local id:String = message.getid()
 		logfile.debug( "TLSP.onHover()" )
 		If Not message Or Not message.J
@@ -796,9 +805,24 @@ End Rem
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	Method onDocumentSymbol:TMessage( message:TMessage )				' REQUEST
+		ImplementationIncomplete( message )
 		Local id:String = message.getid()
-		logfile.debug( "## NOT IMPLEMENTED: onWillSaveWaitUntil()~n"+message.J.Prettify() )
 		client.send( Response_OK( id ) )
 	End Method
+
+	' HANDLER TEMPLATE
+	
+	'__WEBLINK__
+	' REQUEST | NOTIFICATION: _MESSAGE_
+	'Method on_HANDLER:JSON( message:TMessage )
+	'	ImplementationIncomplete( message )
+	'	Local id:String = message.getid()
+	'	Local params:JSON = message.params
+	'	
+		' NOTIFICATION: No response necessary
+		' REQUEST: Return response
+	'	Return Response_OK( id )
+	'End Method
+
 
 End Type
