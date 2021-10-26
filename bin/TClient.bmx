@@ -71,9 +71,19 @@ Type TClient Extends TMessageQueue
 		'Return ( J.tostring() = "true" )
 	End Method
 	
-	' HELPER: Send a message to client
+	' HELPER: Send a message to client by pushing it to the send queue
 	Method Send( message:JSON )
-		New TMessage( "sendToClient", message ).send()		' Send message to client
+
+		' Check we have a valid JSON object, or replace with error
+		If Not message ; message = Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) 
+		
+		' Extract message
+		Local Text:String = message.stringify()
+		
+		'logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
+		logfile.debug( "TClient.Send()~n"+Text )
+
+		If Text ; pushSendQueue( Text )
 	End Method
 
 	' Get the client to register for configuration updates

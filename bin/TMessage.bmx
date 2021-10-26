@@ -43,36 +43,54 @@
 'Global EV_textDocument_completion:Int = AllocUserEventId( "textDocument/completion" )
 'Global EV_textDocument_documentSymbol:Int = AllocUserEventId( "textDocument_documentSymbol/completion" )
 
-' MESSAGE V0.3
-Type TMessage ' Extends TEvent
-
-	Field J:JSON		' Original Message
-
-	Field MsgID:String	' Original message ID
-	Field methd:String
-	Field request:Int = False	' Request or notification
-	Field params:JSON	' Empty until processed by message queue
-	'Field taskid:int	' Message ID
-
-    Field state:Int = STATE_WAITING		' State of the message
-    Field cancelled:Int = False         ' Message cancellation
+' MESSAGE V4
+Type TMessage 
 	
-	Method New( methd:String, payload:JSON, params:JSON=Null )
-		' TMessage values
+	Private
+
+	Field _id:String			' Original message "id"
+
+	Public
+	
+	Field J:JSON				' Original Message
+
+	Field methd:String			' Original message "method"
+	Field params:JSON			' Original message "params"
+	
+	Field request:Int = False	' Request or notification
+	'Field taskid:int			' Message ID
+
+    'Field state:Int = STATE_WAITING		' State of the message
+    Field cancelled:Int = False         ' Message cancellation	
+	
+	Method New( methd:String, payload:JSON )	', params:JSON=Null )
+		' Arguments
 		Self.methd = methd
 		Self.J = payload
-		Self.params = params
-		' TEvent values
-		'Self.extra = payload
-		'Self.source = Self
+		
+		' Extractions
+		params = payload.find( "params" )
 		
 		' Extract ID (if there is one) 
 		If payload.contains( "id" )
 			request = True
-			Local JID:JSON = payload.find( "id" )
-			MsgID = JID.toString()
+			_id = payload.find( "id" ).toString()
 		End If
-		
+
+	End Method
+			
+	' Getter!
+	Method getid:String()
+		Return _id
+	End Method
+
+	' Helper function for message distribution
+	Method send()
+		lsp.distribute( Self )
+	End Method
+
+End Type
+
 		'Publish( "log", "DBG", "** TMSG: '"+methd+"'" )
 		' DEPRECIATED 25/10/21
 '		Select methd
@@ -120,16 +138,9 @@ Type TMessage ' Extends TEvent
 '			id = EV_UNKNOWN
 '		End Select
 '		'Publish( "log", "DBG", "** TMSG: '"+methd+"' ("+id+")" )		
-	End Method
+
 	
 	' 
-	Method getid:String()
-		Return msgid
-'		If Not extra Return "null"
-'		Local J:JSON = JSON(extra).find("id")
-'		If Not J Return "null"
-'		Return J.toString()
-	End Method
 	
 	' NOT USED AT THE MOMENT - BUT SHOULD BE!
 	'Method reflect:TASTNode()
@@ -147,9 +158,6 @@ Type TMessage ' Extends TEvent
 	'	End If
 	'End Method
 	
-	Method send()
-		lsp.distribute( Self )
-	End Method
 	
 	' Override Emit(), so that we can deal with unhandled events
 	' data should be NULL if event has been handled.
@@ -170,4 +178,3 @@ Type TMessage ' Extends TEvent
 	'	' Set task as complete
 	'	state = STATE_COMPLETE
 	'End Method
-End Type

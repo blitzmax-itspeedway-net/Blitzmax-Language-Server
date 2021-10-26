@@ -121,6 +121,24 @@ Type TLogger Extends TEventHandler
         WriteFile( "DEBG "+message )
     EndMethod
 
+	' Use the language servers "trace" level to support messaging
+	Method trace( message:String, verbose:String="" )
+
+		WriteFile( "TRAC LEVEL: "+lsp.trace )	
+		WriteFile( "TRAC MESSAGE: "+message )	
+		If verbose<>"" ; WriteFile( "TRAC VERBOSE: "+verbose )
+		
+		If lsp.trace = "off" ; Return	' Client doesn't want to know!
+		
+		Local logTrace:JSON = New JSON()
+		logTrace.set( "jsonrpc", JSONRPC )
+		logTrace.set( "params|message", message )
+		If lsp.trace = "verbose" And verbose<>"" ; logTrace.set( "params|verbose", verbose )
+
+		client.send( logTrace )
+		'
+	End Method
+
     Method Close()
         Self.WriteFile( "CLOSED" )
         If file file.Close()

@@ -48,7 +48,7 @@ Type TMessageQueue Extends TEventHandler
 		' V0.3, Start Event Listener
 		'listen()
 		
-		' V4 - Register handler
+		' V4 - Register handler for events
 		register()
 		
         ' Subscribe to messages
@@ -165,7 +165,7 @@ End Rem
 
 		'Local JID:JSON = message.J.find("id")
 		'Local taskid:String = JID.tostring()
-		logfile.debug( "Pushing Message Task ("+message.msgid+", '"+ message.methd +"'" )
+		logfile.debug( "Pushing Message (Task "+message.getid()+"): '"+ message.methd +"'" )
 		
         'Publish( "debug", "- task mutex locked" )
         'taskqueue.insert( message.taskid, message )
@@ -315,106 +315,18 @@ End Rem
 	'	V4 MESSAGE HANDLERS
 	'	REQUESTS MUST RETURN A RESPONSE OTHERWISE AN ERROR IS SENT
 
-	Method on_ReceiveFromClient:JSON( message:TMessage )		' NOTIFICATION
-		logfile.debug( "-> TMessageQueue.on_ReceiveFromClient()" )
-		
-		' J contains the original JSON payload from client
-		If Not message Or Not message.J 
-			client.send( Response_Error( ERR_INVALID_REQUEST, "Invalid request" ) )
-			Return Null
-		End If
-		
-		' Check for a method
-		Local node:JSON = message.J.find("method")
-		If Not node 
-			client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
-			Return Null
-		End If
-		
-		' Validate methd
-		Local methd:String = node.tostring()
-		If methd = "" 
-			client.send( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
-			Return Null
-		End If
-		
-		' Extract "Params" if it exists (which it should)
-		'If J.contains( "params" )
-		Local params:JSON = message.J.find( "params" )
-		'End If
-
-		logfile.debug( "- ID:      "+message.getid() )
-		logfile.debug( "- METHOD:  "+methd )
-		'Publish( "debug", "- REQUEST:~n"+J.Prettify() )
-		'Publish( "debug", "- PARAMS:  "+params.stringify() )
-
-		Local newMessage:TMessage = New TMessage( methd, message.J, params )
-
-		' REQUEST or NOTIFICATION
-		If message.request
-			logfile.debug( "- TYPE:    REQUEST" )
-			' This is a request, add to queue
-			logfile.debug( "Pushing request '"+methd+"' to queue")
-			pushTaskQueue( newMessage )		
-		Else
-			' The message is a notification, send it now.
-			logfile.debug( "- TYPE:    NOTIFICATION" )
-			'Publish( "debug", "Executing notification "+methd )
-			'New TMessage( methd, message.J, params ).emit()
-			newMessage.send()
-			'Return Null
-		End If
-		' NOTIFICATION: No response required
-	End Method
-
-	' Sending a message to the client
-	Method on_SendToClient:JSON( message:TMessage )			' NOTIFICATION
-		'Publish( "debug", "TMessageQueue.OnSendtoClient()" )
-
-		' Message.J contains the JSON being sent
-		'Local J:JSON = JSON( message.extra )
-		If Not message Or Not message.J
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
-			Return Null
-		End If
-		
-		' Extract message
-		Local Text:String = message.J.stringify()
-		'publish( "debug", "TMessageQueue.onSendToClient()~n"+text )
-		logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
-		
-		If Text ; pushSendQueue( Text )
-		'Return null
-		' NOTIFICATION: No response required
-	End Method	
-
-	Method On_CancelRequest:TMessage( message:TMessage )			' NOTIFICATION
+	Method on_dollar_CancelRequest:JSON( message:TMessage )			' NOTIFICATION
 		logfile.debug( "TMessageQueue.on_CancelRequest~n"+message.j.Prettify() )
-		' Message.J contains the original JSON being sent
-		' Message.Params contains the parameters
-		If Not message Or Not message.params
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) )
-			Return Null
-		End If
-		
-		'Local JID:JSON = message.params.find( "id" )
-		'If Not JID
-		'	client.send( Response_Error( ERR_INVALID_REQUEST, "Missing ID" ) )
-		'	Return Null
-		'End If
-		'
-		'Local id:String = JID.toString()
+
 		LockMutex( taskmutex )
 		
-		logfile.debug( "# CANCELLING MESSAGE: "+message.MsgID )
+		logfile.debug( "# CANCELLING MESSAGE: "+message.getid() )
 		' Remove from queue
 		taskqueue.remove( message )
 	
 		UnlockMutex( taskMutex )
 		
-		'client.send( Response_OK( message.MsgID ) )
-		'Return null
-		'	NOTIFICATION - No response required
+		' NOTIFICATION - No response required
 	End Method
 
 

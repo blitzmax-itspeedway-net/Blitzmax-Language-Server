@@ -36,16 +36,17 @@ Type TEventHandler
 	'V4.0
 	Method distribute( message:TMessage )
 		Local count:Int = 0
+		
+		' Create function string; removing unwanted characters
+		Local callable:String = "on_"+message.methd
+		callable = Replace( callable, "$/", "dollar_" )
+		callable = Replace( callable, "/", "_" )
+		callable = Replace( callable, "-", "" )
+		
 		For Local handler:TEventHandler = EachIn handlers
 			
 			Local this:TTypeId = TTypeId.ForObject( handler )
-
-			' Create function string; remving unwanted characters
-			Local callable:String = "on_"+message.methd
-			callable = Replace( callable, "$", "dollar" )
-			callable = Replace( callable, "/", "_" )
-			callable = Replace( callable, "-", "" )
-
+			
 			' Use reflection to obtain method
 			Local call:TMethod = this.FindMethod( callable )
 	'DebugStop
@@ -77,6 +78,7 @@ Type TEventHandler
 			Else
 				logfile.warning( "## No registered handler for '"+message.methd+"'" ) 
 			EndIf
+			logfile.debug( "## Method "+callable+"() is missing" )
 		End If
 	End Method
 	

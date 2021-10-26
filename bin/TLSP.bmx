@@ -10,9 +10,9 @@ Type TLSP Extends TEventHandler
 
     Field exitcode:Int = 0
 
-	Field initialised:Int = False   	' Set by "iniialized" message
-    Field shutdown:Int = False      	' Set by "shutdown" message
-	Field dollar_trace:String = "off"		' Set by $/setTrace or OnTraceNotification
+	Field initialised:Int 	= False   	' Set by "initialized" message
+    Field shutdown:Int 		= False		' Set by "shutdown" message
+	Field trace:String 		= "off"		' Set by $/setTrace or OnTraceNotification
 	
 	' ROOT URI and ROOT WORKSPACE are now saved into TWorkspaces
 	'Field rooturi:String					' Root URI
@@ -36,10 +36,9 @@ Type TLSP Extends TEventHandler
     Field ThreadPoolSize:Int
     Field sendMutex:TMutex = CreateMutex()
 
-    
 	' System
 	'Field capabilities:JSON = New JSON()	' Empty object
-	Field handlers:TMap = New TMap
+	'Field handlers:TMap = New TMap
 	
 	Method New()
 'DebugStop
@@ -95,15 +94,7 @@ Type TLSP Extends TEventHandler
                 Continue
             End If
 			'Publish( "debug", "Parse successful" )
-			
-            ' Debugging
-            'Local debug:String = JSON.stringify(J)
-            'logfile.write( "STRINGIFY:" )
-            'logfile.write( "  "+debug )
-
-			' V0.3 Event Creation
-			
-BUG
+						
 Rem
 Message is sent as a receiveFromClient, but it has an ID from the original message
 so it becomes a REQEST.
@@ -112,9 +103,69 @@ returns a failure back to the client which forces the IDE to close the BLS.
 
 I can either modify message in receiveFromClient (and sendto Client) so that it is a notification
 Or I can process the message here and send it without using "receiveFromClient" (Much cleaner)
+
+ReceiverThread Gets message from connection (StdIn)
+	Parses STRING into JSON and packages it into TMessage 
+	:- calls TMessage("receiveFromClient").send()
+TMEssage.Send() calls TLSP.distribute()
+TEventHandler.Distribute() Extracts Method from Message
+	:- Calls TMEssageQueue.on_ReceiveFromClient()
+TMEssageQueue.on_ReceiveFromClient() validates method and message
+	Repackages into another TMessage and calls Send...
+	
 End Rem
-			New TMessage( "receiveFromClient", J ).send()		' Send Message Received event	
-   
+
+			' J is my JSON (Freshly arrived from IDE)
+			
+			' Check for a method
+			If Not J.contains("method")
+				client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
+				Continue
+			End If
+				
+			' Get Method and Ensure it isn't empty
+			Local methd:String = J.find("method").toString()
+			If methd = "" 
+				client.send( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
+				Continue
+			End If
+				
+			' Extract "Params" if they exist (They should)
+			'Local params:JSON = J.find( "params" )
+
+			' Create a Message object
+			Local message:TMessage = New TMessage( methd, J ) ', params )
+			Local id:String = message.getid()
+			
+            ' Validation
+			Select True
+			Case lsp.initialised And methd="initialize"
+				client.send( Response_Error( ERR_INVALID_REQUEST, "Server already initialized", id ) )
+				Continue
+			Case Not lsp.initialised And methd<>"initialize"
+				client.send( Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized", id ))
+				Continue
+            End Select
+
+			logfile.debug( "- ID:      "+id )
+			logfile.debug( "- METHOD:  "+methd )
+			'Publish( "debug", "- REQUEST:~n"+J.Prettify() )
+			'Publish( "debug", "- PARAMS:  "+message.params.stringify() )
+			
+			' REQUEST or NOTIFICATION
+			If message.request
+				logfile.debug( "- TYPE:    REQUEST" )
+				' This is a request, add to queue
+				'logfile.debug( "Pushing request '"+methd+"' to queue")
+				client.pushTaskQueue( message )		
+			Else
+				' The message is a notification, send it now.
+				logfile.debug( "- TYPE:    NOTIFICATION" )
+				'Publish( "debug", "Executing notification "+methd )
+				'New TMessage( methd, message.J, params ).emit()
+				message.send()
+			End If
+
 Rem V0.2 depreciated
             ' Check for a method
             node = J.find("method")
@@ -193,6 +244,11 @@ EndRem
         'Publish( "debug", "ReceiverThread - Exit" )
     End Function
 
+	' Report an Implementation Incomplete State
+	Method ImplementationIncomplete( message:TMessage )
+		logfile.error( "## IMPLEMENTATION INCOMPLETE: '"+message.methd+"'~n"+message.J.Prettify() )
+	End Method
+
 	'V0.1
     ' Thread based message sender
     Function SenderThread:Object( data:Object )
@@ -267,36 +323,31 @@ Rem 31/8/21 Depreciated
 	End Method
 EndRem
 	
-	Method sendPreInitialisedError:Object( id:String )
-		client.send( Response_Error:JSON( ERR_SERVER_NOT_INITIALIZED, "Server is not initialised", id ) )
-		Return Null
-	End Method
+'	Method sendPreInitialisedError:Object( id:String )
+'		client.send( Response_Error:JSON( ERR_SERVER_NOT_INITIALIZED, "Server is not initialised", id ) )
+'		Return Null
+'	End Method
 
-	'	V0.3 EVENT HANDLERS
-	'	WE MUST RETURN MESSAGE IF WE DO NOT HANDLE IT
-	'	RETURN NULL WHEN MESSAGE HANDLED OR ERROR HANDLED
-
-	' Message has arrived from the client.
-	Method on_ReceiveFromClient:JSON( message:TMessage )
-		logfile.debug( "-> TLSP.on_ReceiveFromClient()" )
-	End Method
+	'	V4 MESSAGE HANDLERS
+	'	REQUESTS MUST RETURN A RESPONSE OR CLIENT IS SENT AN ERROR
 		
-	'	##### GENERAL MESSAGES #####
+	' ############################################################
+	' ##### GENERAL MESSAGES #####################################
 
-	Method onExit:TMessage( message:TMessage )						' NOTIFICATION
-		'publish( "log", "DBG", "EVENT onExit()" )
+	Method on_Exit:JSON( message:TMessage )						' NOTIFICATION
 		logfile.debug( "TLSP.onExit()" )
+
 		' QUIT MAIN LOOP
         AtomicSwap( QuitMain, False )
-		'message.state = STATE_COMPLETE
+
 		' NOTIFICATION: No response necessary
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialize
-	Method onInitialize:TMessage( message:TMessage )				' REQUEST
+	Method on_Initialize:JSON( message:TMessage )				' REQUEST
 		Local id:String = message.getid()
 		Local params:JSON = message.params
-		
+				
 		'logfile.debug( "onInitialise()~n"+message.J.prettify() )
 		'logfile.debug( "ONINITIALISE ID="+id )
 		
@@ -307,8 +358,6 @@ EndRem
 		'workspaces.initialise( params )		' Will extract "rootPath" and "workspaceFolders"
 		
 		' Standardise the rootUri path
-		
-		' Add the rootURI to workspaces
 		'	(If multi-workspace is disabled, this will be set, otherwise it will be file:///"
 		Local uri:TURI = New TURI( params.find( "rootUri" ).toString() )
 		'logfile.debug( "ROOTURI:" ) 
@@ -331,21 +380,23 @@ Rem
       }
     ]
 EndRem
-		Local workspaceFolders:JSON[] = params.find( "workspaceFolders" ).toArray()
-		'logfile.debug( "WORKSPACEFOLDERS:~n"+params.find( "workspaceFolders" ).prettify() )
-		'logfile.debug( "ARRAY:"+workspaceFolders[0].prettify() )
-		'logfile.debug( workspacefolders.length + " WORKSPACES" )
-		For Local workspace:JSON = EachIn workspaceFolders
-			Local name:String = workspace.find( "name" ).toString()
-			uri = New TURI( workspace.find( "uri" ).toString())
-			'uri = TURI.parse( uri ).toString()			' Normalise the uri
-			'logfile.debug( "ADDING '"+name+"' at "+uri )
-			If name And uri
-				'logfile.debug( ".. Adding" )
-				workspaces.add( uri, New TWorkspace( name, uri ) )
-			End If
-		Next
-		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+		If params.contains( "workspaceFolders" )
+			Local workspaceFolders:JSON[] = params.find( "workspaceFolders" ).toArray()
+			'logfile.debug( "WORKSPACEFOLDERS:~n"+params.find( "workspaceFolders" ).prettify() )
+			'logfile.debug( "ARRAY:"+workspaceFolders[0].prettify() )
+			'logfile.debug( workspacefolders.length + " WORKSPACES" )
+			For Local workspace:JSON = EachIn workspaceFolders
+				Local name:String = workspace.find( "name" ).toString()
+				uri = New TURI( workspace.find( "uri" ).toString())
+				'uri = TURI.parse( uri ).toString()			' Normalise the uri
+				'logfile.debug( "ADDING '"+name+"' at "+uri )
+				If name And uri
+					'logfile.debug( ".. Adding" )
+					workspaces.add( uri, New TWorkspace( name, uri ) )
+				End If
+			Next
+			logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+		End If
 		
 		' Extract other information that we may need
 		' clientProcessID = params.find( "processId" )
@@ -383,9 +434,10 @@ EndRem
 		'serverCapabilities.set( "monikerProvider", [] )
 		'serverCapabilities.set( "workspaceSymbolProvider", [] )
 		If client.has( "workspace|workspaceFolders" ) 
-			'Publish( "log", "DBG", "# Client HAS workspace|workspaceFolders" )
-			'logfile.debug( "# Client HAS workspace|workspaceFolders" )
+			logfile.debug( "# Client HAS workspace|workspaceFolders" )
 			serverCapabilities.set( "workspace|workspaceFolders|supported", "true" )
+			' send plural and non-plural due to a typo in the LSP 3.16 documentation that doesn't explain
+			' which one is correct!
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", "true" )
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotification", "true" )
 		End If
@@ -406,54 +458,57 @@ EndRem
 
 		'Publish( "log", "DEBG", "CAPABLITIES: "+serverCapabilities.Prettify() )
 
-		' SEND RESPONSE
-		client.send( InitializeResult )
-
 		' Enable all other message processing
 		initialised = True
+
+		' REQUEST: Return response
+		Return InitializeResult
 	End Method
 	
-	Method onInitialized:TMessage( message:TMessage )		' NOTIFICATION
+	Method on_Initialized:JSON( message:TMessage )		' NOTIFICATION
 		'publish( "log", "DBG", "EVENT onInitialized()" )
-		logfile.debug( "TLSP.onInitialized()" )
+		logfile.debug( "TLSP.on_Initialized()" )
 		
 		' Dynamically Register Capabilities
 		client.RegisterForConfigChanges()		' Register for configuration changes
 		'message.state = STATE_COMPLETE
 		
 		' Request Workspace folders that are open
-		Local workspaceFolders:JSON = New JSON()
-		workspaceFolders.set( "jsonrpc", JSONRPC )
+		'Local workspaceFolders:JSON = New JSON()
 		'workspaceFolders.set( "jsonrpc", JSONRPC )
-		workspaceFolders.set( "method", "workspace/workspaceFolders" )
-		workspaceFolders.set( "params", "null" )
-		client.send( workspaceFolders )
+		'workspaceFolders.set( "jsonrpc", JSONRPC )
+		'workspaceFolders.set( "method", "workspace/workspaceFolders" )
+		'workspaceFolders.set( "params", "null" )
+		'client.send( workspaceFolders )
+
+		logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
 		
 		' NOTIFICATION: No response necessary
 	End Method 
 
-	Method onShutdown:TMessage( message:TMessage )			' REQUEST
-		Local id:String = message.getid()
-		'publish( "log", "DBG", "EVENT onShutdown()" )
+	Method on_Shutdown:JSON( message:TMessage )			' REQUEST
 		logfile.debug( "TLSP.onShutdown()" )
 		shutdown = True
-		'
-		'message.state = STATE_COMPLETE
 		' SEND RESPONSE
-		client.send( Response_OK( id ) )
+		Return Response_OK( message.getid() )
+	End Method
+
+	' ############################################################
+	' #####TRACE NOTIFICATIONS ###################################
+
+	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
+	Method on_dollar_setTrace:JSON( message:TMessage )					' NOTIFICATION
+		ImplementationIncomplete( message )
+		trace = message.params.find( "value" ).toString()
+		' NOTIFICATION: No response necessary
 	End Method
 	
+	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
 	' Trace notifications
-	Method OnSetTraceNotification:TMessage( message:TMessage )			' NOTIFICATION
+	Method on_dollar_setTraceNotification:JSON( message:TMessage )			' NOTIFICATION
 		'publish( "log", "DBG", "EVENT onSetTraceNotification()" )
 		logfile.debug( "TLSP.onSetTraceNotification()" )
-		' Set our value to match params:
-		Local J:JSON = message.J.find( "params|value" )
-		If J 
-			'Publish( "log","DBG", J.prettify() )
-			logfile.debug( J.prettify() )
-			dollar_trace = J.toString()
-		End If
+		trace = message.params.find( "value" ).toString()
 		' NOTIFICATION: No response necessary
 	End Method
 	
