@@ -55,7 +55,7 @@ Include "bin/TClient.bmx"		' Represents the remote IDE
 Include "bin/TSymbolTable.bmx"	
 Include "bin/TTextDocument.bmx"	
 Include "bin/TWorkspace.bmx"
-Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - Will be replaced by TWorkspace
+'Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - Will be replaced by TWorkspace
 
 ' SANDBOX LEXER
 'Include "lexer/TLexer.bmx"
@@ -101,7 +101,7 @@ Global LSP:TLSP 									' Language Server
 ' else
 '	LSP = New TLSP_TCP()
 ' end if
-Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager
+'Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager, Depreciated (See Workspace)
 Global Workspaces:TWorkspaces = New TWorkspaces()
 
 '   INCREMENT BUILD NUMBER

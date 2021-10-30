@@ -80,8 +80,8 @@ Type TLSP_Stdio Extends TLSP
         DetachThread( Sender )
         logfile.debug( "Sender thread closed" )
 
-		' Close the document manager
-        documents.Close()
+		' Close the workspaces
+        Workspaces.shutdown()
 
         ThreadPool.shutdown()
         logfile.debug( "Worker thread pool closed" )

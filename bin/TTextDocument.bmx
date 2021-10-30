@@ -29,6 +29,7 @@ Type TTextDocument Implements ITextDocument
 	Public
 
 	Field content:String
+	Field validated:Int = False		' Used by validation thread to identify documents requiring validation
 
 	Method New( uri:TURI, content:String="", version:ULong = 0 )
 		Self.uri = uri
@@ -43,7 +44,8 @@ Type TTextDocument Implements ITextDocument
 	Method getText:String( range:TRange = Null ) 	;	End Method
 	Method positionAt:TPosition( offset:UInt ) 		;	End Method
 	Method offsetAt:UInt( position:TPosition )		;	End Method
-		
+	
+	Method validate() 				;	validated = True				;	End Method
 End Type
 
 ' A TFullTextDocument is open in the language client
@@ -68,7 +70,9 @@ Type TFullTextDocument Extends TTextDocument
 		lineOffsets = []
 	End Method
 
-	Method applyChange( change:String )
+	Method change( changes:JSON[], version:UInt )
+		logfile.debug( "TTextDocument.change() is not implemented" )
+		Self.version = version
 	End Method
 
 	Method get_lineCount:UInt()		; 	Return getLineOffsets().length	;	End Method
@@ -190,21 +194,44 @@ Rem
 	}
 End Rem
 
-	Method parse()
-		If content = "" Return
+'	Method parse()
+'		If content = "" Return
 		
 		' PARSE THE SOURCE
-		lexer = New TBlitzMaxLexer( content )
-		Local parser:TParser = New TBlitzMaxParser( lexer )
+'		lexer = New TBlitzMaxLexer( content )
+'		Local parser:TParser = New TBlitzMaxParser( lexer )
 'DebugStop	
-		ast = parser.parse_ast()
+'		ast = parser.parse_ast()
 
-logfile.debug( "FILE '"+uri.tostring()+"':" )
-logfile.debug( lexer.reveal() )
-logfile.debug( parser.reveal() )
-logfile.debug( ast.reveal() )
+'logfile.debug( "FILE '"+uri.tostring()+"':" )
+'logfile.debug( lexer.reveal() )
+'logfile.debug( parser.reveal() )
+'logfile.debug( ast.reveal() )
 
+'	End Method
+
+	Method validate()
+		If Not validated And content <> ""
+			logfile.debug( "> Parsing "+uri.tostring() )
+			lexer = New TBlitzMaxLexer( content )
+			Local parser:TParser = New TBlitzMaxParser( lexer )
+			ast = parser.parse_ast()
+
+			'logfile.debug( "FILE '"+uri.tostring()+"':" )
+			'logfile.debug( lexer.reveal() )
+			'logfile.debug( parser.reveal() )
+			'logfile.debug( ast.reveal() )
+			
+			' Send outline view to VSCODE
+			
+			
+		End If		
+		
+		' Mark document as validated
+		validated = True
 	End Method
+
+	
 
 End Type
 

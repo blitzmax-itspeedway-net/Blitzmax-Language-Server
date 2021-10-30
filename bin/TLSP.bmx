@@ -668,6 +668,10 @@ Try
 			workspace.add( uri, document )
 	'logfile( "Document is in workspace: "+workspace.name )
 			logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+			
+			' Invalidate document
+			workspace.invalidate( document )
+			
 			' Run Linter
 			'lint( document )
 		
@@ -716,11 +720,11 @@ End Rem
 		
 		Local params:JSON = message.params
 		Local uri:String = params.find( "textDocument|uri" ).tostring()
-		Local ver:Int = params.find( "textDocument|uri" ).toint()
+		Local version:Int = params.find( "textDocument|version" ).toint()
 		Local contentChanges:JSON[] = params.find( "contentChanges" ).toArray()
 
-		'Local workspace:TWorkspace = Workspaces.findUri( uri )
-		'workspace.document_update( uri, contentChanges )	
+		Local workspace:TWorkspace = Workspaces.get( uri )
+		workspace.change( uri, contentChanges, version )	
 
 		' Run Linter
 		'lint( document )
