@@ -65,7 +65,7 @@ EndEnum
 Enum TextDocumentSyncKind ; NONE = 0 ; FULL = 1 ; INCREMENTAL = 2 ; EndEnum
 
 ' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#diagnostic
-Type TDiagnostic
+Type TDiagnostic Extends TASTErrorMessage
 	Field range: TRange
 	Field severity: DiagnosticSeverity	' The diagnostic's severity.
 	'Field code: String					' The diagnostic's code, which might appear in the user interface.

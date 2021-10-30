@@ -57,27 +57,21 @@ Include "bin/TTextDocument.bmx"
 Include "bin/TWorkspace.bmx"
 Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - Will be replaced by TWorkspace
 
-' BlitzMax Parser
-' Included here until stable release pushed back into module
-'Include "bmx/lexer-const-bmx.bmx"
-'Include "bmx/TBlitzMaxAST.bmx"
-'Include "bmx/TBlitzMaxLexer.bmx"
-'Include "bmx/TBlitzMaxParser.bmx"
-
 ' SANDBOX LEXER
-Include "lexer/TLexer.bmx"
-Include "lexer/TToken.bmx"
-Include "lexer/TException.bmx"
+'Include "lexer/TLexer.bmx"
+'Include "lexer/TToken.bmx"
+'Include "lexer/TException.bmx"
 
 ' SANDBOX PARSER
-Include "parser/TParser.bmx"
-Include "parser/TASTNode.bmx"
-Include "parser/TASTBinary.bmx"
-Include "parser/TASTCompound.bmx"
-Include "parser/TVisitor.bmx"
-Include "parser/TParseValidator.bmx"
+'Include "parser/TParser.bmx"
+'Include "parser/TASTNode.bmx"
+'Include "parser/TASTBinary.bmx"
+'Include "parser/TASTCompound.bmx"
+'Include "parser/TVisitor.bmx"
+'Include "parser/TParseValidator.bmx"
 
 ' SANDBOX BLITZMAX LEXER/PARSER
+' Included here until stable release pushed back into module
 Include "bmx/lexer-const-bmx.bmx"
 Include "bmx/TBlitzMaxAST.bmx"
 Include "bmx/TBlitzMaxLexer.bmx"
@@ -88,6 +82,9 @@ Include "bmx/TBlitzMaxParser.bmx"
 Include "handlers/handlers.bmx"
 
 Include "bin/constants.bmx"
+
+DebugStop
+Local td:TDiagnostic = New TDiagnostic()
 
 'DebugStop
 '   GLOBALS

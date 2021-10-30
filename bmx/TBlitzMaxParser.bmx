@@ -353,9 +353,9 @@ EndRem
 				End If
 		
 			Catch e:TParseError
-DebugStop
+'DebugStop
 				If e 
-					token = lexer.fastFwd( TK_EOL )	' Skip to end of line
+					ast.add( eatUntil( [TK_EOL,TK_EOF], token ) )
 				End If
 
 			EndTry
