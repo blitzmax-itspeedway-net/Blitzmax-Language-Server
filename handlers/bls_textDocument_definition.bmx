@@ -24,13 +24,13 @@ Rem EXAMPLE
 }
 End Rem
 
-Function bls_textDocument_definition( message:TMessage )
+Function bls_textDocument_definition:JSON( message:TMessage )
     logfile.debug( "bls_textDocument_definition() - TEST CODE~n"+message.J.stringify() )
     logfile.info( "~n"+message.j.Prettify() )
 	
     Local id:String = message.getid()
     Local params:JSON = message.params
 
-	client.send( Response_OK( id ) )
+	Return( Response_OK( id ) )
 End Function
 

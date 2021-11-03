@@ -27,7 +27,7 @@ Rem EXAMPLE
 }
 End Rem
 
-Function bls_textDocument_completion( message:TMessage )
+Function bls_textDocument_completion:JSON( message:TMessage )
     logfile.debug( "bls_textDocument_completion() - TEST CODE~n"+message.J.stringify() )
     logfile.info( "~n"+message.j.Prettify() )
 	
@@ -57,7 +57,7 @@ Function bls_textDocument_completion( message:TMessage )
     items.addlast( item )
 
     ' Reply to the client
-    client.send( response )
+    return( response )
 
 End Function
 

@@ -3,30 +3,6 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 '   MESSAGE QUEUE
 
-Rem Event Lifecycle Explained
-
-	JSON Message arrives from client
-	LSP Receiver Thread packages this up into an event
-		Event ID:	EV_messageReceived event
-		Extra:		Original JSON message
-	Message queue receives this event
-		Validates JSON.Method
-		If Extra (JSON) contains an ID
-			Adds message to the message queue
-		If Extra (JSON) does not contain an ID
-			(It is a notification)
-			Emits an event
-				Event ID:	Matches the Method in the request
-				Extra:		Original JSON message
-	Messagequeue processes queue
-		Next message is emitted as an event
-			Event ID:	Matches the Method in the request
-			Extra:		Original JSON message
-	Message queue processes CANCEL EVENTS
-		Loops through message queue and flags message as cancelled.
-
-End Rem
-
 Type TMessageQueue Extends TEventHandler
     Global requestThread:TThread
     Global sendqueue:TQueue<String>         ' Messages waiting to deliver to Language Client

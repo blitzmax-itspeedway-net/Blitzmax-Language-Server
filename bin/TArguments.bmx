@@ -7,7 +7,7 @@
 Rem
 	IMPLEMENTED ARGUMENTS
 	
-	-ex:<option>	Enable experminental option
+	-x:<option>	Enable experminental option
 	
 End Rem
 
@@ -45,16 +45,24 @@ End Rem
 '		--lint:ifthen=10	' Enforce THEN is not used
 '		--lint:ifthen=11	' Enforce THEN is used
 
+Global EXPERIMENTAL:String[][] = [..
+	[ "ast", "AST" ], ..
+	[ "docsym", "Document Symbols" ] ..
+	]
+
 Type TArguments
 
 	Method New()
 'DebugStop
 		'   ARGUMENTS
 		'Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
-		logfile.debug( "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs)) )
+		logfile.debug( "  ARGS:" )'       "+AppArgs.length+"~n"+("#".join(AppArgs)) )
 		
 		' Set the application argument in case we need it later
 		CONFIG[ "app" ] = AppArgs[0]
+		
+		'DebugStop
+		'DebugLog( "ARGS:"+AppArgs.length )
 		
 		' Parse all the arguments, splitting them by ":"
 		For Local n:Int=1 Until AppArgs.length
@@ -62,11 +70,29 @@ Type TArguments
 			Local items:String[] = AppArgs[n].split(":")
 			Local key:String = Lower( items[0] )
 			Local value:String = ""
-			If items.length>1 ; value = ":".join( items[1..] )
+			Select items.length
+			Case 1
+				value = ""
+			Case 2
+				value = Lower(items[1])
+			Default
+				value = ":".join( items[1..] )
+			End Select
+			
+			logfile.debug( "    "+n+") "+key + " = '"+value+"'" )
 			'
 			Select key
-			Case "-ex"		' EXPERIMENTAL
-				CONFIG["experimental|"+value] = "true"  
+			Case "-x"		' EXPERIMENTAL
+				Local lab:String = experiment( value )
+				If lab = ""
+					Print( "Argument '"+AppArgs[n] + "' is an unknown experiment" )
+					logfile.warning( "## Argument '"+AppArgs[n] + "' is an unknown experiment" )
+				Else 
+					CONFIG["experimental|"+value] = "true"  
+					Print( "WARNING: '"+value+"' ("+lab+") is experimental" )
+					logfile.warning( "## Feature '"+value+"' ("+lab+") is experimental" )
+DebugLog( config.J.prettify() )
+				End If
 			Case "-h","-help"
 				CONFIG["cli|help"] = "true"  
 			Case "-v","-ver","-version"
@@ -74,23 +100,31 @@ Type TArguments
 			Default
 				' Invalid argument!
 				Print( "Argument '"+AppArgs[n] + "' is invalid" )
+				logfile.warning( "    Argument '"+AppArgs[n] + "' is invalid" )
 			End Select
 		Next
 
 		' Parse CLI commands
-		If CONFIG.contains( "cli|help" )
+		If CONFIG.isTrue( "cli|help" )
 			help()
 			exit_(1)
 		EndIf
 
-		If CONFIG.contains( "cli|version" )
+		If CONFIG.isTrue( "cli|version" )
 			Print AppTitle
 			Print "Version "+version+"."+build
 			exit_(1)
 		EndIf
 
 		'Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
-		logfile.debug( "CONFIG:~n"+CONFIG.J.Prettify() )
+		'logfile.debug( "CONFIG:~n"+CONFIG.J.Prettify() )
+	End Method
+	
+	Method experiment:String( criteria:String )
+		For Local i:Int = 0 Until experimental.length
+			If experimental[i][0]=criteria ; Return experimental[i][1]
+		Next
+		Return ""
 	End Method
 	
 	'Method operator []:String(key:String)

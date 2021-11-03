@@ -2,7 +2,7 @@
 '   JSON PARSER / CONFIG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-Type TConfig Extends TMap
+Type TConfig ' Extends TMap
 	Field J:JSON = New JSON()
 
     Method New()
@@ -100,9 +100,18 @@ End Rem
 '		Return String( valueforkey( key ) )
 	End Method
 	
-	Method Operator []( key:String, value:String )
+	Method Operator []=( key:String, value:String )
 		J.set( key, value )
 	End Method
 	
+	Method isTrue:Int( path:String )
+		Local key:JSON = J.find( path )
+logfile.debug( "KEY:"+key.stringify() )
+		Return key.isTrue()
+	End Method
+	
+	Method find:JSON( key:String )
+		 Return J.find( key )
+	End Method
 	
 End Type

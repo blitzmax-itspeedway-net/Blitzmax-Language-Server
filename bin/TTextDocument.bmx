@@ -222,14 +222,15 @@ End Rem
 			'logfile.debug( parser.reveal() )
 			'logfile.debug( ast.reveal() )
 			
-			' Send outline view to VSCODE
-			
 			
 		End If		
 		
 		' Mark document as validated
 		validated = True
 	End Method
+
+	'Method DocumentSymbolProvider()
+	'End Method
 
 	
 

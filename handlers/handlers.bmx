@@ -2,7 +2,8 @@
 '   LANGUAGE SERVER MESSAGE HANDLERS
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-include "bls_completionItem_resolve.bmx"
-include "bls_textDocument_completion.bmx"
-include "bls_textDocument_definition.bmx"
+Include "bls_completionItem_resolve.bmx"
+Include "bls_textDocument_completion.bmx"
+Include "bls_textDocument_definition.bmx"
+Include "bls_textDocument_documentSymbol.bmx"
 

@@ -42,24 +42,32 @@ Enum InsertTextFormat ; PlainText = 1 ; Snippet ; EndEnum
 Enum MessageType ; Error = 1 ; Warning ; Info ; Log ; EndEnum
 
 Enum SymbolKind
-    _File = 1
-    _Module = 2
-    _Namespace = 3
-    _Package = 4
-    _Class = 5
-    _Method = 6
-    _Property = 7
-    _Field = 8
-    _Constructor = 9
-    _Enum = 10
-    _Interface = 11
-    _Function = 12
-    _Variable = 13
-    _Constant = 14
-    _String = 15
-    _Number = 16
-    _Boolean = 17
-    _Array = 18
+    _File			= 1
+    _Module			= 2
+    _Namespace		= 3
+    _Package		= 4
+    _Class			= 5
+    _Method			= 6
+    _Property		= 7
+    _Field			= 8
+    _Constructor	= 9
+    _Enum			= 10
+    _Interface		= 11
+    _Function		= 12
+    _Variable		= 13
+    _Constant		= 14
+    _String			= 15
+    _Number			= 16
+    _Boolean		= 17
+    _Array			= 18
+	_Object			= 19
+	_Key			= 20
+	_Null			= 21
+	_EnumMember		= 22
+	_Struct			= 23
+	_Event			= 24
+	_Operator		= 25
+	_TypeParameter	= 26
 EndEnum
 
 Enum TextDocumentSyncKind ; NONE = 0 ; FULL = 1 ; INCREMENTAL = 2 ; EndEnum

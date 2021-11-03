@@ -117,6 +117,6 @@ Type TClient Extends TMessageQueue
 			' Fallback to global (or local) settings
 		End If
 	End Method
-
+	
 End Type
 

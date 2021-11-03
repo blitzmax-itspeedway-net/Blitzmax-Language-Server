@@ -21,7 +21,7 @@ Rem EXAMPLE
 }
 End Rem
 
-Function bls_completionItem_resolve( message:TMessage )
+Function bls_completionItem_resolve:JSON( message:TMessage )
     logfile.debug( "bls_completionItem_resolve() - TEST CODE~n"+message.J.stringify() )
     logfile.info( "~n"+message.j.Prettify() )
 	
@@ -60,6 +60,6 @@ Function bls_completionItem_resolve( message:TMessage )
 	End If
 	
 	' Reply to the client
-	client.send( response )  
+	return( response )  
 
 End Function

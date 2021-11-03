@@ -63,12 +63,12 @@ Include "bin/TWorkspace.bmx"
 'Include "lexer/TException.bmx"
 
 ' SANDBOX PARSER
-'Include "parser/TParser.bmx"
-'Include "parser/TASTNode.bmx"
-'Include "parser/TASTBinary.bmx"
-'Include "parser/TASTCompound.bmx"
-'Include "parser/TVisitor.bmx"
-'Include "parser/TParseValidator.bmx"
+Include "bmx.parser/TParser.bmx"
+Include "bmx.parser/TASTNode.bmx"
+Include "bmx.parser/TASTBinary.bmx"
+Include "bmx.parser/TASTCompound.bmx"
+Include "bmx.parser/TVisitor.bmx"
+Include "bmx.parser/TParseValidator.bmx"
 
 ' SANDBOX BLITZMAX LEXER/PARSER
 ' Included here until stable release pushed back into module
@@ -89,11 +89,29 @@ Local td:TDiagnostic = New TDiagnostic()
 'DebugStop
 '   GLOBALS
 Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
-Global Config:TConfig = New TConfig					' Configuration manager
+Global CONFIG:TConfig = New TConfig					' Configuration manager
 ' Apply Command line arguments
 Global Logfile:TLogger = New TLogger()				' Log File Manager
+
+'   INCREMENT BUILD NUMBER
+
+' @bmk include build.bmk
+' @bmk incrementVersion build.bmx
+Include "build.bmx"
+logfile.debug( "------------------------------------------------------------" )
+logfile.info( AppTitle )
+logfile.info( "  VERSION:    "+version+"."+build )
+logfile.debug( "  CURRENTDIR: "+CurrentDir$() )
+logfile.debug( "  AppDir:     "+AppDir )
+
+'	ARGUMENTS AND CONFIGURATION
 New TArguments()			' Arguments
+logfile.debug( "CONFIG:~n"+config.J.prettify() )
+
 Global Client:TClient = New TClient()				' Client Manager
+
+'	LANGUAGE SERVER
+
 Global LSP:TLSP 									' Language Server
 ' This will be based on arguments in the future, but for now we only support STDIO
 ' if Config['transport']="stdio"
@@ -101,18 +119,12 @@ Global LSP:TLSP 									' Language Server
 ' else
 '	LSP = New TLSP_TCP()
 ' end if
+
+'	DOCUMENTS AND WORKSPACES
+
 'Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager, Depreciated (See Workspace)
 Global Workspaces:TWorkspaces = New TWorkspaces()
 
-'   INCREMENT BUILD NUMBER
-
-' @bmk include build.bmk
-' @bmk incrementVersion build.bmx
-Include "build.bmx"
-logfile.info( AppTitle )
-logfile.info( "  VERSION:    "+version+"."+build )
-logfile.debug( "  CURRENTDIR: "+CurrentDir$() )
-logfile.debug( "  AppDir:     "+AppDir )
 
 Rem 31/8/21, Depreciated by new message queue
 '   Worker Thread
@@ -137,6 +149,22 @@ Type TRunnableTask Extends TRunnable
     End Method
 End Type
 End Rem
+
+' Function to identify membership of an INT array
+Function in:Int( needle:Int, haystack:Int[] )
+	For Local i:Int = 0 Until haystack.length
+		If haystack[i]=needle ; Return i
+	Next
+	Return 0
+End Function
+
+' Function to identify membership of an INT array
+Function notin:Int( needle:Int, haystack:Int[] )
+	For Local i:Int = 0 Until haystack.length
+		If haystack[i]=needle ; Return False
+	Next
+	Return True
+End Function
 
 '   Run the Application
 logfile.debug( "Starting Language Server..." )

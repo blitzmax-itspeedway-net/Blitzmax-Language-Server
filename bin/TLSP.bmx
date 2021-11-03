@@ -361,7 +361,8 @@ EndRem
 		' Standardise the rootUri path
 		'	(If multi-workspace is disabled, this will be set, otherwise it will be file:///"
 		Local uri:TURI = New TURI( params.find( "rootUri" ).toString() )
-		'logfile.debug( "ROOTURI:" ) 
+		'logfile.debug( "ROOTURI:" + params.find( "rootUri" ).toString() ) 
+		'logfile.debug( "ROOTURI:" + uri.toString() ) 
 		'logfile.debug( "-~tOriginal: "+uri ) 
 '		uri = TURI.parse( uri ).toString()			' Normalise the uri
 		'logfile.debug( "-~tStandard: "+uri )
@@ -418,7 +419,7 @@ EndRem
 		'serverCapabilities.set( "implementationProvider", [] )
 		'serverCapabilities.set( "referencesProvider", [] )
 		'serverCapabilities.set( "documentHighlightProvider", [] )
-		'serverCapabilities.set( "documentSymbolProvider", [] )
+		serverCapabilities.set( "documentSymbolProvider", True )
 		'serverCapabilities.set( "codeActionProvider", [] )
 		'serverCapabilities.set( "codeLensProvider", [] )
 		'serverCapabilities.set( "documentLinkProvider", [] )
@@ -499,8 +500,7 @@ EndRem
 
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
 	Method on_dollar_setTrace:JSON( message:TMessage )					' NOTIFICATION
-		ImplementationIncomplete( message )
-		'logfile.debug( "TLSP.onSetTrace()~n"+message.J.prettify() )
+		logfile.debug( "TLSP.on_dollar_setTrace()~n"+message.J.prettify() )
 		trace = message.params.find( "value" ).toString()
 		logfile.info( "? setTrace is now: '"+trace+"'" )
 		' NOTIFICATION: No response necessary
@@ -509,7 +509,7 @@ EndRem
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
 	' Trace notifications
 	Method on_dollar_setTraceNotification:JSON( message:TMessage )			' NOTIFICATION
-		'logfile.debug( "TLSP.onSetTraceNotification()~n"+message.J.prettify() )
+		logfile.debug( "TLSP.on_dollar_setTraceNotification()~n"+message.J.prettify() )
 		trace = message.params.find( "value" ).toString()
 		logfile.info( "? setTrace is now: '"+trace+"'" )
 		' NOTIFICATION: No response necessary
@@ -785,10 +785,10 @@ End Rem
 	'	##### LANGUAGE FEATURES #####
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_completion
-	Method onCompletion:TMessage( message:TMessage )		; 	bls_textDocument_completion( message )	; 	End Method
+	Method onCompletion:JSON( message:TMessage )		; 	Return bls_textDocument_completion( message )	; 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#completionItem_resolve
-	Method onCompletionResolve:TMessage( message:TMessage )	;	bls_textDocument_completion( message )	;	End Method
+	Method onCompletionResolve:JSON( message:TMessage )	;	Return bls_textDocument_completion( message )	;	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover
 	Method onHover:TMessage( message:TMessage )							' REQUEST
@@ -805,13 +805,13 @@ End Rem
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_definition
-	Method onDefinition:TMessage( message:TMessage )	; bls_textDocument_definition( message )	;	End Method
+	' REQUEST: textDocument/definition
+	Method onDefinition:JSON( message:TMessage )	; Return bls_textDocument_definition( message )	;	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
-	Method onDocumentSymbol:TMessage( message:TMessage )				' REQUEST
-		ImplementationIncomplete( message )
-		Local id:String = message.getid()
-		client.send( Response_OK( id ) )
+	' REQUEST: textDocument/documentSymbol
+	Method on_textDocument_documentSymbol:JSON( message:TMessage )
+		Return bls_textDocument_documentSymbol( message )
 	End Method
 
 	' HANDLER TEMPLATE
