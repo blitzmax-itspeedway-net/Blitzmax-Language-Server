@@ -164,6 +164,7 @@ Type TDocumentSymbolVisitor Extends TVisitor
 	Const OPT_TREE:Int = $0001
 	Const OPT_AST:Int  = $0010
 	Const OPT_SHOW:Int = $0011
+	Const OPT_EOL:Int  = $0100	' Show EOL symbols in AST
 	
 	Global VALID_SYMBOLS:String[] = ["program","function","type","method","struct","include"]
 
@@ -273,10 +274,93 @@ Rem - 6/11/21, Removed because we do this in visit()
 	End Method
 End Rem
 
-	' A missing optional compoment doesn't have a
-	'Method outline_missingoptional( arg:TGift )
-	'End Method
+	Method outline_MISSINGOPTIONAL( arg:TGift )
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Optional '" + arg.node.name + "' is missing " + arg.node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", 0 )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( arg.node ) )
+		documentSymbol.set( "selectionRange", JRange( arg.node ) )
+		' Add to mother node
+		arg.data.addLast( documentSymbol )
+	End Method
 
+	Method outline_ERROR( arg:TGift )
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "ERROR '"+arg.node.value+"' "+ arg.node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", 0 )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( arg.node ) )
+		documentSymbol.set( "selectionRange", JRange( arg.node ) )
+
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+
+		' Add to mother node
+		arg.data.addLast( documentSymbol )
+		visitChildren( arg.node, children, arg.prefix )
+	End Method
+	
+	' A container for skipped symbols
+	Method outline_IGNORED( arg:TGift )
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "IGNORED TOKENS" )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", 0 )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( arg.node ) )
+		documentSymbol.set( "selectionRange", JRange( arg.node ) )
+
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+
+		' Add to mother node
+		arg.data.addLast( documentSymbol )
+		visitChildren( arg.node, children, arg.prefix )
+	End Method
+
+	' A symbol has been skipped and this si a placeholder
+	Method outline_SKIPPED( arg:TGift )
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "SKIPPED '"+arg.node.value+"' "+arg.node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", 0 )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( arg.node ) )
+		documentSymbol.set( "selectionRange", JRange( arg.node ) )
+
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+
+		' Add to mother node
+		arg.data.addLast( documentSymbol )
+		visitChildren( arg.node, children, arg.prefix )
+		
+	End Method
+
+	' END OF LINE (EOL)
+	' This should only show if option is selected
+	Method outline_EOL( arg:TGift )
+		If options & OPT_EOL > 0
+		End If
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "EOL " + arg.node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", 0 )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( arg.node ) )
+		documentSymbol.set( "selectionRange", JRange( arg.node ) )
+		' Add to mother node
+		arg.data.addLast( documentSymbol )
+	End Method
+		
 	' This is the entry point of our appliciation
 	Method outline_PROGRAM( arg:TGift )
 		visitChildren( arg.node, arg.data, arg.prefix )
@@ -289,7 +373,7 @@ End Rem
 		If Not node.fnname Return
 		
 		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "Function "+node.fnname.value+"()" )
+		documentSymbol.set( "name", "Function "+node.fnname.value+"() "+node.pos() )
 		'documentSymbol.set( "detail", "" )
 		documentSymbol.set( "kind", SymbolKind._Function.ordinal() )
 		'documentSymbol.set( "tags", "" )
@@ -313,7 +397,7 @@ End Rem
 		If Not node.methodname Return
 		
 		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "Method "+node.methodname.value+"()" )
+		documentSymbol.set( "name", "Method "+node.methodname.value+"() "+node.pos() )
 		'documentSymbol.set( "detail", "" )
 		documentSymbol.set( "kind", SymbolKind._Method.ordinal() )
 		'documentSymbol.set( "tags", "" )
@@ -339,7 +423,7 @@ End Rem
 		Local documentSymbol:JSON = New JSON()
 		Local name:String = "Type "+node.typename.value
 		If node.extend And node.supertype ; name :+ " Extends "+node.supertype.value		
-		documentSymbol.set( "name", name )
+		documentSymbol.set( "name", name+" "+node.pos() )
 		'documentSymbol.set( "detail", "" )
 		documentSymbol.set( "kind", SymbolKind._Class.ordinal() )
 		'documentSymbol.set( "tags", "" )

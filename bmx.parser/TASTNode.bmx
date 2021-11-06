@@ -110,8 +110,13 @@ Type TASTNode
 	End Method
 
 	' Get string location
-	Method loc:String( Prefix:String = " " )
-		Return prefix+"["+start_line+","+start_char+"]-["+end_line+","+end_char+"]-"
+	Method loc:String()
+		Return "["+start_line+","+start_char+"]-["+end_line+","+end_char+"]"
+	End Method
+
+	' Get string position
+	Method pos:String()
+		Return "["+start_line+","+start_char+"]"
 	End Method
 	
 	' Debugging text (Name of node taken from metadata or name)

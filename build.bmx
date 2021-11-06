@@ -1,2 +1,2 @@
 global version:string="0.2A"
-global build:string="779"
+global build:string="788"
