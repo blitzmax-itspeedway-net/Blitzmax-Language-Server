@@ -25,11 +25,11 @@ logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
 	' Find a workspace for a file uri
 	Method get:TWorkspace( doc_uri:String )
 		Local uri:TURI = New TURI( doc_uri )
-If uri
-	logfile.debug( "uri is "+uri.toString() )
-Else
-	logfile.debug( "uri is NULL" )
-EndIf
+'If uri
+'	logfile.debug( "uri is "+uri.toString() )
+'Else
+'	logfile.debug( "uri is NULL" )
+'EndIf
 		If uri ; Return get( uri )
 	End Method
 	
@@ -48,7 +48,7 @@ EndIf
 		' Match workspaces
 		For Local key:String = EachIn list.keys()
 			Local workspace:TWorkspace = TWorkspace( list[key] )
-			logfile.debug( "Comparing: "+ workspace.uri.toString()+"~n  SCHEME:"+workspace.uri.scheme+"~n  AUTHORITY:"+workspace.uri.authority+"~n  PATH: "+workspace.uri.path )
+			'logfile.debug( "Comparing: "+ workspace.uri.toString()+"~n  SCHEME:"+workspace.uri.scheme+"~n  AUTHORITY:"+workspace.uri.authority+"~n  PATH: "+workspace.uri.path )
 			If workspace.uri.scheme = uri.scheme And ..
 			   workspace.uri.authority = uri.authority 
 				If workspace.uri.path = path
@@ -61,8 +61,8 @@ EndIf
 			End If
 		Next
 
-		logfile.debug( "# No workspace match was found" )
-		If candidate ; logfile.debug( "# Using candidate "+candidate.uri.toString() )
+		'logfile.debug( "# No workspace match was found" )
+		'If candidate ; logfile.debug( "# Using candidate "+candidate.uri.toString() )
 
 		' We get here if no exact match has been found
 		' In this case, we return the closest candidate (if found)
@@ -127,9 +127,9 @@ Type TWorkspace
 
 	' Add a document
 	Method add( uri:TURI, document:TTextDocument )
-		logfile.debug( "Adding document!" )
-		If Not uri logfile.debug( "uri IS NULL" )
-		logfile.debug( "Adding document to "+ uri.tostring() )
+		'logfile.debug( "Adding document!" )
+		'If Not uri logfile.debug( "uri IS NULL" )
+		'logfile.debug( "Adding document to "+ uri.tostring() )
 		documents[ uri.toString() ] = document
 		
 		' Request document validation

@@ -84,17 +84,27 @@ logfile.debug( "Got document" )
 	
 logfile.debug( "Getting Options" )
 
-	Local options:Int = 0	' SYMBOLINFORMATION
+	Local options:Int = TDocumentSymbolVisitor.OPT_FLAT
 	If client.has( "textDocument|documentSymbol|hierarchicalDocumentSymbolSupport" )
 		logfile.debug( "# Client HAS textDocument|documentSymbol|hierarchicalDocumentSymbolSupport" )
-		options = $0001
+		options = TDocumentSymbolVisitor.OPT_TREE
 	Else
 		logfile.debug( "# Client only supports SymbolInformation" )	
 	End If
 
+	' An AST can only be shown in Tree (Hierarchial) symbol information
 	Local showAST:Int = config.find("experimental|ast").toint()
-	If showAST ; options :| $0002
+	If showAST And options = TDocumentSymbolVisitor.OPT_TREE ; options :| TDocumentSymbolVisitor.OPT_AST
 	
+	'OPTIONS DEBUGGING
+	' 00 = Show Flat Symbol Information
+	' 01 = Show Hierarchical Symbol Information
+	' 10 = Not valid. Hierarchical is required to display AST
+	' 11 = Show AST INSTEAD of heirachical
+	'options = TDocumentSymbolVisitor.OPT_FLAT
+	'options = TDocumentSymbolVisitor.OPT_TREE
+	'options = TDocumentSymbolVisitor.OPT_TREE | TDocumentSymbolVisitor.OPT_AST
+
 	' Generate DocumentSymbol Information
 logfile.debug( "RUNNING VISITOR" )
 	Local visitor:TDocumentSymbolVisitor = New TDocumentSymbolVisitor( document.ast, options )
@@ -123,7 +133,7 @@ logfile.debug( "RUNNING VISITOR" )
 	'If data ; logfile.debug( "DOCUMENTSYMBOL~n"+data.prettify() )		
 
 logfile.debug( "CREATED DATA" )
-logfile.debug( "SYMBOLINFORMATION~n"+data.prettify() )
+'logfile.debug( "SYMBOLINFORMATION~n"+data.prettify() )
 	Local response:JSON = Response_OK( id )
 		
 	response.set( "result", data )
@@ -149,6 +159,13 @@ Type TDocumentSymbolVisitor Extends TVisitor
 
 	Field ast:TASTNode
 	Field options:Int
+	
+	Const OPT_FLAT:Int = $0000
+	Const OPT_TREE:Int = $0001
+	Const OPT_AST:Int  = $0010
+	Const OPT_SHOW:Int = $0011
+	
+	Global VALID_SYMBOLS:String[] = ["program","function","type","method","struct","include"]
 
 	Method New( ast:TASTNode, options:Int )
 		Self.ast = ast
@@ -163,9 +180,8 @@ Type TDocumentSymbolVisitor Extends TVisitor
 	End Method
 	
 	Method visit( node:TASTNode, mother:JSON, prefix:String = "outline" )
-'DebugStop
 		If Not node ; Return
-
+		
 		' Use Reflection to call the visitor method (or an error)
 		Local nodeid:TTypeId = TTypeId.ForObject( node )
 		
@@ -175,10 +191,22 @@ Type TDocumentSymbolVisitor Extends TVisitor
 		Local class:String = nodeid.metadata( "class" )
 		If class = "" class = node.name
 'DebugStop
+
+		' Only show selective nodes unless in AST mode
+		If options <> OPT_SHOW 
+Local within:Int = in( class, VALID_SYMBOLS )
+logfile.debug( "OPT:"+options+", '"+class+"', "+within )
+			If Not in( Lower(class), VALID_SYMBOLS ) ; Return
+		End If
+
 		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
 		If methd
+			
 			methd.invoke( Self, [New TGift(node,mother,prefix)] )
 		Else
+			' We only show these errors in AST View
+			If options <> OPT_SHOW ; Return
+		
 			Local documentSymbol:JSON = New JSON()
 			documentSymbol.set( "name", "## MISSING: '"+prefix+"_"+class+"()'" )
 			'documentSymbol.set( "detail", "" )
@@ -268,14 +296,6 @@ End Rem
 		'documentSymbol.set( "depreciated", "false" )
 		documentSymbol.set( "range", JRange( node ) )
 		documentSymbol.set( "selectionRange", JRange( node ) )
-		'documentSymbol.set( "range|start|line", node.line )
-		'documentSymbol.set( "range|start|character", node.pos )
-		'documentSymbol.set( "range|end|line", node.line+1 )
-		'documentSymbol.set( "range|end|character", 0 )
-		'documentSymbol.set( "selectionRange|start|line", node.line )
-		'documentSymbol.set( "selectionRange|start|character", node.pos )
-		'documentSymbol.set( "selectionRange|end|line", node.line+1 )
-		'documentSymbol.set( "selectionRange|end|character", 0 )
 
 		Local children:JSON = New JSON( JSON_ARRAY )
 		documentSymbol.set( "children", children )
@@ -286,5 +306,55 @@ End Rem
 		visitChildren( node.body, children, arg.prefix )
 	End Method
 	
+	' This is the entry point of our appliciation
+	Method outline_METHOD( arg:TGift )
+	
+		Local node:TAST_Method = TAST_Method( arg.node )
+		If Not node.methodname Return
+		
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Method "+node.methodname.value+"()" )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", SymbolKind._Method.ordinal() )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+		
+		' Add to mother node
+		arg.data.addLast( documentSymbol )	
+
+		visitChildren( node, children, arg.prefix )
+	End Method
+
+	' This is the entry point of our appliciation
+	Method outline_TYPE( arg:TGift )
+	
+		Local node:TAST_Type = TAST_Type( arg.node )
+		If Not node.typename Return
+		
+		Local documentSymbol:JSON = New JSON()
+		Local name:String = "Type "+node.typename.value
+		If node.extend And node.supertype ; name :+ " Extends "+node.supertype.value		
+		documentSymbol.set( "name", name )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", SymbolKind._Class.ordinal() )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+		
+		' Add to mother node
+		arg.data.addLast( documentSymbol )	
+
+		visitChildren( node, children, arg.prefix )
+	End Method
+
 End Type
 
