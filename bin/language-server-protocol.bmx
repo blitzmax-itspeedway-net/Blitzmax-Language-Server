@@ -162,20 +162,25 @@ Type TRange
 End Type
 
 ' Functions to return a JSON range object from positional or node arguments
-Function JRange:JSON( start_line:Int, start_char:Int, end_line:Int, end_char:Int )
+' CLIENT IS ZERO-BASED, BUT TEXT DOCUMENT IS LINE BASED
+Function JRange:JSON( start_line:Int, start_char:Int, end_line:Int, end_char:Int, zerobased:Int=True )
+	Local offset:Int = 0
+	If zerobased ; offset = 1
 	Local J:JSON = New JSON()
-	J.set( "start|line", start_line )
+	J.set( "start|line", start_line-offset )
 	J.set( "start|character", start_char )
-	J.set( "end|line", end_line )
+	J.set( "end|line", end_line-offset )
 	J.set( "end|character", end_char )
 	Return J
 End Function
 
-Function JRange:JSON( node:TASTNode )
+Function JRange:JSON( node:TASTNode, zerobased:Int=True )
+	Local offset:Int = 0
+	If zerobased ; offset = 1
 	Local J:JSON = New JSON()
-	J.set( "start|line", node.start_line )
+	J.set( "start|line", node.start_line-offset )
 	J.set( "start|character", node.start_char )
-	J.set( "end|line", node.end_line )
+	J.set( "end|line", node.end_line-offset )
 	J.set( "end|character", node.end_char )
 	Return J
 End Function
