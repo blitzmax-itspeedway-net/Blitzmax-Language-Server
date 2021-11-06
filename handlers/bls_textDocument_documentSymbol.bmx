@@ -370,7 +370,7 @@ End Rem
 	Method outline_FUNCTION( arg:TGift )
 	
 		Local node:TAST_Function = TAST_Function( arg.node )
-		If Not node.fnname Return
+		If Not node Or Not node.fnname Return
 		
 		Local documentSymbol:JSON = New JSON()
 		documentSymbol.set( "name", "Function "+node.fnname.value+"() "+node.pos() )
@@ -387,14 +387,14 @@ End Rem
 		' Add to mother node
 		arg.data.addLast( documentSymbol )	
 
-		visitChildren( node.body, children, arg.prefix )
+		If node.body ; visitChildren( node.body, children, arg.prefix )
 	End Method
 	
 	' This is the entry point of our appliciation
 	Method outline_METHOD( arg:TGift )
 	
 		Local node:TAST_Method = TAST_Method( arg.node )
-		If Not node.methodname Return
+		If Not node Or Not node.methodname Return
 		
 		Local documentSymbol:JSON = New JSON()
 		documentSymbol.set( "name", "Method "+node.methodname.value+"() "+node.pos() )

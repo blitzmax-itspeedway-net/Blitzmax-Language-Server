@@ -409,8 +409,8 @@ EndRem
 		' Respond to the client
 		Local serverCapabilities:JSON = New JSON()
 		serverCapabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
-		serverCapabilities.set( "completionProvider|resolveProvider", "true" )
-		serverCapabilities.set( "definitionProvider", "true" )
+		'serverCapabilities.set( "completionProvider|resolveProvider", "true" )
+		'serverCapabilities.set( "definitionProvider", "true" )
 		'serverCapabilities.set( "hoverProvider", "true" )
 		'serverCapabilities.set( "signatureHelpProvider", [] )
 		'serverCapabilities.set( "declarationProvider", [] )
