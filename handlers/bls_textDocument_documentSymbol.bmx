@@ -137,18 +137,22 @@ End Function
 Type TGift
 	Field node:TASTNode
 	Field data:JSON
-	Method New( node:TASTNode, data:JSON )
+	Field prefix:String
+	Method New( node:TASTNode, data:JSON, prefix:String )
 		Self.node = node
 		Self.data = data
+		Self.prefix = prefix
 	End Method
 End Type
 
 Type TDocumentSymbolVisitor Extends TVisitor
 
 	Field ast:TASTNode
+	Field options:Int
 
 	Method New( ast:TASTNode, options:Int )
 		Self.ast = ast
+		Self.options = options
 	End Method
 
 	' Create source code from the AST
@@ -173,8 +177,7 @@ Type TDocumentSymbolVisitor Extends TVisitor
 'DebugStop
 		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
 		If methd
-			methd.invoke( Self, [New TGift(node,mother)] )
-
+			methd.invoke( Self, [New TGift(node,mother,prefix)] )
 		Else
 			Local documentSymbol:JSON = New JSON()
 			documentSymbol.set( "name", "## MISSING: '"+prefix+"_"+class+"()'" )
@@ -182,14 +185,17 @@ Type TDocumentSymbolVisitor Extends TVisitor
 			documentSymbol.set( "kind", SymbolKind._Namespace.ordinal() )
 			'documentSymbol.set( "tags", "" )
 			'documentSymbol.set( "depreciated", "false" )
-	documentSymbol.set( "range|start|line", 0 )
-	documentSymbol.set( "range|start|character", 0 )
-	documentSymbol.set( "range|end|line", 0 )
-	documentSymbol.set( "range|end|character", 11 )
-	documentSymbol.set( "selectionRange|start|line", 0 )
-	documentSymbol.set( "selectionRange|start|character", 0 )
-	documentSymbol.set( "selectionRange|end|line", 0 )
-	documentSymbol.set( "selectionRange|end|character", 11 )
+			documentSymbol.set( "range", JRange( node ) )
+			documentSymbol.set( "selectionRange", JRange( node ) )
+			
+			'documentSymbol.set( "range|start|line", 0 )
+			'documentSymbol.set( "range|start|character", 0 )
+			'documentSymbol.set( "range|end|line", 0 )
+			'documentSymbol.set( "range|end|character", 11 )
+			'documentSymbol.set( "selectionRange|start|line", 0 )
+			'documentSymbol.set( "selectionRange|start|character", 0 )
+			'documentSymbol.set( "selectionRange|end|line", 0 )
+			'documentSymbol.set( "selectionRange|end|character", 11 )
 	
 			' Add to mother node
 			mother.addLast( documentSymbol )
@@ -198,16 +204,17 @@ Type TDocumentSymbolVisitor Extends TVisitor
 
 	End Method
 
-	Method visitChildren( node:TASTNode, mother:JSON )
-		Local compound:TASTCompound = TASTCompound( node )
-'DebugStop
-		If Not compound Return
-		For Local child:TASTNode = EachIn compound.children
-			visit( child, mother )
-		Next
+	Method visitChildren( node:TASTNode, mother:JSON, prefix:String )
+		Local family:TASTCompound = TASTCompound( node )
+		If family
+			For Local child:TASTNode = EachIn family.children
+				visit( child, mother, prefix )
+			Next
+		EndIf
 	End Method
 	
 	' DEFAULT NODE - CALLED WHEN THERE IS NO METHOD FOR THE CURRENT NODE
+Rem - 6/11/21, Removed because we do this in visit()
 	Method outline_( arg:TGift )
 'DebugStop
 		Local node:TASTNode = arg.node
@@ -236,10 +243,15 @@ Type TDocumentSymbolVisitor Extends TVisitor
 
 		'visitChildren( arg.node, mother )
 	End Method
+End Rem
+
+	' A missing optional compoment doesn't have a
+	'Method outline_missingoptional( arg:TGift )
+	'End Method
 
 	' This is the entry point of our appliciation
 	Method outline_PROGRAM( arg:TGift )
-		visitChildren( arg.node, arg.data )
+		visitChildren( arg.node, arg.data, arg.prefix )
 	End Method
 
 	' This is the entry point of our appliciation
@@ -254,14 +266,16 @@ Type TDocumentSymbolVisitor Extends TVisitor
 		documentSymbol.set( "kind", SymbolKind._Function.ordinal() )
 		'documentSymbol.set( "tags", "" )
 		'documentSymbol.set( "depreciated", "false" )
-		documentSymbol.set( "range|start|line", node.line )
-		documentSymbol.set( "range|start|character", node.pos )
-		documentSymbol.set( "range|end|line", node.line+1 )
-		documentSymbol.set( "range|end|character", 0 )
-		documentSymbol.set( "selectionRange|start|line", node.line )
-		documentSymbol.set( "selectionRange|start|character", node.pos )
-		documentSymbol.set( "selectionRange|end|line", node.line+1 )
-		documentSymbol.set( "selectionRange|end|character", 0 )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+		'documentSymbol.set( "range|start|line", node.line )
+		'documentSymbol.set( "range|start|character", node.pos )
+		'documentSymbol.set( "range|end|line", node.line+1 )
+		'documentSymbol.set( "range|end|character", 0 )
+		'documentSymbol.set( "selectionRange|start|line", node.line )
+		'documentSymbol.set( "selectionRange|start|character", node.pos )
+		'documentSymbol.set( "selectionRange|end|line", node.line+1 )
+		'documentSymbol.set( "selectionRange|end|character", 0 )
 
 		Local children:JSON = New JSON( JSON_ARRAY )
 		documentSymbol.set( "children", children )
@@ -269,7 +283,7 @@ Type TDocumentSymbolVisitor Extends TVisitor
 		' Add to mother node
 		arg.data.addLast( documentSymbol )	
 
-		visitChildren( node.body, children )
+		visitChildren( node.body, children, arg.prefix )
 	End Method
 	
 End Type

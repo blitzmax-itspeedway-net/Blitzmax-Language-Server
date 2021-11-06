@@ -766,7 +766,7 @@ End Rem
 			Local starts:TPosition = New TPosition( token )
 			Local ends:TPosition =  New TPosition( token )
 			ends.character :+ token.value.length
-			Local ast:TASTMissingOptional = New TASTMissingOptional( "FRAMEWORK", "Framework" )
+			Local ast:TASTMissingOptional = New TASTMissingOptional( "FRAMEWORK", "Framework", token.line )
 			ast.errors :+ [ New TDiagnostic( "'Framework' is recommended", DiagnosticSeverity.Hint, New TRange( starts, ends ) ) ]
 			Return ast
 		End If
@@ -1019,7 +1019,7 @@ EndRem
 			Local starts:TPosition = New TPosition( token )
 			Local ends:TPosition =  New TPosition( token )
 			ends.character :+ token.value.length
-			Local ast:TASTMissingOptional = New TASTMissingOptional( "STRICTMODE", "superstrict~n" )
+			Local ast:TASTMissingOptional = New TASTMissingOptional( "STRICTMODE", "superstrict~n", token.line )
 			ast.errors :+ [ New TDiagnostic( "'SuperStrict' is recommended", DiagnosticSeverity.Hint, New TRange( starts, ends ) ) ]
 			Return ast
 		End If

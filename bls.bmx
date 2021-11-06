@@ -166,6 +166,7 @@ Function notin:Int( needle:Int, haystack:Int[] )
 	Return True
 End Function
 
+
 '   Run the Application
 logfile.debug( "Starting Language Server..." )
 

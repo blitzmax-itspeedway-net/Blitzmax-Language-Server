@@ -123,8 +123,8 @@ Type TParser
 'DebugStop
 		Local ast:TASTCompound = New TASTCompound( "IGNORED" )
 		'ast.error 	= "block ignored by parser"
-		ast.line    = start.line
-		ast.pos     = start.pos
+		ast.start_line = start.line
+		ast.start_char = start.pos
 		Repeat
 			Local token:TToken = Self.token
 			If token.in( completion ) Or token.id=TK_EOF
@@ -133,6 +133,8 @@ Type TParser
 			End If
 'DebugStop
 			ast.add( New TASTError( "SKIPPED", token ) )
+			ast.end_line = token.line
+			ast.end_char = token.pos
 			advance()
 		Forever
 	End Method

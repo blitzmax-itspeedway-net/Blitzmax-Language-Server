@@ -161,6 +161,24 @@ Type TRange
 	
 End Type
 
+' Functions to return a JSON range object from positional or node arguments
+Function JRange:JSON( start_line:Int, start_char:Int, end_line:Int, end_char:Int )
+	Local J:JSON = New JSON()
+	J.set( "start|line", start_line )
+	J.set( "start|character", start_char )
+	J.set( "end|line", end_line )
+	J.set( "end|character", end_char )
+	Return J
+End Function
+
+Function JRange:JSON( node:TASTNode )
+	Local J:JSON = New JSON()
+	J.set( "start|line", node.start_line )
+	J.set( "start|character", node.start_char )
+	J.set( "end|line", node.end_line )
+	J.set( "end|character", node.end_char )
+	Return J
+End Function
 
 ' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#uri
 

@@ -19,10 +19,18 @@ Type TASTNode
 	'Field token:TToken
 	Field tokenid:Int		' This is the token id that created the node
 	Field value:String		' Used in leaf nodes
-	Field line:Int, pos:Int	' Not normally held in an AST, but needed for language server
 	'Field definition:String	' Block comment (before) used to describe meaning
 	'Field descr:String		' Optional Trailing "line" comment
-	Field link:TLink		' Used in Compound nodes
+
+	' Not normally held in an AST, but needed for language server
+	'Field line:Int, pos:Int		' DEPRECIATED 6/11/21
+	Field start_line:Int
+	Field start_char:Int
+	Field end_line:Int
+	Field end_char:Int
+	
+	' Used by compound nodes
+	Field link:TLink
 	
 	'Field comment:TToken	' Trailing comment or Null
 	'Field valid:Int = False	' Is node valid
@@ -54,10 +62,13 @@ Type TASTNode
 	End Method
 	
 	Method consume( token:TToken )
-		Self.tokenid = token.id
-		Self.value   = token.value
-		Self.line    = token.line
-		Self.pos     = token.pos
+		Self.tokenid    = token.id
+		Self.value      = token.value
+		Self.start_line = token.line
+		Self.start_char = token.pos
+		Self.end_line   = token.line
+		Self.end_char   = token.pos 
+		If token.value ; Self.end_char :+ token.value.length
 	End Method
 	
 	'Method walk:Object( evaluator( node:TASTNode, result:Object ), result:Object ) 
@@ -100,7 +111,7 @@ Type TASTNode
 
 	' Get string location
 	Method loc:String( Prefix:String = " " )
-		Return prefix+"["+line+","+pos+"]"
+		Return prefix+"["+start_line+","+start_char+"]-["+end_line+","+end_char+"]-"
 	End Method
 	
 	' Debugging text (Name of node taken from metadata or name)

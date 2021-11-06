@@ -13,13 +13,17 @@ Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 	' help user recreate this, or force it
 	' default value needs to be included so it can be "fixed"
 
-	Method New( name:String, value:String )
+	Method New( name:String, value:String, line:Int )
 'DebugStop
 		Self.name   = name
 		Self.value  = value
 		'Self.errors = New TList()
 		Self.status = AST_NODE_WARNING
 		'Local range:TRange = New TRange( 0,0,0,0 )
+		Self.start_line = line
+		Self.start_char = 0
+		Self.end_line = line+1
+		Self.end_char = 0
 		'errors :+ [ New TDiagnostic( "'"+name+"' is recommended", DiagnosticSeverity.Hint, range ) ]
 	End Method
 		
