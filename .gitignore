@@ -14,7 +14,8 @@ old/
 *.debug
 *.old
 *.sh
+*.code-workspace
 bls.config
 runlog.txt
+todo.txt
 
-bls.config
