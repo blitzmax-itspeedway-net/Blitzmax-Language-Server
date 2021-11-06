@@ -222,7 +222,8 @@ End Rem
 			'logfile.debug( parser.reveal() )
 			'logfile.debug( ast.reveal() )
 			
-			
+			' Send diagnostics to client
+			sendDiagnostics()
 		End If		
 		
 		' Mark document as validated
@@ -232,7 +233,61 @@ End Rem
 	'Method DocumentSymbolProvider()
 	'End Method
 
+	Method sendDiagnostics()
 	
+		logfile.debug( "# DIAGNOSTICS" )
+		Local list:TDiagnostic[]
+		list = TDiagnostic[]( ast.inorder( GetDiagnostic, list, 0 ) )
+		
+		' Convert diagnostics into a string so we can display it
+		Local result:String
+		For Local diag:TDiagnostic = EachIn list
+			result :+ diag.reveal()+"~n"
+		Next
+		logfile.debug( result )
+		
+		' Convert diagnostics into JSON and send to client
+		Local diagnostics:JSON = New JSON( JSON_Array )
+		
+		Local diagnostic:JSON = New JSON()
+		diagnostic.set( "range", JRange( 0,0,1,0 ) )
+		diagnostic.set( "severity", DiagnosticSeverity.hint.ordinal() )
+		diagnostic.set( "code", 99 )
+		diagnostic.set( "codeDescription", "Additional information" )
+		diagnostic.set( "source", "BLS!" )
+		diagnostic.set( "message", "THis is a test diagnostic" )
+		'diagnostic.set( "tags", [] )
+		'diagnostic.set( "relatedInformation", 0 )
+		'diagnostic.set( "data", 0 )
+
+		diagnostics.addlast( diagnostic )
+
+		Local message:JSON = EmptyMessage( "textDocument/publishDiagnostics" )
+		message.set( "params|uri", uri.tostring() )
+		message.set( "params|version", version )
+		message.set( "params|diagnostics", diagnostics )
+	
+		logfile.debug( "DIAGNOSTICS:~n"+message.prettify() )
+		
+		client.send( message )
+		
+		Function GetDiagnostic:Object( node:TASTNode, data:Object, options:Int )
+'DebugStop
+			If node.errors.length = 0 Return data
+'DebugStop
+			' Convert data into a list and append to it
+			Local list:TDiagnostic[] = TDiagnostic[]( data )
+			'Local result:String
+			'For Local i:Int = 0 Until node.errors.length
+				'list :+ [ node.errors[i] ]
+				'result :+ errors[n] + "["+node.line+","+node.pos+"] "+node.error+" ("+node.getname()+")~n"
+				'result :+ errors[n] + "["+node.line+","+node.pos+"] ("+node.getname()+")~n"
+			'	list.addlast( error )
+			'Next 
+			Return list + node.errors
+		End Function
+		
+	End Method
 
 End Type
 

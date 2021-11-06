@@ -182,6 +182,7 @@ Type TWorkspace
 
 	' Validation of all documents
 	Method validate()
+logfile.debug( "# VALIDATING DOCUMENTS" )
 		For Local key:String = EachIn documents.keys()
 			Local document:TTextDocument = TTextDocument( documents[key] )
 			If document ; document.validate()

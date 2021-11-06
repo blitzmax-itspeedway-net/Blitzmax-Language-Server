@@ -47,7 +47,8 @@ End Rem
 
 Global EXPERIMENTAL:String[][] = [..
 	[ "ast", "AST" ], ..
-	[ "docsym", "Document Symbols" ] ..
+	[ "docsym", "Document Symbols" ], ..
+	[ "diag", "Diagnostic Information" ] ..
 	]
 
 Type TArguments

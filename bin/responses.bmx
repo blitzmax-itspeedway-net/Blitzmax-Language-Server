@@ -21,3 +21,10 @@ Function Response_Error:JSON( code:String, message:String, id:String="null" )
     response.set( "error", [["code",code],["message","~q"+message+"~q"]] )
     Return response
 End Function
+
+Function EmptyMessage:JSON( methd:String )
+    Local response:JSON = New JSON()
+    response.set( "jsonrpc", JSONRPC )
+	response.set( "method", methd )
+    Return response
+End Function
