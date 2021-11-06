@@ -13,11 +13,9 @@ VERSION 0.02 Alpha
 
 ## DOCUMENTATION
 
-* [Installation](Home)
-* [Compiling the source](Compiling)
-* [[Features]]
-* [[Linting Rules]]
-* [[Command Line Arguments]]
+* [https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki](Installing)
+* [https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Compiling](Compiling)
+* [https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Features](Features)
 
 ## DEBUGGING:
 ```
