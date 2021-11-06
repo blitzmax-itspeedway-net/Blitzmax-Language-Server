@@ -13,9 +13,9 @@ VERSION 0.02 Alpha
 
 ## DOCUMENTATION
 
-* [https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki](Installing)
-* [https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Compiling](Compiling)
-* [https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Features](Features)
+* [Installing](https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki)
+* [Compiling](https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Compiling)
+* [Features](https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Features)
 
 ## DEBUGGING:
 ```
