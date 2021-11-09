@@ -109,7 +109,7 @@ Type TDiagnostic Extends TASTErrorMessage
 		result :+ Upper( severity.tostring() )
 		result :+ " ["+range.start.line+","+range.start.character+"] - "
 		result :+ "["+range.ends.line+","+range.ends.character+"] " 
-		result :+ source + " "
+		result :+ "{"+ source + "} "
 		result :+ message
 		Return result
 	End Method
@@ -163,6 +163,21 @@ End Type
 
 ' Functions to return a JSON range object from positional or node arguments
 ' CLIENT IS ZERO-BASED, BUT TEXT DOCUMENT IS LINE BASED
+Function JRange:JSON( range:TRange, zerobased:Int=True )
+	Local offset:Int = 0
+	If zerobased ; offset = 1
+	Local J:JSON = New JSON()
+	Try
+		J.set( "start|line", range.start.line-offset)
+		J.set( "start|character", range.start.character )
+		J.set( "end|line", range.ends.line-offset )
+		J.set( "end|character", range.ends.character )
+	Catch Exception:String
+		' Ignore and continue
+	End Try
+	Return J
+End Function
+
 Function JRange:JSON( start_line:Int, start_char:Int, end_line:Int, end_char:Int, zerobased:Int=True )
 	Local offset:Int = 0
 	If zerobased ; offset = 1

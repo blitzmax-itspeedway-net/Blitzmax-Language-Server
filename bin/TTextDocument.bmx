@@ -238,24 +238,37 @@ End Rem
 		logfile.debug( "# DIAGNOSTICS" )
 		Local list:TDiagnostic[]
 		list = TDiagnostic[]( ast.inorder( GetDiagnostic, list, 0 ) )
-		
+
+		' Convert diagnostics into JSON and send to client
+		Local diagnostics:JSON = New JSON( JSON_Array )
+		Local diagnostic:JSON 
+				
 		' Convert diagnostics into a string so we can display it
 		Local result:String
 		For Local diag:TDiagnostic = EachIn list
 			result :+ diag.reveal()+"~n"
+			
+			If diag.range And diag.range.start And diag.range.ends
+				If diag.range.start.line=0 Or diag.range.ends.line=0
+					' Skip
+				Else
+					diagnostic = New JSON()
+					diagnostic.set( "range", JRange( diag.range ) )
+					diagnostic.set( "message", diag.message )
+					diagnostics.addlast( diagnostic )
+				End If
+			End if
 		Next
 		logfile.debug( result )
 		
-		' Convert diagnostics into JSON and send to client
-		Local diagnostics:JSON = New JSON( JSON_Array )
-		
-		Local diagnostic:JSON = New JSON()
-		diagnostic.set( "range", JRange( 0,0,1,0 ) )
-		diagnostic.set( "severity", DiagnosticSeverity.hint.ordinal() )
-		diagnostic.set( "code", 99 )
-		diagnostic.set( "codeDescription", "Additional information" )
-		diagnostic.set( "source", "BLS!" )
-		diagnostic.set( "message", "THis is a test diagnostic" )
+
+		diagnostic = New JSON()
+		diagnostic.set( "range", JRange( 1,0,2,0 ) )
+		'diagnostic.set( "severity", DiagnosticSeverity.hint.ordinal() )
+		'diagnostic.set( "code", 99 )
+		'diagnostic.set( "codeDescription", uri )
+		'diagnostic.set( "source", "BLS!" )
+		diagnostic.set( "message", "This is a test diagnostic" )
 		'diagnostic.set( "tags", [] )
 		'diagnostic.set( "relatedInformation", 0 )
 		'diagnostic.set( "data", 0 )
@@ -263,11 +276,13 @@ End Rem
 		diagnostics.addlast( diagnostic )
 
 		Local message:JSON = EmptyMessage( "textDocument/publishDiagnostics" )
+		logfile.debug( ">>URI>>"+uri.tostring() )
 		message.set( "params|uri", uri.tostring() )
 		message.set( "params|version", version )
 		message.set( "params|diagnostics", diagnostics )
 	
 		logfile.debug( "DIAGNOSTICS:~n"+message.prettify() )
+		logfile.debug( "DIAGNOSTICS:~n"+message.stringify() )
 		
 		client.send( message )
 		
