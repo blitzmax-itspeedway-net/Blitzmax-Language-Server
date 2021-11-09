@@ -24,8 +24,14 @@ Import bmx.json
 
 AppTitle = "BlitzMax Language Server"	' BLS
 
-?debug
-Print"~n~n~t~tWARNING:~n~t~tYou are compiling in DEBUG mode~n~n"
+?Debug
+' @bmk echo
+' @bmk echo ****
+' @bmk echo **** WARNING
+' @bmk echo **** You are compiling in DEBUG mode
+' @bmk echo ****
+' @bmk echo
+?Not Debug
 ?
 
 'DebugStop
@@ -63,19 +69,20 @@ Include "bin/TWorkspace.bmx"
 'Include "lexer/TException.bmx"
 
 ' SANDBOX PARSER
-Include "bmx.parser/TParser.bmx"
-Include "bmx.parser/TASTNode.bmx"
-Include "bmx.parser/TASTBinary.bmx"
-Include "bmx.parser/TASTCompound.bmx"
-Include "bmx.parser/TVisitor.bmx"
-Include "bmx.parser/TParseValidator.bmx"
+Include "sandbox/bmx.parser/TParser.bmx"
+Include "sandbox/bmx.parser/TASTNode.bmx"
+Include "sandbox/bmx.parser/TASTBinary.bmx"
+Include "sandbox/bmx.parser/TASTCompound.bmx"
+Include "sandbox/bmx.parser/TVisitor.bmx"
+Include "sandbox/bmx.parser/TParseValidator.bmx"
+Include "sandbox/bmx.parser/TASTErrorMessage.bmx"
 
 ' SANDBOX BLITZMAX LEXER/PARSER
 ' Included here until stable release pushed back into module
-Include "bmx/lexer-const-bmx.bmx"
-Include "bmx/TBlitzMaxAST.bmx"
-Include "bmx/TBlitzMaxLexer.bmx"
-Include "bmx/TBlitzMaxParser.bmx"
+Include "sandbox/bmx.blitzmaxparser/lexer-const-bmx.bmx"
+Include "sandbox/bmx.blitzmaxparser/TBlitzMaxAST.bmx"
+Include "sandbox/bmx.blitzmaxparser/TBlitzMaxLexer.bmx"
+Include "sandbox/bmx.blitzmaxparser/TBlitzMaxParser.bmx"
 
 'debugstop
 ' Message Handlers
@@ -83,8 +90,15 @@ Include "handlers/handlers.bmx"
 
 Include "bin/constants.bmx"
 
-DebugStop
-Local td:TDiagnostic = New TDiagnostic()
+'	COMPATABILITY
+
+Const JSON_MINIMUM_VERSION:Float = 2.1
+Const JSON_MINIMUM_BUILD:Int = 10
+
+' USING PRINT SCREWS UP STDIO SO DONT USE IT!
+Function Print( Message:String ) ; End Function
+
+'Local td:TDiagnostic = New TDiagnostic()
 
 'DebugStop
 '   GLOBALS
@@ -98,11 +112,14 @@ Global Logfile:TLogger = New TLogger()				' Log File Manager
 ' @bmk include build.bmk
 ' @bmk incrementVersion build.bmx
 Include "build.bmx"
+
 logfile.debug( "------------------------------------------------------------" )
 logfile.info( AppTitle )
 logfile.info( "  VERSION:    "+version+"."+build )
+logfile.info( "  JSON:       V"+JSON.Version() )
 logfile.debug( "  CURRENTDIR: "+CurrentDir$() )
-logfile.debug( "  AppDir:     "+AppDir )
+logfile.debug( "  APPDIR:     "+AppDir )
+'Print( "AppTitle" )
 
 '	ARGUMENTS AND CONFIGURATION
 New TArguments()			' Arguments
@@ -114,11 +131,13 @@ Global Client:TClient = New TClient()				' Client Manager
 
 Global LSP:TLSP 									' Language Server
 ' This will be based on arguments in the future, but for now we only support STDIO
-' if Config['transport']="stdio"
+Config["transport"]="stdio"
+Select Config["transport"]
+Case "tcp"
+	LSP = New TLSP_TCP()
+Default
 	LSP = New TLSP_StdIO()
-' else
-'	LSP = New TLSP_TCP()
-' end if
+End Select
 
 '	DOCUMENTS AND WORKSPACES
 

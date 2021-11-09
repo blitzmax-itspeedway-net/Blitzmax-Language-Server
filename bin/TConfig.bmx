@@ -36,6 +36,7 @@ Type TConfig ' Extends TMap
 		If Not J.Contains("logfile") ; J.set( "logfile", "" )
 		If Not J.Contains("loglevel") ; J.set( "loglevel", "7" )
 		If Not J.Contains("threadpool") ; J.set( "threadpool", "4" )
+		If Not J.Contains("transport") ; J.set( "transport", "stdio" )		' STDIO or TCP
     End Method 
 
 '    Method defaults()

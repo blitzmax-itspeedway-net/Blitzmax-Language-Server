@@ -154,7 +154,7 @@ Type TRange
 		Self.ends = ending
 	End Method
 
-	Method New( start_line:UInt, start_char:Int, end_line:UInt, end_char:Int )
+	Method New( start_line:UInt, start_char:UInt, end_line:UInt, end_char:UInt )
 		Self.start = New TPosition( start_line, start_char )
 		Self.ends = New TPosition( end_line, end_char )
 	End Method

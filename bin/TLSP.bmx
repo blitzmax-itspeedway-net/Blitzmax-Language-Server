@@ -444,12 +444,12 @@ EndRem
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotification", "true" )
 		End If
 		serverCapabilities.set( "workspace|configuration", "file" )
-		serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", "file" )
-		serverCapabilities.set( "workspace|fileOperations|willCreate|filters|scheme", "file" )
-		serverCapabilities.set( "workspace|fileOperations|didRename|filters|scheme", "file" )
-		serverCapabilities.set( "workspace|fileOperations|willRename|filters|scheme", "file" )
-		serverCapabilities.set( "workspace|fileOperations|didDelete|filters|scheme", "file" )
-		serverCapabilities.set( "workspace|fileOperations|willDelete|filters|scheme", "file" )
+		'serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", "file" )
+		'serverCapabilities.set( "workspace|fileOperations|willCreate|filters|scheme", "file" )
+		'serverCapabilities.set( "workspace|fileOperations|didRename|filters|scheme", "file" )
+		'serverCapabilities.set( "workspace|fileOperations|willRename|filters|scheme", "file" )
+		'serverCapabilities.set( "workspace|fileOperations|didDelete|filters|scheme", "file" )
+		'serverCapabilities.set( "workspace|fileOperations|willDelete|filters|scheme", "file" )
 		'serverCapabilities.set( "experimental", [] )
 		
 		Local InitializeResult:JSON = Response_OK( id )
@@ -484,6 +484,15 @@ EndRem
 		'client.send( workspaceFolders )
 
 		logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
+		
+		'	MODULE COMPATABILITY
+
+		If Not JSON.VersionCheck( JSON_MINIMUM_VERSION, JSON_MINIMUM_BUILD )
+			Local error:String = "JSON Version "+JSON.Version()+" is not compatible."
+			logfile.critical( "## "+error )
+			client.logMessage( error, MessageType.Error.Ordinal() )
+		'	Print( error )
+		End If
 		
 		' NOTIFICATION: No response necessary
 	End Method 

@@ -17,10 +17,4 @@ VERSION 0.02 Alpha
 * [Compiling](https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Compiling)
 * [Features](https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Features)
 
-## DEBUGGING:
-```
-    Create an environment variable called LSP-DEBUG and set it to a file and the application will write debug information to that file.
-    - NOT IMPLEMENTED
 
-    In BlitzMax settings, Enable/disable LSP:Hot Reload
-```

@@ -1,20 +1,35 @@
 @define incrementVersion
 
-	file = io.open("build.txt", "r")
-	build = file:read()
-	file:close()	
-	build = build + 1
-	file = io.open("build.txt","w")
-	file:write(build)
-	file:close()
+    function fileExists( filename )
+       local file = io.open( filename, "r" )
+       if file ~= nil then io.close( file ) return true else return false end
+    end
 
-	file = io.open("version.txt", "r")
-	version = file:read()
-	file:close()
+    local version = 1
+    local build = 0
+    local lines = {}
 
-	file = io.open("build.bmx","w")
-	file:write( 'global version:string="'..version..'"\n' )
-	file:write( 'global build:string="'..build..'"' )
+    -- Read existing build version (if it exists)
+    if fileExists( "build.txt" ) then
+        for line in io.lines("build.txt") do
+            lines[ #lines + 1 ] = line
+        end
+        if #lines > 1 then 
+            version = lines[1] 
+            build = lines[2]
+            build = build + 1
+        end
+    end
+
+    -- Write updated file
+    file = io.open("build.txt","w")
+    file:write(version..'\n'..build..'\n')
+    file:close()
+
+    -- Write Blitzmax containing version number
+	file = io.open("version.bmx","w")
+	file:write( 'Global version:String="'..version..'"\n' )
+	file:write( 'Global build:String="'..build..'"' )
 	file:close()
 	
 @end

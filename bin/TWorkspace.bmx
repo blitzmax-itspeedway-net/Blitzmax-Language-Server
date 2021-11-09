@@ -138,7 +138,7 @@ Type TWorkspace
 	End Method
 	
 	' Apply a change to a document
-	Method change( doc_uri:String, changes:JSON[], version:ULong=0 )
+	Method change( doc_uri:String, changes:JSON[], version:int=0 )
 		Local document:TFullTextDocument = TFullTextDocument( documents.valueForKey( doc_uri ) )
 		If document
 			document.change( changes, version )

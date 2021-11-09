@@ -70,7 +70,7 @@ Type TFullTextDocument Extends TTextDocument
 		lineOffsets = []
 	End Method
 
-	Method change( changes:JSON[], version:UInt )
+	Method change( changes:JSON[], version:Int )
 		logfile.debug( "TTextDocument.change() is not implemented" )
 		Self.version = version
 	End Method

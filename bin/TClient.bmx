@@ -70,6 +70,14 @@ Type TClient Extends TMessageQueue
 		'If Not J Return False
 		'Return ( J.tostring() = "true" )
 	End Method
+
+	' HELPER: Send a message to client by pushing it to the send queue
+	Method logMessage( message:String, messagetype:Int )
+		Local J:JSON = EmptyMessage( "window/logMessage" )
+		J.set( "params|type",  messagetype  )
+		J.set( "params|message", message )
+		send( J )
+	End Method
 	
 	' HELPER: Send a message to client by pushing it to the send queue
 	Method Send( message:JSON )
