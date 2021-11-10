@@ -141,6 +141,19 @@ Type TPosition
 		Self.line = token.line
 		Self.character = token.pos
 	End Method
+
+	Method New( position:JSON )
+		Try
+			Self.line = position.find("line").toInt()
+			Self.character = position.find("character").toint()
+		Catch Exception:String
+			' Ignore issues, result will be empty!
+		End Try
+	End Method
+
+	Method reveal:String()
+		Return "["+line+","+character+"]"
+	End Method
 	
 End Type
 
@@ -159,46 +172,72 @@ Type TRange
 		Self.ends = New TPosition( end_line, end_char )
 	End Method
 	
+	Method New( range:JSON )
+		Try
+			Self.start = New TPosition( range.find("start") )
+			Self.ends = New TPosition( range.find("end") )
+		Catch Exception:String
+			' Ignore issues, result will be empty!
+		End Try
+	End Method
+	
+	Method reveal:String()
+		Local str:String
+		If start 
+			str :+ start.reveal()
+		Else
+			str = "[]"
+		End If
+		str:+"-"
+		If ends 
+			str :+ ends.reveal()
+		Else
+			str = "[]"
+		End If		
+	End Method
+	
 End Type
 
 ' Functions to return a JSON range object from positional or node arguments
 ' CLIENT IS ZERO-BASED, BUT TEXT DOCUMENT IS LINE BASED
-Function JRange:JSON( range:TRange, zerobased:Int=True )
-	Local offset:Int = 0
-	If zerobased ; offset = 1
-	Local J:JSON = New JSON()
+Function JRange:JSON( range:TRange, offset:Int=-1 )
+	'Local offset:Int = 0
+	'If zerobased ; offset = 1
+	'Local J:JSON = New JSON()
+	If Not range Or Not range.start Or Not range.ends ; Return New JSON()
 	Try
-		J.set( "start|line", range.start.line-offset)
-		J.set( "start|character", range.start.character )
-		J.set( "end|line", range.ends.line-offset )
-		J.set( "end|character", range.ends.character )
+		Return JRange( range.start.line, range.start.character, range.ends.line, range.ends.character, offset )
+	'	J.set( "start|line", range.start.line-offset)
+	'	J.set( "start|character", range.start.character-offset )
+	'	J.set( "end|line", range.ends.line-offset )
+	'	J.set( "end|character", range.ends.character-offset )
 	Catch Exception:String
 		' Ignore and continue
+		Return New JSON()
 	End Try
+End Function
+
+Function JRange:JSON( node:TASTNode, offset:Int=-1 )
+	'Local offset:Int = 0
+	'If zerobased ; offset = 1
+	'Local J:JSON = New JSON()
+	'J.set( "start|line", node.start_line-offset )
+	'J.set( "start|character", node.start_char-offset )
+	'J.set( "end|line", node.end_line-offset )
+	'J.set( "end|character", node.end_char-offset )
+	If Not node Return New JSON()
+	Return JRange( node.start_line, node.start_char, node.end_line, node.end_char, offset )
+End Function
+
+Function JRange:JSON( start_line:Int, start_char:Int, end_line:Int, end_char:Int, offset:Int=-1 )
+	Local J:JSON = New JSON()
+	J.set( "start|line", Max(start_line+offset,0) )
+	J.set( "start|character", Max(start_char+offset,0) )
+	J.set( "end|line", Max(end_line+offset,0) )
+	J.set( "end|character", Max(end_char+offset,0) )
 	Return J
 End Function
 
-Function JRange:JSON( start_line:Int, start_char:Int, end_line:Int, end_char:Int, zerobased:Int=True )
-	Local offset:Int = 0
-	If zerobased ; offset = 1
-	Local J:JSON = New JSON()
-	J.set( "start|line", start_line-offset )
-	J.set( "start|character", start_char )
-	J.set( "end|line", end_line-offset )
-	J.set( "end|character", end_char )
-	Return J
-End Function
-
-Function JRange:JSON( node:TASTNode, zerobased:Int=True )
-	Local offset:Int = 0
-	If zerobased ; offset = 1
-	Local J:JSON = New JSON()
-	J.set( "start|line", node.start_line-offset )
-	J.set( "start|character", node.start_char )
-	J.set( "end|line", node.end_line-offset )
-	J.set( "end|character", node.end_char )
-	Return J
-End Function
 
 ' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#uri
 

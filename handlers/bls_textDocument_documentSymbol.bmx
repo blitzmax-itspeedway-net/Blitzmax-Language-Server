@@ -177,6 +177,8 @@ Type TDocumentSymbolVisitor Extends TVisitor
 	Method run:JSON()
 		Local J:JSON = New JSON( JSON_ARRAY )	' DocumentSymbol[]
 		visit( ast, J, "outline" )
+		
+		logfile.debug( "OUTLINE:~n"+J.prettify() )
 		Return J
 	End Method
 	

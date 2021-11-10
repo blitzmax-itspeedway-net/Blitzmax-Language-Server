@@ -73,6 +73,17 @@ Type TFullTextDocument Extends TTextDocument
 	Method change( changes:JSON[], version:Int )
 		logfile.debug( "TTextDocument.change() is not implemented" )
 		Self.version = version
+		
+		For Local change:JSON = EachIn changes
+			Local range:TRange = New TRange( change.find( "range" ) )
+			Local Text:String = change.find( "text" ).toString()
+			Local starting:Int = offsetAt( range.start )
+			Local ending:Int = offsetAt( range.ends )
+			content = content[0..starting]+Text+content[ending..]
+			
+			logfile.debug( "? "+range.reveal()+" "+Text+"~n"+content[0..100] )
+		Next
+		validated = False
 	End Method
 
 	Method get_lineCount:UInt()		; 	Return getLineOffsets().length	;	End Method
@@ -246,34 +257,20 @@ End Rem
 		' Convert diagnostics into a string so we can display it
 		Local result:String
 		For Local diag:TDiagnostic = EachIn list
-			result :+ diag.reveal()+"~n"
+			result :+ ">> "+diag.reveal()+"~n"
 			
 			If diag.range And diag.range.start And diag.range.ends
-				If diag.range.start.line=0 Or diag.range.ends.line=0
-					' Skip
-				Else
+				If diag.range.start.line>0 And diag.range.ends.line>0 And diag.range.start.character>0
 					diagnostic = New JSON()
 					diagnostic.set( "range", JRange( diag.range ) )
+					' Ensure that a "next line" end of zero is not passed as a -1.
+					diag.range.ends.character= Max( diag.range.ends.character, 1 )
 					diagnostic.set( "message", diag.message )
 					diagnostics.addlast( diagnostic )
 				End If
-			End if
+			End If
 		Next
-		logfile.debug( result )
-		
-
-		diagnostic = New JSON()
-		diagnostic.set( "range", JRange( 1,0,2,0 ) )
-		'diagnostic.set( "severity", DiagnosticSeverity.hint.ordinal() )
-		'diagnostic.set( "code", 99 )
-		'diagnostic.set( "codeDescription", uri )
-		'diagnostic.set( "source", "BLS!" )
-		diagnostic.set( "message", "This is a test diagnostic" )
-		'diagnostic.set( "tags", [] )
-		'diagnostic.set( "relatedInformation", 0 )
-		'diagnostic.set( "data", 0 )
-
-		diagnostics.addlast( diagnostic )
+		logfile.debug( "DIAGNOSTIC:~n"+result )
 
 		Local message:JSON = EmptyMessage( "textDocument/publishDiagnostics" )
 		logfile.debug( ">>URI>>"+uri.tostring() )
@@ -281,8 +278,8 @@ End Rem
 		message.set( "params|version", version )
 		message.set( "params|diagnostics", diagnostics )
 	
-		logfile.debug( "DIAGNOSTICS:~n"+message.prettify() )
-		logfile.debug( "DIAGNOSTICS:~n"+message.stringify() )
+		'logfile.debug( "DIAGNOSTICS:~n"+message.prettify() )
+		'logfile.debug( "DIAGNOSTICS:~n"+message.stringify() )
 		
 		client.send( message )
 		
