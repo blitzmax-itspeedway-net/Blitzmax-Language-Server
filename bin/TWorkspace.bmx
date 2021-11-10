@@ -118,6 +118,9 @@ Type TWorkspace
 		
 		' Create a document manager thread
 		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
+		
+		' Request Workspace configuration
+		getConfiguration()
 	End Method
 
 	' Retrieve all documents
@@ -138,7 +141,7 @@ Type TWorkspace
 	End Method
 	
 	' Apply a change to a document
-	Method change( doc_uri:String, changes:JSON[], version:int=0 )
+	Method change( doc_uri:String, changes:JSON[], version:Int=0 )
 		Local document:TFullTextDocument = TFullTextDocument( documents.valueForKey( doc_uri ) )
 		If document
 			document.change( changes, version )
@@ -208,6 +211,33 @@ logfile.debug( "# VALIDATING DOCUMENTS" )
         logfile.debug( "Workspace '"+name+"' thread closed" )
 	
 		' Save cache, ast or anything should be done here!
+	End Method
+	
+	' Get workspace configuration
+	Method getConfiguration()
+		' Register for Configuration updates (If supported by client)
+		If client.has( "workspace|configuration" )
+			logfile.debug( "# Client supports workspace configuration" )
+			
+			' Create a JSON array for the configuration Parameters
+			Local configParams:JSON = New JSON( JSON_ARRAY )
+
+			' Create ConfigurationItem array
+			Local configurationItem:JSON = New JSON()
+			configurationItem.set( "scopeUri", uri.tostring() )
+			'configurationItem.set( "section","tasks")
+			configParams.addlast( configurationItem )
+			
+			'config = New JSON()
+			'config.set( "scopeUri", "resource" )
+			'config.set( "section","blitzmax")
+			'configParams.addlast( config )
+
+			' Create a response and add configParams
+			Local request:JSON = EmptyMessage( "workspace/configuration" )
+			request.set( "params", configParams )			
+			client.send( request )
+		End If
 	End Method
 	
 	    ' Thread to manage documents

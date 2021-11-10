@@ -89,43 +89,11 @@ Type TClient Extends TMessageQueue
 		Local Text:String = message.stringify()
 		
 		'logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
-		Local dbg:String = Text[1..200]
-		If Len(Text)>200 ; dbg :+ "..."
+		Local dbg:String = Text[1..500]
+		If Len(Text)>500 ; dbg :+ "..."
 		logfile.debug( "TClient.Send()~n"+dbg )
 
 		If Text ; pushSendQueue( Text )
-	End Method
-
-	' Get the client to register for configuration updates
-	Method RegisterForConfigChanges()
-		' Register for Configuration updates (If supported by client)
-		If has( "workspace|configuration" )
-			logfile.debug( "# Client supports workspace configuration" )
-			
-			' Create an array for the configuration updates we need
-			Local items:JSON = New JSON( JSON_ARRAY )
-
-			' Create an array element for specific items and add to items array
-			Local config:JSON = New JSON()
-			config.set( "scopeUri", "resource" )
-			config.set( "section","bls")
-			items.addlast( config )
-			
-			config = New JSON()
-			config.set( "scopeUri", "resource" )
-			config.set( "section","blitzmax")
-			items.addlast( config )
-
-			' Create a response and add items to params
-			Local response:JSON = New JSON()
-			response.set( "jsonrpc", JSONRPC )
-			'response.set( "id",10 )
-			response.set( "method", "workspace/configuration" )
-			response.set( "params|items", items )			
-			send( response )
-		Else
-			' Fallback to global (or local) settings
-		End If
 	End Method
 	
 End Type

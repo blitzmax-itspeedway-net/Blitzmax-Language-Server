@@ -472,7 +472,7 @@ EndRem
 		logfile.debug( "TLSP.on_Initialized()" )
 		
 		' Dynamically Register Capabilities
-		client.RegisterForConfigChanges()		' Register for configuration changes
+		'client.RegisterForConfigChanges()		' Register for configuration changes
 		'message.state = STATE_COMPLETE
 		
 		' Request Workspace folders that are open

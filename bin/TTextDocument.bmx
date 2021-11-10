@@ -263,9 +263,16 @@ End Rem
 				If diag.range.start.line>0 And diag.range.ends.line>0 And diag.range.start.character>0
 					diagnostic = New JSON()
 					diagnostic.set( "range", JRange( diag.range ) )
-					' Ensure that a "next line" end of zero is not passed as a -1.
+					' Ensure that a "next line" end of zero was not passed as a -1.
 					diag.range.ends.character= Max( diag.range.ends.character, 1 )
+					diagnostic.set( "severity", diag.severity.ordinal() )
+					'diagnostic.set( "code", Int/STRING )
+					'diagnostic.set( "codeDescription", TCodeDescrition )
+					'diagnostic.set( "source", "" )
 					diagnostic.set( "message", diag.message )
+					'diagnostic.set( "tags", "" )
+					'diagnostic.set( "relatedInformation", "" )
+					'diagnostic.set( "data", "" )
 					diagnostics.addlast( diagnostic )
 				End If
 			End If
