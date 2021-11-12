@@ -87,9 +87,9 @@ End Rem
     End Method
     
     ' Retrieve a message from task queue
-    Method popTaskQueue:TMessage()
+    Method popTaskQueue:TTask()
         LockMutex( TaskMutex )
-        Local result:TMessage = TMessage( taskqueue.removefirst() )
+        Local result:TTask = TTask( taskqueue.removefirst() )
         UnlockMutex( TaskMutex )
         Return result
     End Method
@@ -133,26 +133,34 @@ End Rem
     Private
 
     ' Add a new message to the queue
-    Method pushTaskQueue( message:TMessage )
+    Method pushTaskQueue( task:TTask, unique:Int=False )
         'Publish( "debug", "PushTaskQueue()" )
-        If Not message Return
-        'Publish( "debug", "- task is not null" )
+        If Not task Return
         LockMutex( TaskMutex )
 
-		'Local JID:JSON = message.J.find("id")
-		'Local taskid:String = JID.tostring()
-		logfile.debug( "Pushing Message (Task "+message.getid()+"): '"+ message.methd +"'" )
-		
-        'Publish( "debug", "- task mutex locked" )
-        'taskqueue.insert( message.taskid, message )
-		taskqueue.addlast( message )
-        'Publish( "debug", "- task inserted" )
-        'PostSemaphore( taskCounter )
-        'Publish( "debug", "- task Semaphore Incremented" )
+		' PRIORITY QUEUE (12/11/21)
+		Local link:TLink = taskqueue.lastlink()
+		While link 
+			Local item:TTask = TTask( link.value )
+			' Check Uniqueness
+			If unique And task.identifier=item.identifier And task.subject = item.subject
+				' Task already exists with this name and identifier, so drop it.
+				UnlockMutex( TaskMutex )
+				Return				
+			End If
+			' Check Priority
+			If item.priority<=task.priority
+				taskqueue.insertAfterLink( task, link )
+				UnlockMutex( TaskMutex )
+				Return
+			EndIf
+			link = link.prevLink
+		Wend
+		' Queue is empty, or task goes at end...
+		taskqueue.addFirst( task )
         UnlockMutex( TaskMutex )
-        'Publish( "debug", "- task mutex unlocked" )
     End Method
-   
+   	
     ' Add a message to send queue
     Method pushSendQueue( message:String )
         message = Trim( message )
@@ -296,9 +304,17 @@ End Rem
 
 		LockMutex( taskmutex )
 		
-		logfile.debug( "# CANCELLING MESSAGE: "+message.getid() )
+		Local id:String = message.getid()
+		logfile.debug( "# CANCELLING MESSAGE: "+id )
+
 		' Remove from queue
-		taskqueue.remove( message )
+		'taskqueue.remove( message )		
+		For Local message:TMessage = EachIn taskqueue
+			If message.getid() = id
+				taskqueue.remove( message )
+				Exit
+			End If
+		Next
 	
 		UnlockMutex( taskMutex )
 		

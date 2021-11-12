@@ -58,12 +58,12 @@ Type TLSP_Stdio Extends TLSP
             Wend
 			EndRem
 			
-			' Get the next message
-			'Local message:TMessage = client.getNextTask()
-			Local message:TMessage = client.popTaskQueue()
+			' Get the next task
+			'Local message:TMessage = client.popTaskQueue()
+			Local task:TTask = client.popTaskQueue()
 			
 			' Message is only returned if it needs to be emitted (Launched)
-			If message ; message.send()
+			If task ; task.execute()	'.send()
 			
             Delay(100)
         'Until endprocess

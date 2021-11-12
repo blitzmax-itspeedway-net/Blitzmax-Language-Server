@@ -3,6 +3,44 @@ SuperStrict
 '   BLITZMAX LANGUAGE SERVER
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
+Rem WHERE AM I?
+* OUTLINE:			PARSER	VISITOR	OUTLINE	AST
+	- program		DONE	DONE	n/a		n/a
+	- function		Should be a Compound with Children, not a node with a body!
+	- type			DONE	DONE	DONE	DONE
+	- method		DONE	DONE	DONE	DONE
+	- struct		DONE	DONE	Error!		
+	- include		DONE	DONE	DONE
+	- import		DONE	DONE	DONE
+	- interface		DONE	DONE	Error!	
+	- enum			TK_EndEnum is missing!
+* AST:
+	- comment		DONE	DONE	DONE
+	- remark		DONE	MISSING
+
+* Add a unique task for openfile, parsing and validation etc. (Instead of running during onChange)
+	
+* Currently not getting configuration chnage or workspace chnage messages
+* GOt To get setTrace Working
+* Got To get this working:
+https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#logging-support-For-language-server
+End Rem
+
+'	OBJECT HEIRARCHY
+'	----------------
+'	TEventHandler
+'		TLSP extends TEventHandler
+'			TLSP_Stdio Extends TLSP
+'			TLSP_TCP Extends TLSP
+'		TMessageQueue Extends TEventHandler
+'			TClient Extends TMessageQueue
+'		TLogger Extends TEventHandler
+'		TWorkspaces Extends TEventHandler
+'	TTextDocument Implements ITextDocument
+'		TFullTextDocument Extends TTextDocument
+'	TTask
+'		TMessage Extends TTask
+
 Framework brl.standardio 
 Import brl.collections      ' Used for Tokeniser
 'Import brl.linkedlist
@@ -48,6 +86,7 @@ Include "bin/TLSP.bmx"
 Include "bin/responses.bmx"
 
 ' Load order - ANY
+Include "bin/TTask.bmx"
 Include "bin/TEventHandler.bmx"
 Include "bin/TMessage.bmx"
 Include "bin/TMessageQueue.bmx"

@@ -44,7 +44,7 @@
 'Global EV_textDocument_documentSymbol:Int = AllocUserEventId( "textDocument_documentSymbol/completion" )
 
 ' MESSAGE V4
-Type TMessage 
+Type TMessage Extends TTask
 	
 	Private
 
@@ -85,7 +85,11 @@ Type TMessage
 	End Method
 
 	' Helper function for message distribution
-	Method send()
+	'Method send()
+	'	lsp.distribute( Self )
+	'End Method
+
+	Method execute()
 		lsp.distribute( Self )
 	End Method
 

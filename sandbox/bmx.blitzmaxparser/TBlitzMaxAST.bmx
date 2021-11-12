@@ -78,6 +78,17 @@ Type TAST_Comment Extends TASTNode { class="COMMENT" }
 '	Method validate() ; valid = True ; error = [] ; End Method
 End Type
 
+Type TAST_ENUM Extends TASTCompound { class="ENUM" }
+	Field name:TToken
+	Field ending:TToken
+			
+	' Used for debugging tree structure
+	Method showLeafText:String()
+		Return name.value
+	End Method
+	
+End Type
+
 Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
 	Field major:TToken
 	Field dot:TToken
@@ -144,6 +155,17 @@ Type TAST_Include Extends TASTNode { class="INCLUDE" }
 	
 End Type
 
+Type TAST_Interface Extends TASTCompound { class="INTERFACE" }
+	Field name:TToken
+	Field ending:TToken
+			
+	' Used for debugging tree structure
+	Method showLeafText:String()
+		Return name.value
+	End Method
+	
+End Type
+
 Type TAST_Method Extends TASTCompound { class="METHOD" }
 	Field methodname:TToken
 	Field colon:TTOken
@@ -178,6 +200,18 @@ Type TAST_StrictMode Extends TASTNode { class="STRICTMODE" }
 
 	'Method validate() ; valid = True ; error = [] ; End Method
 
+End Type
+
+Type TAST_Struct Extends TASTCompound { class="STRUCT" }
+	Field structname:TToken
+	Field ending:TToken
+			
+	' Used for debugging tree structure
+	Method showLeafText:String()
+		Local name:String = structname.value
+		Return name
+	End Method
+	
 End Type
 
 Type TAST_Type Extends TASTCompound { class="TYPE" }

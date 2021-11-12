@@ -164,7 +164,7 @@ End Rem
 				logfile.debug( "- TYPE:    NOTIFICATION" )
 				'Publish( "debug", "Executing notification "+methd )
 				'New TMessage( methd, message.J, params ).emit()
-				message.send()
+				message.execute()
 			End If
 
 Rem V0.2 depreciated

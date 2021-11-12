@@ -107,7 +107,7 @@ End Rem
 	
 	Method isTrue:Int( path:String )
 		Local key:JSON = J.find( path )
-logfile.debug( "KEY:"+key.stringify() )
+'logfile.debug( "KEY:"+key.stringify() )
 		Return key.isTrue()
 	End Method
 	

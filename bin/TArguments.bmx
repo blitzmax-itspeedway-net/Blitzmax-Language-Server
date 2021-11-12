@@ -7,7 +7,11 @@
 Rem
 	IMPLEMENTED ARGUMENTS
 	
-	-x:<option>	Enable experminental option
+	-x:<option>	Enable experimental option
+	+ast		Show AST in outline
+	-ast		Hide AST in outline		(DEFAULT)
+	+eol		Show EOL in AST
+	-eol		Hide EOL in AST			(DEFAULT)
 	
 End Rem
 
@@ -46,9 +50,15 @@ End Rem
 '		--lint:ifthen=11	' Enforce THEN is used
 
 Global EXPERIMENTAL:String[][] = [..
-	[ "ast", "AST" ], ..
-	[ "docsym", "Document Symbols" ], ..
-	[ "diag", "Diagnostic Information" ] ..
+	[ "diag", "experimental|diag", "Diagnostic Information" ] ..
+	]
+
+'	[ "ast", "ast|show", "AST" ], ..
+'	[ "docsym", "experimental|docsym", "Document Symbols" ], ..
+
+Global FEATURES:String[][] = [..
+	[ "-ast", "outline|ast", "true", "Show AST in Outline" ], ..
+	[ "-eol", "outline|eol", "true", "Show EOL in AST" ] ..
 	]
 
 Type TArguments
@@ -57,12 +67,12 @@ Type TArguments
 'DebugStop
 		'   ARGUMENTS
 		'Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
-		logfile.debug( "  ARGS:" )'       "+AppArgs.length+"~n"+("#".join(AppArgs)) )
+		'logfile.debug( "  ARGS:" )'       "+AppArgs.length+"~n"+("#".join(AppArgs)) )
 		
 		' Set the application argument in case we need it later
 		CONFIG[ "app" ] = AppArgs[0]
 		
-		'DebugStop
+'DebugStop
 		'DebugLog( "ARGS:"+AppArgs.length )
 		
 		' Parse all the arguments, splitting them by ":"
@@ -80,28 +90,32 @@ Type TArguments
 				value = ":".join( items[1..] )
 			End Select
 			
-			logfile.debug( "    "+n+") "+key + " = '"+value+"'" )
+			'logfile.debug( "    "+n+") "+key + " = '"+value+"'" )
 			'
 			Select key
 			Case "-x"		' EXPERIMENTAL
-				Local lab:String = experiment( value )
-				If lab = ""
-					Print( "Argument '"+AppArgs[n] + "' is an unknown experiment" )
+				Local lab:String[] = lookup( EXPERIMENTAL, value )
+				If lab = []
+					'Print( "Argument '"+AppArgs[n] + "' is an unknown experiment" )
 					logfile.warning( "## Argument '"+AppArgs[n] + "' is an unknown experiment" )
 				Else 
-					CONFIG["experimental|"+value] = "true"  
-					Print( "WARNING: '"+value+"' ("+lab+") is experimental" )
-					logfile.warning( "## Feature '"+value+"' ("+lab+") is experimental" )
-DebugLog( config.J.prettify() )
+					CONFIG[ lab[1] ] = "true"  
+					'Print( "WARNING: '"+value+"' ("+lab[2]+") is experimental" )
+					logfile.warning( "## Feature '"+value+"' ("+lab[2]+") is experimental" )
+'DebugLog( config.J.prettify() )
 				End If
 			Case "-h","-help"
 				CONFIG["cli|help"] = "true"  
 			Case "-v","-ver","-version"
 				CONFIG["cli|version"] = "true"
 			Default
-				' Invalid argument!
-				Print( "Argument '"+AppArgs[n] + "' is invalid" )
-				logfile.warning( "    Argument '"+AppArgs[n] + "' is invalid" )
+				Local feature:String[] = lookup( FEATURES, key )
+				If feature = []
+					logfile.warning( "## Argument '"+AppArgs[n] + "' is invalid" )
+				Else
+					CONFIG[ feature[1] ] = feature[2]
+					logfile.info( "## "+ feature[3] )
+				End If
 			End Select
 		Next
 
@@ -119,13 +133,21 @@ DebugLog( config.J.prettify() )
 
 		'Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
 		'logfile.debug( "CONFIG:~n"+CONFIG.J.Prettify() )
+DebugLog( CONFIG.J.prettify() )
 	End Method
 	
-	Method experiment:String( criteria:String )
-		For Local i:Int = 0 Until experimental.length
-			If experimental[i][0]=criteria ; Return experimental[i][1]
+	'Method experiment:String( criteria:String )
+	'	For Local i:Int = 0 Until experimental.length
+	'		If experimental[i][0]=criteria ; Return experimental[i][1]
+	'	Next
+	'	Return ""
+	'End Method
+	
+	Method lookup:String[]( list:String[][], key:String )
+		For Local i:Int = 0 Until list.length
+			If list[i][0]=key ; Return list[i]
 		Next
-		Return ""
+		Return []
 	End Method
 	
 	'Method operator []:String(key:String)

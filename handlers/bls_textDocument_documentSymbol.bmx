@@ -24,38 +24,38 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
     Local id:String = message.getid()
     Local params:JSON = message.params
 	
-	If config.istrue("experimental|docsym")
-		logfile.warning( "EXPERIMENTAL FEATURE ENABLED: textDocument/documentSymbol~n"+message.J.prettify() )
-	Else
-		logfile.warning( "EXPERIMENTAL FEATURE DISABLED: textDocument/documentSymbol" )
-		Return Response_OK( id )
-	End If
+	'If config.istrue("experimental|docsym")
+	'	logfile.warning( "EXPERIMENTAL FEATURE ENABLED: textDocument/documentSymbol~n"+message.J.prettify() )
+	'Else
+	'	logfile.warning( "EXPERIMENTAL FEATURE DISABLED: textDocument/documentSymbol" )
+	'	Return Response_OK( id )
+	'End If
 	
-logfile.debug( "Getting document" )
+'logfile.debug( "Getting document" )
 
 	' Get the document
 	Local doc_uri:String = message.J.find( "params|textDocument|uri" ).toString()
 
-logfile.debug( "Got doc_uri: "+doc_uri )
+'logfile.debug( "Got doc_uri: "+doc_uri )
 
 	Local workspace:TWorkspace = workspaces.get( doc_uri )
 
-logfile.debug( "Got Workspace" )
-If workspace 
-	logfile.debug( "Workspace IS NOT NULL" )
-Else
-	logfile.debug( "Workspace IS NULL" )
-EndIf
+'logfile.debug( "Got Workspace" )
+'If workspace 
+'	logfile.debug( "Workspace IS NOT NULL" )
+'Else
+'	logfile.debug( "Workspace IS NULL" )
+'EndIf
 
 	Local document:TFullTextDocument = TFullTextDocument( workspace.get( doc_uri ) )
 
-logfile.debug( "Got document" )
+'logfile.debug( "Got document" )
 
 	' Can only work with FULL TEXT DOCUMENTS at present
 	' Later we may be able to load an AST from file
 
 	If Not document Or Not document.ast
-		logfile.debug( "# NOT A FILL TEXT DOCUMENT" )
+'		logfile.debug( "# NOT A FULL TEXT DOCUMENT" )
 		Return Response_OK( id )
 	End If
 	
@@ -81,10 +81,12 @@ logfile.debug( "Got document" )
 	'	00000000	SymbolInformation[]
 	'	00000001	DocumentSymbol[]
 	'	00000010	Show AST
+	'	00000100	Show EOL			(Disabled by default)
 	
-logfile.debug( "Getting Options" )
+'logfile.debug( "Getting Options" )
 
 	Local options:Int = TDocumentSymbolVisitor.OPT_FLAT
+	
 	If client.has( "textDocument|documentSymbol|hierarchicalDocumentSymbolSupport" )
 		logfile.debug( "# Client HAS textDocument|documentSymbol|hierarchicalDocumentSymbolSupport" )
 		options = TDocumentSymbolVisitor.OPT_TREE
@@ -93,8 +95,18 @@ logfile.debug( "Getting Options" )
 	End If
 
 	' An AST can only be shown in Tree (Hierarchial) symbol information
-	Local showAST:Int = config.find("experimental|ast").toint()
-	If showAST And options = TDocumentSymbolVisitor.OPT_TREE ; options :| TDocumentSymbolVisitor.OPT_AST
+	Local showAST:Int = config.find("outline|ast").toint()
+	If showAST And ( options & TDocumentSymbolVisitor.OPT_TREE >0 )
+		'logfile.debug( "## ENABLING AST VIEW" )
+		options = options | TDocumentSymbolVisitor.OPT_AST
+		Local showEOL:Int = config.find("outline|eol").toint()
+		If showEOL 
+			'logfile.debug( "## ENABLING EOL IN AST VIEW" )
+			options = options | TDocumentSymbolVisitor.OPT_EOL
+		End If
+	'Else
+	'	logfile.debug( "## AST VIEW IS DISABLED" )
+	End If
 	
 	'OPTIONS DEBUGGING
 	' 00 = Show Flat Symbol Information
@@ -161,15 +173,15 @@ Type TDocumentSymbolVisitor Extends TVisitor
 	Field options:Int
 	
 	Const OPT_FLAT:Int = $0000
-	Const OPT_TREE:Int = $0001
-	Const OPT_AST:Int  = $0010
-	Const OPT_SHOW:Int = $0011
-	Const OPT_EOL:Int  = $0100	' Show EOL symbols in AST
+	Const OPT_TREE:Int = $0001	' 0000 0001	
+	Const OPT_AST:Int  = $0002	' 0000 0010		Show AST in Tree View
+	Const OPT_EOL:Int  = $0004	' 0000 0100		Show EOL symbols in AST
 	
-	Global VALID_SYMBOLS:String[] = ["program","function","type","method","struct","include"]
+	Global VALID_SYMBOLS:String[] = ["program","function","type","method","struct","include","import","interface","enum"]
 
 	Method New( ast:TASTNode, options:Int )
 		Self.ast = ast
+		logfile.debug( "## VISITOR OPTIONS: "+options )
 		Self.options = options
 	End Method
 
@@ -195,9 +207,9 @@ Type TDocumentSymbolVisitor Extends TVisitor
 'DebugStop
 
 		' Only show selective nodes unless in AST mode
-		If options <> OPT_SHOW 
+		If options & OPT_AST = 0	' NOT SHOWING AST
 Local within:Int = in( class, VALID_SYMBOLS )
-logfile.debug( "OPT:"+options+", '"+class+"', "+within )
+logfile.debug( "OPT:"+options+", '"+class+"', "+within+" skipped" )
 			If Not in( Lower(class), VALID_SYMBOLS ) ; Return
 		End If
 
@@ -207,7 +219,7 @@ logfile.debug( "OPT:"+options+", '"+class+"', "+within )
 			methd.invoke( Self, [New TGift(node,mother,prefix)] )
 		Else
 			' We only show these errors in AST View
-			If options <> OPT_SHOW ; Return
+			If options & OPT_AST = 0 ; Return
 		
 			Local documentSymbol:JSON = New JSON()
 			documentSymbol.set( "name", "## MISSING: '"+prefix+"_"+class+"()'" )
@@ -345,21 +357,38 @@ End Rem
 		
 	End Method
 
+	Method outline_COMMENT( arg:TGift )
+		Local node:TAST_Comment = TAST_Comment( arg.node )
+		If Not node Return
+
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Comment "+node.pos() )
+		documentSymbol.set( "detail", node.value )
+		documentSymbol.set( "kind", 0 )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+		
+		' Add to mother node
+		arg.data.addLast( documentSymbol )	
+	End Method
+	
 	' END OF LINE (EOL)
 	' This should only show if option is selected
 	Method outline_EOL( arg:TGift )
 		If options & OPT_EOL > 0
+			Local documentSymbol:JSON = New JSON()
+			documentSymbol.set( "name", "EOL " + arg.node.pos() )
+			'documentSymbol.set( "detail", "" )
+			documentSymbol.set( "kind", 0 )
+			'documentSymbol.set( "tags", "" )
+			'documentSymbol.set( "depreciated", "false" )
+			documentSymbol.set( "range", JRange( arg.node ) )
+			documentSymbol.set( "selectionRange", JRange( arg.node ) )
+			' Add to mother node
+			arg.data.addLast( documentSymbol )
 		End If
-		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "EOL " + arg.node.pos() )
-		'documentSymbol.set( "detail", "" )
-		documentSymbol.set( "kind", 0 )
-		'documentSymbol.set( "tags", "" )
-		'documentSymbol.set( "depreciated", "false" )
-		documentSymbol.set( "range", JRange( arg.node ) )
-		documentSymbol.set( "selectionRange", JRange( arg.node ) )
-		' Add to mother node
-		arg.data.addLast( documentSymbol )
 	End Method
 		
 	' This is the entry point of our appliciation
@@ -390,7 +419,58 @@ End Rem
 
 		If node.body ; visitChildren( node.body, children, arg.prefix )
 	End Method
-	
+
+	Method outline_INCLUDE( arg:TGift )
+		Local node:TAST_Include = TAST_Include( arg.node )
+		If Not node Or Not node.file Return
+
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Include "+node.file.value+" "+node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", SymbolKind._File.ordinal() )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+		
+		' Add to mother node
+		arg.data.addLast( documentSymbol )	
+	End Method
+
+	Method outline_IMPORT( arg:TGift )
+		Local node:TAST_Import = TAST_Import( arg.node )
+		If Not node Or Not node.major Or Not node.minor Return
+
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Import "+node.major.value+"."+node.minor.value+" "+node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", SymbolKind._File.ordinal() )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+
+		' Add to mother node
+		arg.data.addLast( documentSymbol )			
+	End Method
+
+	Method outline_INTERFACE( arg:TGift )
+		Local node:TAST_Interface = TAST_Interface( arg.node )
+		If Not node Or Not node.name Return
+
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Interface "+node.name.value+" "+node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", SymbolKind._Interface.ordinal() )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+
+		' Add to mother node
+		arg.data.addLast( documentSymbol )			
+	End Method
+			
 	' This is the entry point of our appliciation
 	Method outline_METHOD( arg:TGift )
 	
@@ -415,7 +495,40 @@ End Rem
 		visitChildren( node, children, arg.prefix )
 	End Method
 
-	' This is the entry point of our appliciation
+	Method outline_REMARK( arg:TGift )
+		Local node:TAST_Rem = TAST_Rem( arg.node )
+		If Not node Return
+
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Remark "+node.pos() )
+		documentSymbol.set( "detail", node.value )
+		documentSymbol.set( "kind", 0 )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+		
+		' Add to mother node
+		arg.data.addLast( documentSymbol )	
+	End Method
+	
+	Method outline_STRUCT( arg:TGift )
+		Local node:TAST_Struct= TAST_Struct( arg.node )
+		If Not node Or Not node.structname Return
+
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Struct "+node.structname.value+" "+node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", SymbolKind._Struct.ordinal() )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+
+		' Add to mother node
+		arg.data.addLast( documentSymbol )			
+	End Method
+	
 	Method outline_TYPE( arg:TGift )
 	
 		Local node:TAST_Type = TAST_Type( arg.node )

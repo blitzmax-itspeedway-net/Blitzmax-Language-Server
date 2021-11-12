@@ -33,11 +33,14 @@ Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, 
 
 Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_FOR, TK_REPEAT, TK_WHILE ]
 
-Global SYM_PROGRAM_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
-Global SYM_METHOD_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
+Global SYM_ENUM_BODY:Int[] = [ TK_INCLUDE ]
 Global SYM_FUNCTION_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
-Global SYM_TYPE_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
+Global SYM_PROGRAM_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE, TK_INTERFACE, TK_STRUCT ]
+Global SYM_METHOD_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
 Global SYM_MODULE_BODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
+Global SYM_INTERFACE_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD ]
+Global SYM_STRUCT_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL ]
+Global SYM_TYPE_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
 
 Global SYM_DATATYPES:Int[] = [ TK_BYTE, TK_DOUBLE, TK_FLOAT, TK_INT, TK_LONG, TK_SHORT, TK_STRING ]
 
@@ -297,12 +300,18 @@ EndRem
 						ast.add( Parse_Function( options ) )
 					Case TK_Global
 						ast.add( Parse_Global() )
+					Case TK_Import
+						ast.add( Parse_Import() )
 					Case TK_Include
 						ast.add( Parse_Include() )
+					Case TK_Interface
+						ast.add( Parse_Interface() )
 					Case TK_Local
 						ast.add( Parse_Local() )
-'					Case TK_Method
-'						ast.add( New TAST_Method() )
+					Case TK_Method
+						ast.add( Parse_Method() )
+					Case TK_Struct
+						ast.add( Parse_Struct() )
 					Case TK_Type
 						ast.add( Parse_Type() )
 					Default
@@ -744,6 +753,20 @@ End Rem
 		Return ast
 	End Method
 
+'	Method Parse_Enum:TASTNode()
+'DebugStop
+'		Local ast:TAST_Enum = New TAST_Enum( token )
+'		advance()
+'
+'		' Get properties
+'		ast.name = eat( TK_ALPHA )
+'		parseSequence( ast, SYM_ENUM_BODY+[TK_ALPHA], [TK_EndEnum] )
+'		
+'		' End of block
+'		ast.ending = eat( TK_EndEnum )
+'		Return ast
+'	End Method
+	
 	Method Parse_Field:TASTNode()
 		Local ast:TASTBinary = New TASTBinary( token )	' LOCAL, GLOBAL or FIELD
 		ast.name = "vardecl"
@@ -902,6 +925,20 @@ DebugStop
 		Return ast
 	End Method
 
+	Method Parse_Interface:TASTNode()
+'DebugStop
+		Local ast:TAST_Interface = New TAST_Interface( token )
+		advance()
+
+		' Get properties
+		ast.name = eat( TK_ALPHA )
+		parseSequence( ast, SYM_INTERFACE_BODY+[TK_ALPHA], [TK_EndInterface] )
+		
+		' End of block
+		ast.ending = eat( TK_EndInterface )
+		Return ast
+	End Method
+	
 	Method Parse_Local:TASTNode()
 		Local ast:TASTBinary = New TASTBinary( token )	' LOCAL, GLOBAL or FIELD
 		ast.name = "vardefinition"
@@ -933,11 +970,13 @@ DebugStop
 		' Trailing comment is a description
 		'ast.comment = eatOptional( [TK_COMMENT], Null )
 		
-		' BODY OF THE FUNCTION
+		' BODY OF THE METHOD
 		
 		' For the sake of simplicity at the moment, this will not parse the body
 		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		ast.add( eatUntil( [TK_EndMethod], ast.rparen ) )
+		'ast.add( eatUntil( [TK_EndMethod], ast.rparen ) )
+		
+		parseSequence( ast, SYM_METHOD_BODY+[TK_ALPHA], [TK_EndMethod] )
 Rem
 		Local finished:Int = False
 		Repeat
@@ -1076,6 +1115,20 @@ Rem	Method Parse_Type:TASTNode( token:TToken Var )
 	End Method
 End Rem
 
+	Method Parse_Struct:TASTNode()
+'DebugStop
+		Local ast:TAST_Struct = New TAST_Struct( token )
+		advance()
+
+		' Get properties
+		ast.structname = eat( TK_ALPHA )
+		parseSequence( ast, SYM_STRUCT_BODY+[TK_ALPHA], [TK_EndStruct] )
+		
+		' End of block
+		ast.ending = eat( TK_EndStruct )
+		Return ast
+	End Method
+	
 	Method Parse_Type:TASTNode()
 'DebugStop
 		Local ast:TAST_Type = New TAST_Type( token )
@@ -1093,9 +1146,10 @@ End Rem
 		
 		' For the sake of simplicity at the moment, this will not parse the body
 		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		ast.add( eatUntil( [TK_EndType], token ) )
+		'ast.add( eatUntil( [TK_EndType], token ) )
 		'ListAddLast( ast.children, New TASTNode("ERROR" ) )
-
+		parseSequence( ast, SYM_TYPE_BODY+[TK_ALPHA], [TK_EndType] )
+		
 		' End of block
 		ast.ending = eat( TK_EndType )
 		Return ast

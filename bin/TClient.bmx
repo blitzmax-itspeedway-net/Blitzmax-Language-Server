@@ -89,7 +89,7 @@ Type TClient Extends TMessageQueue
 		Local Text:String = message.stringify()
 		
 		'logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
-		Local dbg:String = Text[1..500]
+		Local dbg:String = Text[0..500]
 		If Len(Text)>500 ; dbg :+ "..."
 		logfile.debug( "TClient.Send()~n"+dbg )
 
