@@ -55,7 +55,7 @@ Type TClient Extends TMessageQueue
 			logfile.info "  VERSION: "+clientver
 		Else
 			logfile.info( "NO CLIENT INFO EXISTS" )
-		End If
+		End If	
 		
 	End Method
 	
@@ -73,27 +73,29 @@ Type TClient Extends TMessageQueue
 
 	' HELPER: Send a message to client by pushing it to the send queue
 	Method logMessage( message:String, messagetype:Int )
-		Local J:JSON = EmptyMessage( "window/logMessage" )
+		Local J:JSON = EmptyResponse( "window/logMessage" )
 		J.set( "params|type",  messagetype  )
 		J.set( "params|message", message )
-		send( J )
+		sendMessage( J.stringify() )
 	End Method
 	
 	' HELPER: Send a message to client by pushing it to the send queue
-	Method Send( message:JSON )
+	Method SendMessage( message:String )
 
 		' Check we have a valid JSON object, or replace with error
-		If Not message ; message = Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) 
+		'If Not message ; message = Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) 
 		
 		' Extract message
-		Local Text:String = message.stringify()
+		'Local Text:String = message.stringify()
 		
 		'logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
-		Local dbg:String = Text[0..500]
-		If Len(Text)>500 ; dbg :+ "..."
-		logfile.debug( "TClient.Send()~n"+dbg )
+		If Len(message)>500 
+			logfile.debug( "TClient.SendMessage()~n"+message[0..500]+"..." )
+		Else
+			logfile.debug( "TClient.SendMessage()~n"+message )
+		End If
 
-		If Text ; pushSendQueue( Text )
+		If message ; pushSendQueue( message )
 	End Method
 	
 End Type

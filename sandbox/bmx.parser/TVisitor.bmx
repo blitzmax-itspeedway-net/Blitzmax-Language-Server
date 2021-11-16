@@ -39,26 +39,29 @@ Type TVisitor
 		' Use Reflection to call the visitor method (or an error)
 'DebugStop
 		Local this:TTypeId = TTypeId.ForObject( Self )
-		' The visitor function is either defined in metadata or as node.name
+		' The visitor function is defined in metadata 
 		Local class:String = this.metadata( "class" )
-		If class = "" class = node.name
+		If class = "" 
+			If node.classname = "" ; Return ""
+			class = node.classname
+		End If
 		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
 		If methd
-			Local text:String = String( methd.invoke( Self, [New TVisitorArg(node,indent)] ))
-			Return text
+			Local Text:String = String( methd.invoke( Self, [New TVisitorArg(node,indent)] ))
+			Return Text
 		EndIf
 		If exception_on_missing_method ; exception( prefix+"_"+class )
 		Return ""
 	End Method
 
 	Method visitChildren:String( node:TASTNode, prefix:String, indent:String="" )
-		Local text:String
+		Local Text:String
 		Local compound:TASTCompound = TASTCompound( node )
 'DebugStop
 		For Local child:TASTNode = EachIn compound.children
-			text :+ visit( child, prefix, indent )
+			Text :+ visit( child, prefix, indent )
 		Next
-		Return text
+		Return Text
 	End Method
 	
 	' This is called when node doesn't have metadata or a name...

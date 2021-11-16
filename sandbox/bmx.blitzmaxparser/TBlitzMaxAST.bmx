@@ -8,17 +8,14 @@
 
 ' Diagnostics node used when an optional token is missing
 Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
+	Field name: String
 	
-	' descr field should hold some detail used by the language server to
-	' help user recreate this, or force it
-	' default value needs to be included so it can be "fixed"
-
 	Method New( name:String, value:String, line:Int )
 'DebugStop
 		Self.name   = name
 		Self.value  = value
 		'Self.errors = New TList()
-		Self.status = AST_NODE_WARNING
+		'Self.status = AST_NODE_WARNING
 		'Local range:TRange = New TRange( 0,0,0,0 )
 		Self.start_line = line
 		Self.start_char = 0
@@ -27,6 +24,36 @@ Type TASTMissingOptional Extends TASTNode { class="missingoptional" }
 		'errors :+ [ New TDiagnostic( "'"+name+"' is recommended", DiagnosticSeverity.Hint, range ) ]
 	End Method
 		
+End Type
+
+' Diagnostics node used when a token is ignored by the Parser
+'Type TASTIgnored Extends TASTCompound { class="IGNORED" }			
+'	Method New( token:TTOken )
+'		consume( token )
+'	End Method
+'End Type
+
+' Diagnostics node used when a token is unexpected.
+'Type TASTUnexpected Extends TASTCompound { class="UNEXPECTED" }			
+'End Type
+
+' Diagnostics node used when a token is skipped by the Parser
+Type TASTSkipped Extends TASTError { class="SKIPPED" }
+	Method New( token:TTOken )
+		consume( token )
+	End Method
+	
+	Method New( token:TToken, error:String )
+		consume( token )
+		errors :+ [ New TDiagnostic( error, DiagnosticSeverity.Warning ) ]
+		'Self.valid = False
+	End Method	
+End Type
+
+Type TASTKeyWord Extends TASTNode { class="KEYWORD" }
+	Method New( token:TTOken )
+		consume( token )
+	End Method
 End Type
 
 Type TASTNumber Extends TASTNode	{ class="number" }
@@ -43,32 +70,37 @@ End Type
 
 ' Node for END OF LINE marker
 Type TAST_EOL Extends TASTNode { class="EOL" }
-	Method New( name:String, value:String )
-		Self.name  = name
-		Self.value = value
+	'Method New( name:String, value:String )
+	'	Self.name  = name
+	'	Self.value = value
+	'End Method
+	
+	' We don't need to see EOL in the AST during DEBUG!
+	Method reveal:String( indent:String = "" )
+		Return ""
 	End Method
 End Type
 
 ' Diagnostics node used when an error has been found and a node has been skipped
-Type TAST_Skipped Extends TASTError { class="skipped" }
-	
-	' descr field should hold some detail used by the language server to
-	' help user recreate this, or force it
-	' default value needs to be included so it can be "fixed"
-
-	Method New( name:String, value:String )
-		Self.name  = name
-		Self.value = value
-		'Self.valid = False
-	End Method
-
-	Method New( token:TToken, error:String )
-		consume( token )
-		errors :+ [ New TDiagnostic( error, DiagnosticSeverity.Warning ) ]
-		'Self.valid = False
-	End Method	
-		
-End Type
+'Type TAST_Skipped Extends TASTError { class="skipped" }
+'	
+'	' descr field should hold some detail used by the language server to
+'	' help user recreate this, or force it
+'	' default value needs to be included so it can be "fixed"
+'
+'	Method New( name:String, value:String )
+'		Self.name  = name
+'		Self.value = value
+'		'Self.valid = False
+'	End Method
+'
+'	Method New( token:TToken, error:String )
+'		consume( token )
+'		errors :+ [ New TDiagnostic( error, DiagnosticSeverity.Warning ) ]
+''		'Self.valid = False
+'	End Method	
+'		
+'End Type
 
 ' This AST Node is used for LOCAL, GLOBAL and FIELD definitions
 'Type TAST_VariableDeclaration Extends TASTBinary { class="VariableDeclaration" }
@@ -78,7 +110,7 @@ Type TAST_Comment Extends TASTNode { class="COMMENT" }
 '	Method validate() ; valid = True ; error = [] ; End Method
 End Type
 
-Type TAST_ENUM Extends TASTCompound { class="ENUM" }
+Type TAST_Enum Extends TASTCompound { class="ENUM" }
 	Field name:TToken
 	Field ending:TToken
 			
@@ -87,6 +119,14 @@ Type TAST_ENUM Extends TASTCompound { class="ENUM" }
 		Return name.value
 	End Method
 	
+	Method validate()
+		If children.isempty() ; errors :+ [ New TDiagnostic( "Empty Construct", DiagnosticSeverity.Error ) ]
+	End Method
+	
+End Type
+
+Type TAST_For Extends TASTCompound { class="FORNEXT" }
+	Field ending:TToken	
 End Type
 
 Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
@@ -108,29 +148,50 @@ Type TAST_Framework Extends TASTNode { class="FRAMEWORK" }
 	End Method
 End Type
 
-Type TAST_Function Extends TASTNode { class="FUNCTION" }
-	Field fnname:TToken
+Type TAST_Function Extends TASTCompound { class="FUNCTION" }
+	Field name:TToken
 	Field colon:TTOken
 	Field returntype:TToken
 	Field lparen:TToken
 	Field def:TASTCompound
 	Field rparen:TToken
 	Field ending:TToken
-	Field body:TASTCompound
+	'Field body:TASTCompound
 
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Return fnname.value
+		Return name.value
 	End Method
 	
-	'Method validate()
-		'Super.validate()
-'DebugStop
+	Method validate()
+		If children.isempty() ; errors :+ [ New TDiagnostic( "Empty Construct", DiagnosticSeverity.Error ) ]
 		
+		'	VALIDATE RETURN TYPE
+
+		If returntype And returntype.notin( [TK_Int,TK_String,TK_Double,TK_Float] )
+
+'TODO: Need to check return type against SYMBOL TABLE
+
+			Local starts:TPosition = New TPosition( returntype )
+			Local ends:TPosition = New TPosition( returntype )
+			ends.character :+ returntype.value.length	' Add length of token
+			Local range:TRange = New TRange( starts, ends )
+			errors :+ [ New TDiagnostic( "Invalid return type", DiagnosticSeverity.Warning, range ) ]
+		End If
+
+		'	VALIDATE PARENTHESIS
+		'Local start:TPosition = New TPosition( fnname )
+		Local range:TRange = New TRange( Self )
+		If Not lparen 
+			errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning, range ) ]
+		ElseIf Not rparen 
+			errors :+ [ New TDiagnostic( "Missing parenthesis", DiagnosticSeverity.Warning, range ) ]
+		ElseIf lparen<>rparen	' Mismatch "(" and NULL or Null and ")"
+			errors :+ [ New TDiagnostic( "Mismatching parenthesis", DiagnosticSeverity.Warning, range ) ]
+		End If
 		
-		'	Report back worst state
-		'Return Min( status, valid )
-	'End Method
+	End Method
+
 End Type
 
 Type TAST_Import Extends TASTNode { class="IMPORT" }
@@ -163,11 +224,15 @@ Type TAST_Interface Extends TASTCompound { class="INTERFACE" }
 	Method showLeafText:String()
 		Return name.value
 	End Method
+
+	Method validate()
+		If children.isempty() ; errors :+ [ New TDiagnostic( "Empty Construct", DiagnosticSeverity.Error ) ]
+	End Method
 	
 End Type
 
 Type TAST_Method Extends TASTCompound { class="METHOD" }
-	Field methodname:TToken
+	Field name:TToken
 	Field colon:TTOken
 	Field returntype:TToken
 	Field lparen:TToken
@@ -177,8 +242,13 @@ Type TAST_Method Extends TASTCompound { class="METHOD" }
 
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Return methodname.value
+		Return name.value
 	End Method
+	
+	Method validate()
+		If children.isempty() ; errors :+ [ New TDiagnostic( "Empty Construct", DiagnosticSeverity.Error ) ]
+	End Method
+
 End Type
 
 Type TAST_Module Extends TASTCompound { class="MODULE" }
@@ -196,6 +266,10 @@ Type TAST_Rem Extends TASTNode { class="REMARK" }
 	'Method validate() ; valid = True ; error = [] ; End Method
 End Type
 
+Type TAST_Repeat Extends TASTCompound { class="REPEAT" }
+	Field ending:TToken	
+End Type
+
 Type TAST_StrictMode Extends TASTNode { class="STRICTMODE" }
 
 	'Method validate() ; valid = True ; error = [] ; End Method
@@ -203,30 +277,50 @@ Type TAST_StrictMode Extends TASTNode { class="STRICTMODE" }
 End Type
 
 Type TAST_Struct Extends TASTCompound { class="STRUCT" }
-	Field structname:TToken
+	Field name:TToken
 	Field ending:TToken
 			
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Local name:String = structname.value
-		Return name
+		'Local name:String = structname.value
+		Return name.value
+	End Method
+	
+	Method validate()
+		If children.isempty() ; errors :+ [ New TDiagnostic( "Empty Construct", DiagnosticSeverity.Error ) ]
 	End Method
 	
 End Type
 
 Type TAST_Type Extends TASTCompound { class="TYPE" }
-	Field typename:TToken
+	Field name:TToken
 	Field extend:TToken
 	Field supertype:TToken
 	Field ending:TToken
 		
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Local name:String = typename.value
-		If extend name :+ "("+supertype.value+")"
-		Return name
+		Local descr:String = name.value
+		If extend descr :+ "("+supertype.value+")"
+		Return descr
 	End Method
 	
+	Method validate()
+		If children.isempty() ; errors :+ [ New TDiagnostic( "Empty Construct", DiagnosticSeverity.Error ) ]
+	End Method
+	
+End Type
+
+' A Variable Declaration
+Type TAST_VARDECL Extends TASTBinary { class="VARDECL" }
+End Type
+
+' A Variable Definition
+Type TAST_VARDEF Extends TASTBinary { class="VARDEF" }
+End Type
+
+Type TAST_While Extends TASTCompound { class="WHILEWEND" }
+	Field ending:TToken	
 End Type
 
 Rem Type TAST_Comment Extends TASTNode

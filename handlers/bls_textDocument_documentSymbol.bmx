@@ -5,17 +5,37 @@
 '   https://microsoft.github.io/language-server-protocol/specification#textDocument_documentSymbol
 '   REQUEST:    textDocument/documentSymbol
 
-Rem EXAMPLE
-{
-  "id": 2,
-  "jsonrpc": "2.0",
-  "method": "textDocument/documentSymbol",
-  "params": {
-    "textDocument": {
-      "uri": "file: ///home/si/dev/sandbox/loadfile/loadfile3.bmx"
-    }
-  }
-}
+Rem	
+	DESCRIPTION
+	
+	This handler populates the "Overview" area of VSCode.
+	By default it will produce a flat structure, but if the client supports it a hierarchical tree will
+	be provided.
+	Nodes that are displayed in the hierarchical tree are:
+		import, include, enum, function, interface, method, struct, type
+	A command line (-ast) configuration setting ("outline|ast") will extend the tree into an AST
+	A commane line (-eol) will include EOL nodes in the AST (When enabled)
+
+	FUTURE EXPANSION
+	
+	The Document Symbol system includes several other kinds that could be included in the tree if
+	the community feel that they would be useful and not clutter the overview:
+		Module, Namespace, Property, Field, Constructor, Variable, Constant, String
+		Number, Boolean, Array, Object, Key, Null, EnumMember, Event, Operator, TypeParameter
+
+	EXAMPLE
+	
+	{
+	  "id": 2,
+	  "jsonrpc": "2.0",
+	  "method": "textDocument/documentSymbol",
+	  "params": {
+		"textDocument": {
+		  "uri": "file: ///home/si/dev/sandbox/loadfile/loadfile3.bmx"
+		}
+	  }
+	}
+	
 End Rem
 
 ' CLIENT HAS REQUESTED DOCUMENT SYMBOLS
@@ -118,7 +138,12 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
 	'options = TDocumentSymbolVisitor.OPT_TREE | TDocumentSymbolVisitor.OPT_AST
 
 	' Generate DocumentSymbol Information
-logfile.debug( "RUNNING VISITOR" )
+	logfile.debug( "RUNNING VISITOR~nOPTIONS:~n" + ..
+		"FLAT: "+ (options & TDocumentSymbolVisitor.OPT_FLAT ) + "~n" + ..
+		"TREE: "+ (options & TDocumentSymbolVisitor.OPT_TREE ) + "~n" + ..
+		"AST:  "+ (options & TDocumentSymbolVisitor.OPT_AST ) + "~n" + ..
+		"EOL:  "+ (options & TDocumentSymbolVisitor.OPT_EOL ) )
+
 	Local visitor:TDocumentSymbolVisitor = New TDocumentSymbolVisitor( document.ast, options )
 	Local data:JSON = visitor.run()
 	
@@ -151,8 +176,7 @@ logfile.debug( "CREATED DATA" )
 	response.set( "result", data )
 
 	Return response
-	
-	
+
 End Function
 
 ' A Gift is an Argument brought by a Visitor... ;) ha ha... 
@@ -165,7 +189,7 @@ Type TGift
 		Self.data = data
 		Self.prefix = prefix
 	End Method
-End Type
+EndType
 
 Type TDocumentSymbolVisitor Extends TVisitor
 
@@ -201,11 +225,13 @@ Type TDocumentSymbolVisitor Extends TVisitor
 		
 		' Use Reflection to call the visitor method (or an error)
 		Local this:TTypeId = TTypeId.ForObject( Self )
-		' The visitor function is either defined in metadata or as node.name
+		' The visitor function is defined in metadata
 		Local class:String = nodeid.metadata( "class" )
-		If class = "" class = node.name
+		If class = "" 
+			If node.classname = "" ; Return
+			class = node.classname
+		End If
 'DebugStop
-
 		' Only show selective nodes unless in AST mode
 		If options & OPT_AST = 0	' NOT SHOWING AST
 Local within:Int = in( class, VALID_SYMBOLS )
@@ -248,11 +274,12 @@ logfile.debug( "OPT:"+options+", '"+class+"', "+within+" skipped" )
 
 	Method visitChildren( node:TASTNode, mother:JSON, prefix:String )
 		Local family:TASTCompound = TASTCompound( node )
-		If family
-			For Local child:TASTNode = EachIn family.children
-				visit( child, mother, prefix )
-			Next
-		EndIf
+		If Not family ; Return
+		If family.children.isEmpty() ; Return
+
+		For Local child:TASTNode = EachIn family.children
+			visit( child, mother, prefix )
+		Next
 	End Method
 	
 	' DEFAULT NODE - CALLED WHEN THERE IS NO METHOD FOR THE CURRENT NODE
@@ -288,14 +315,15 @@ Rem - 6/11/21, Removed because we do this in visit()
 End Rem
 
 	Method outline_MISSINGOPTIONAL( arg:TGift )
+		Local node:TASTMissingOptional = TASTMissingOptional( arg.node )
 		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "Optional '" + arg.node.name + "' is missing " + arg.node.pos() )
+		documentSymbol.set( "name", "Optional '" + node.name + "' is missing " + node.pos() )
 		'documentSymbol.set( "detail", "" )
 		documentSymbol.set( "kind", 0 )
 		'documentSymbol.set( "tags", "" )
 		'documentSymbol.set( "depreciated", "false" )
-		documentSymbol.set( "range", JRange( arg.node ) )
-		documentSymbol.set( "selectionRange", JRange( arg.node ) )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
 		' Add to mother node
 		arg.data.addLast( documentSymbol )
 	End Method
@@ -310,12 +338,12 @@ End Rem
 		documentSymbol.set( "range", JRange( arg.node ) )
 		documentSymbol.set( "selectionRange", JRange( arg.node ) )
 
-		Local children:JSON = New JSON( JSON_ARRAY )
-		documentSymbol.set( "children", children )
+		'Local children:JSON = New JSON( JSON_ARRAY )
+		'documentSymbol.set( "children", children )
 
 		' Add to mother node
 		arg.data.addLast( documentSymbol )
-		visitChildren( arg.node, children, arg.prefix )
+		'visitChildren( arg.node, children, arg.prefix )
 	End Method
 	
 	' A container for skipped symbols
@@ -329,15 +357,18 @@ End Rem
 		documentSymbol.set( "range", JRange( arg.node ) )
 		documentSymbol.set( "selectionRange", JRange( arg.node ) )
 
-		Local children:JSON = New JSON( JSON_ARRAY )
-		documentSymbol.set( "children", children )
+		'Local children:JSON = New JSON( JSON_ARRAY )
+		'documentSymbol.set( "children", children )
 
 		' Add to mother node
 		arg.data.addLast( documentSymbol )
+		' Children nodes
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
 		visitChildren( arg.node, children, arg.prefix )
 	End Method
 
-	' A symbol has been skipped and this si a placeholder
+	' A symbol has been skipped and this is a placeholder
 	Method outline_SKIPPED( arg:TGift )
 		Local documentSymbol:JSON = New JSON()
 		documentSymbol.set( "name", "SKIPPED '"+arg.node.value+"' "+arg.node.pos() )
@@ -353,7 +384,7 @@ End Rem
 
 		' Add to mother node
 		arg.data.addLast( documentSymbol )
-		visitChildren( arg.node, children, arg.prefix )
+		'visitChildren( arg.node, children, arg.prefix )
 		
 	End Method
 
@@ -391,19 +422,35 @@ End Rem
 		End If
 	End Method
 		
-	' This is the entry point of our appliciation
-	Method outline_PROGRAM( arg:TGift )
-		visitChildren( arg.node, arg.data, arg.prefix )
+	Method outline_ENUM( arg:TGift )
+		Local node:TAST_Enum= TAST_Enum( arg.node )
+		If Not node Or Not node.name Return
+
+		Local documentSymbol:JSON = New JSON()
+		documentSymbol.set( "name", "Enum "+node.name.value+" "+node.pos() )
+		'documentSymbol.set( "detail", "" )
+		documentSymbol.set( "kind", SymbolKind._Enum.ordinal() )
+		'documentSymbol.set( "tags", "" )
+		'documentSymbol.set( "depreciated", "false" )
+		documentSymbol.set( "range", JRange( node ) )
+		documentSymbol.set( "selectionRange", JRange( node ) )
+
+		' Add to mother node
+		arg.data.addLast( documentSymbol )
+		' Children nodes
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+		visitChildren( node, children, arg.prefix )		
 	End Method
 
 	' This is the entry point of our appliciation
 	Method outline_FUNCTION( arg:TGift )
 	
 		Local node:TAST_Function = TAST_Function( arg.node )
-		If Not node Or Not node.fnname Return
+		If Not node Or Not node.name Return
 		
 		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "Function "+node.fnname.value+"() "+node.pos() )
+		documentSymbol.set( "name", "Function "+node.name.value+"() "+node.pos() )
 		'documentSymbol.set( "detail", "" )
 		documentSymbol.set( "kind", SymbolKind._Function.ordinal() )
 		'documentSymbol.set( "tags", "" )
@@ -411,13 +458,17 @@ End Rem
 		documentSymbol.set( "range", JRange( node ) )
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
-		Local children:JSON = New JSON( JSON_ARRAY )
-		documentSymbol.set( "children", children )
+		'Local children:JSON = New JSON( JSON_ARRAY )
+		'documentSymbol.set( "children", children )
 		
 		' Add to mother node
 		arg.data.addLast( documentSymbol )	
 
-		If node.body ; visitChildren( node.body, children, arg.prefix )
+		'If node.body ; visitChildren( node.body, children, arg.prefix )
+		' Children nodes
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+		visitChildren( node, children, arg.prefix )
 	End Method
 
 	Method outline_INCLUDE( arg:TGift )
@@ -468,33 +519,48 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )			
+		arg.data.addLast( documentSymbol )
+		' Children nodes
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+		visitChildren( node, children, arg.prefix )		
 	End Method
 			
 	' This is the entry point of our appliciation
 	Method outline_METHOD( arg:TGift )
 	
 		Local node:TAST_Method = TAST_Method( arg.node )
-		If Not node Or Not node.methodname Return
+		If Not node Or Not node.name Return
 		
 		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "Method "+node.methodname.value+"() "+node.pos() )
+		documentSymbol.set( "name", "Method "+node.name.value+"() "+node.pos() )
 		'documentSymbol.set( "detail", "" )
-		documentSymbol.set( "kind", SymbolKind._Method.ordinal() )
+		If node.name.value = "new"
+			documentSymbol.set( "kind", SymbolKind._Constructor.ordinal() )
+		Else
+			documentSymbol.set( "kind", SymbolKind._Method.ordinal() )
+		End If
 		'documentSymbol.set( "tags", "" )
 		'documentSymbol.set( "depreciated", "false" )
 		documentSymbol.set( "range", JRange( node ) )
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
-		Local children:JSON = New JSON( JSON_ARRAY )
-		documentSymbol.set( "children", children )
+		'Local children:JSON = New JSON( JSON_ARRAY )
+		'documentSymbol.set( "children", children )
 		
 		' Add to mother node
 		arg.data.addLast( documentSymbol )	
-
+		' Children nodes
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )
 	End Method
 
+	' This is the entry point of our appliciation
+	Method outline_PROGRAM( arg:TGift )
+		visitChildren( arg.node, arg.data, arg.prefix )
+	End Method
+	
 	Method outline_REMARK( arg:TGift )
 		Local node:TAST_Rem = TAST_Rem( arg.node )
 		If Not node Return
@@ -514,10 +580,10 @@ End Rem
 	
 	Method outline_STRUCT( arg:TGift )
 		Local node:TAST_Struct= TAST_Struct( arg.node )
-		If Not node Or Not node.structname Return
+		If Not node Or Not node.name Return
 
 		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "Struct "+node.structname.value+" "+node.pos() )
+		documentSymbol.set( "name", "Struct "+node.name.value+" "+node.pos() )
 		'documentSymbol.set( "detail", "" )
 		documentSymbol.set( "kind", SymbolKind._Struct.ordinal() )
 		'documentSymbol.set( "tags", "" )
@@ -526,16 +592,20 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )			
+		arg.data.addLast( documentSymbol )
+		' Children nodes
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
+		visitChildren( node, children, arg.prefix )		
 	End Method
 	
 	Method outline_TYPE( arg:TGift )
 	
 		Local node:TAST_Type = TAST_Type( arg.node )
-		If Not node.typename Return
+		If Not node.name Return
 		
 		Local documentSymbol:JSON = New JSON()
-		Local name:String = "Type "+node.typename.value
+		Local name:String = "Type "+node.name.value
 		If node.extend And node.supertype ; name :+ " Extends "+node.supertype.value		
 		documentSymbol.set( "name", name+" "+node.pos() )
 		'documentSymbol.set( "detail", "" )
@@ -545,12 +615,15 @@ End Rem
 		documentSymbol.set( "range", JRange( node ) )
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
-		Local children:JSON = New JSON( JSON_ARRAY )
-		documentSymbol.set( "children", children )
+		'Local children:JSON = New JSON( JSON_ARRAY )
+		'documentSymbol.set( "children", children )
 		
 		' Add to mother node
 		arg.data.addLast( documentSymbol )	
 
+		' Children nodes
+		Local children:JSON = New JSON( JSON_ARRAY )
+		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )
 	End Method
 

@@ -130,12 +130,11 @@ Type TLogger Extends TEventHandler
 		
 		If lsp.trace = "off" ; Return	' Client doesn't want to know!
 		
-		Local logTrace:JSON = New JSON()
-		logTrace.set( "jsonrpc", JSONRPC )
+		Local logTrace:JSON = EmptyResponse( "$/logTrace" )
 		logTrace.set( "params|message", message )
 		If lsp.trace = "verbose" And verbose<>"" ; logTrace.set( "params|verbose", verbose )
 
-		client.send( logTrace )
+		lsp.send( logTrace )
 		'
 	End Method
 

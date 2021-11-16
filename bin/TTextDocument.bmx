@@ -279,7 +279,7 @@ End Rem
 		Next
 		logfile.debug( "DIAGNOSTIC:~n"+result )
 
-		Local message:JSON = EmptyMessage( "textDocument/publishDiagnostics" )
+		Local message:JSON = EmptyResponse( "textDocument/publishDiagnostics" )
 		logfile.debug( ">>URI>>"+uri.tostring() )
 		message.set( "params|uri", uri.tostring() )
 		message.set( "params|version", version )
@@ -288,7 +288,7 @@ End Rem
 		'logfile.debug( "DIAGNOSTICS:~n"+message.prettify() )
 		'logfile.debug( "DIAGNOSTICS:~n"+message.stringify() )
 		
-		client.send( message )
+		lsp.send( message )
 		
 		Function GetDiagnostic:Object( node:TASTNode, data:Object, options:Int )
 'DebugStop

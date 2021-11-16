@@ -59,9 +59,9 @@ Type TEventHandler
 				' REQUESTS must always return a response
 				If message.request
 					If response
-						client.send( response )
+						lsp.send( response )
 					Else
-						client.send( Response_Error( ERR_INTERNAL_ERROR, "Handler failed to respond" ) )
+						lsp.send( Response_Error( ERR_INTERNAL_ERROR, "Handler failed to respond" ) )
 					End If
 				End If
 				
@@ -73,7 +73,7 @@ Type TEventHandler
 		' Report unhandled messages
 		If count=0
 			If message.request
-				client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No handler defined" ) )
+				'client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No handler defined" ) )
 				logfile.critical( "## No registered handler for '"+message.methd+"'" ) 
 			Else
 				logfile.warning( "## No registered handler for '"+message.methd+"'" ) 

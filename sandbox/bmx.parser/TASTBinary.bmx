@@ -29,7 +29,7 @@ Type TASTBinary Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = indent+name
+		Local block:String = indent+getname()
 		If value<>"" block :+ " "+Replace(value,"~n","\n")
 		block :+ "~n"
 		If lnode

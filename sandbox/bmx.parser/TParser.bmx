@@ -122,6 +122,7 @@ Type TParser
 	Method eatUntil:TASTCompound( completion:Int[], start:TToken )
 'DebugStop
 		Local ast:TASTCompound = New TASTCompound( "IGNORED" )
+		'Local ast:TASTIgnored = New TASTIgnored( start )
 		'ast.error 	= "block ignored by parser"
 		ast.start_line = start.line
 		ast.start_char = start.pos
@@ -132,7 +133,8 @@ Type TParser
 				Return ast
 			End If
 'DebugStop
-			ast.add( New TASTError( "SKIPPED", token ) )
+			'ast.add( New TASTError( "SKIPPED", token ) )
+			ast.add( New TASTSkipped( token ) )
 			ast.end_line = token.line
 			ast.end_char = token.pos
 			advance()

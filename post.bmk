@@ -1,6 +1,7 @@
 
-echo EXEFILE: %exepath% %outfile%
-bmk.sys( 'cp /home/si/dev/LSP/lsp.debug /home/si/BlitzMax/bin/' )
+echo Copying '%outfile%' to application folder..
+echo - SRC: %exepath%/
+echo - DST: ~/BlitzMax/bin/
 
-
+bmk.sys( 'cp %exepath%/%outfile% ~/BlitzMax/bin/' )
 

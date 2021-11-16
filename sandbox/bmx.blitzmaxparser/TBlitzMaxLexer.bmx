@@ -12,8 +12,8 @@ Const TK_EMPTY:Int = $FFFE		' Used to represent optional token matches
 
 Type TBlitzMaxLexer Extends TLexer
 
-	Method New( text:String )
-		Super.New( text )
+	Method New( Text:String )
+		Super.New( Text )
 		'Print "Starting MAXLexer"
 
 		' Define internal symbols
@@ -91,20 +91,20 @@ Type TBlitzMaxLexer Extends TLexer
 			Return New TToken( TK_Comment, ExtractLineComment(), line, pos, "COMMENT" )
 		Case Instr( SYM_NUMBER, char ) > 0	' Number
 			Return New TToken( TK_Number, ExtractNumber(), line, pos, "NUMBER" )
-		Case Instr( SYM_ALPHA, char )>0       	' Alphanumeric Identifier
-			Local text:String = ExtractIdent( SYM_ALPHA+SYM_NUMBER+"_" )
+		Case Instr( SYM_ALPHA+"_", char )>0       	' Alphanumeric Identifier
+			Local Text:String = ExtractIdent( SYM_ALPHA+SYM_NUMBER+"_" )
 			' Check if this is a named-token or just an alpha
-			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(text) ) )
+			Local symbol:TSymbol = TSymbol( defined.valueforkey( Lower(Text) ) )
 			If symbol
 'If Lower(text) = "end" DebugStop
 				If previous.id = TK_END
 'DebugStop
 					Select symbol.id
-					Case TK_EXTERN, TK_FUNCTION, TK_IF, TK_INTERFACE, TK_METHOD, TK_REM, TK_SELECT, TK_STRUCT, TK_TRY, TK_TYPE, TK_WHILE
-						Local sym:TSymbol = TSymbol( defined.valueforkey( "end"+Lower(text) ) )
+					Case TK_ENUM, TK_EXTERN, TK_FUNCTION, TK_IF, TK_INTERFACE, TK_METHOD, TK_REM, TK_SELECT, TK_STRUCT, TK_TRY, TK_TYPE, TK_WHILE
+						Local sym:TSymbol = TSymbol( defined.valueforkey( "end"+Lower(Text) ) )
 						previous.id = sym.id
 						previous.class = sym.class
-						previous.value :+ " "+text
+						previous.value :+ " "+Text
 						Return Null					
 					EndSelect
 					
@@ -115,9 +115,9 @@ Type TBlitzMaxLexer Extends TLexer
 				If symbol.id = TK_REM ; Return New TToken( symbol.id, ExtractRemark(), line, pos, symbol.class )
 
 				' Return the symbol
-				Return New TToken( symbol.id, text, line, pos, symbol.class )
+				Return New TToken( symbol.id, Text, line, pos, symbol.class )
 			End If
-			Return New TToken( TK_ALPHA, text, line, pos, "ALPHA" )
+			Return New TToken( TK_ALPHA, Text, line, pos, "ALPHA" )
 		'Case Instr( valid_symbols, char, 1 )            ' Single character symbol
 		Default								' A Symbol
 			PopChar()   ' Move to next character
@@ -196,6 +196,7 @@ DefData TK_EACHIN,       "eachin"
 DefData TK_ELSE,         "else"
 DefData TK_ELSEIF,       "elseif"
 DefData TK_END,          "end"
+DefData TK_ENDENUM,      "endenum"
 DefData TK_ENDEXTERN,    "endextern"
 DefData TK_ENDFUNCTION,  "endfunction"
 DefData TK_ENDIF,        "endif"
@@ -207,6 +208,7 @@ DefData TK_ENDSTRUCT,    "endstruct"
 DefData TK_ENDTRY,       "endtry"
 DefData TK_ENDTYPE,      "endtype"
 DefData TK_ENDWHILE,     "endwhile"
+DefData TK_ENUM,         "enum"
 DefData TK_EXIT,         "exit"
 DefData TK_EXPORT,       "export"
 DefData TK_EXTENDS,      "extends"

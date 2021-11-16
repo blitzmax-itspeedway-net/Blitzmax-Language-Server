@@ -234,9 +234,9 @@ logfile.debug( "# VALIDATING DOCUMENTS" )
 			'configParams.addlast( config )
 
 			' Create a response and add configParams
-			Local request:JSON = EmptyMessage( "workspace/configuration" )
+			Local request:JSON = EmptyResponse( "workspace/configuration" )
 			request.set( "params", configParams )			
-			client.send( request )
+			lsp.send( request )
 		End If
 	End Method
 	

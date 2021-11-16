@@ -5,14 +5,21 @@
 Include "TLSP_Stdio.bmx"
 Include "TLSP_TCP.bmx"
 
-Type TLSP Extends TEventHandler
-    Global instance:TLSP
+Type TLanguageServer Extends TEventHandler
+    Global instance:TLanguageServer
 
-    Field exitcode:Int = 0
+	Const STATE_UNINITIALISED:Int	= 0
+	Const STATE_INITIALISING:Int	= 1
+	Const STATE_INITIALISED:Int		= 2
+	Const STATE_SHUTDOWN:Int		= 3
 
-	Field initialised:Int 	= False   	' Set by "initialized" message
-    Field shutdown:Int 		= False		' Set by "shutdown" message
-	Field trace:String 		= "off"		' Set by $/setTrace or OnTraceNotification
+    Field exitcode:Int				= 0
+
+	Field state:Int					= STATE_UNINITIALISED
+	'Field initialised:Int			= False   	' Set by "initialized" message
+    'Field shutdown:Int				= False		' Set by "shutdown" message
+	Field trace:String				= "off"		' Set by $/setTrace or OnTraceNotification
+	Field sendbuffer:String[]		= []
 	
 	' ROOT URI and ROOT WORKSPACE are now saved into TWorkspaces
 	'Field rooturi:String					' Root URI
@@ -51,6 +58,64 @@ Type TLSP Extends TEventHandler
 
     Method Close() ; End Method
 
+	' Send a message to the client 
+	Method send( message:JSON )
+		Local response:Int = False
+		' Check we have a valid JSON object, or replace with error
+		If Not message ; message = Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) 
+		
+		' Extract message
+		Local Text:String = message.stringify()
+		If Not Text ; Return
+		If message.contains("id") ; response = True
+		
+		logfile.debug( "# METHOD IS '"+ message.find("method").tostring()+"'" )
+		If response 
+			logfile.debug( "# MESSAGE IS A RESPONSE" )
+		Else
+			logfile.debug( "# MESSAGE IS A NOTIFICATION" )
+		End If
+
+		' Validation
+		Local allowed:Int = response | (state=STATE_INITIALISED)	
+		logfile.debug( "allowed="+allowed )
+		If Not allowed
+			Select state
+			Case STATE_UNINITIALISED		' Server not connected, nothing to send to!
+				logfile.critical( "## SERVER IS UNINITIALISED:~n"+Text )
+			Case STATE_INITIALISING
+				Select message.find( "method" ).toString()
+				Case "initialize", "window/showMessage", "window/logMessage", "telemetry/event", "window/showMessageRequest"
+					allowed = True
+				End Select
+			'Case STATE_INITIALISED
+			'	allowed = True
+			Case STATE_SHUTDOWN
+				logfile.critical( "## SERVER IS SHUTDOWN:~n"+Text )
+			End Select
+		End If
+		logfile.debug( "# ALLOWED TO SEND: "+["FALSE","TRUE"][allowed]+" ("+allowed+")" )
+		
+		' Send message
+		If allowed	' SEND MESSAGE
+			client.sendMessage( Text )
+		Else		' ADD TO BUFFER
+			logfile.debug( "# BUFFERING MESSAGE:~n"+Text )
+			'sendbuffer :+ [Text]
+		End If
+		
+		' Send buffered messages?
+		If state = STATE_INITIALISED And sendbuffer<>[]
+			logfile.debug( "# EMPTYING BUFFER" )
+			For Local buffered:String = EachIn sendbuffer
+				client.sendMessage( buffered )
+			Next
+			sendbuffer = []			
+			logfile.debug( "# BUFFER EMPTY" )
+		End If
+			
+	End Method
+
 	'V0.0
     Function ExitProcedure()
         'Publish( "debug", "Exit Procedure running" )
@@ -63,7 +128,7 @@ Type TLSP Extends TEventHandler
 	'V0.1
     ' Thread based message receiver
     Function ReceiverThread:Object( data:Object )
-        Local lsp:TLSP = TLSP( data )
+        Local lsp:TLanguageServer = TLanguageServer( data )
         Local quit:Int = False     ' Local loop state
 
         ' Read messages from Language Client
@@ -91,7 +156,7 @@ Type TLSP Extends TEventHandler
 				'Publish( "debug", errtext )
                 'Publish( "send", Response_Error( ERR_PARSE_ERROR, errtext ) )
 				logfile.debug( errtext )
-				client.send( Response_Error( ERR_PARSE_ERROR, errtext ) )
+				'send( Response_Error( ERR_PARSE_ERROR, errtext ) )
                 Continue
             End If
 			'Publish( "debug", "Parse successful" )
@@ -120,14 +185,16 @@ End Rem
 			
 			' Check for a method
 			If Not J.contains("method")
-				client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
+				'client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
+				logfile.critical( "## No Method specified~n"+J.stringify() )
 				Continue
 			End If
 				
 			' Get Method and Ensure it isn't empty
 			Local methd:String = J.find("method").toString()
 			If methd = "" 
-				client.send( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
+				'client.send( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
+				logfile.critical( "## Method cannot be empty~n"+J.stringify() )
 				Continue
 			End If
 				
@@ -140,11 +207,13 @@ End Rem
 			
             ' Validation
 			Select True
-			Case lsp.initialised And methd="initialize"
-				client.send( Response_Error( ERR_INVALID_REQUEST, "Server already initialized", id ) )
+			Case lsp.state = lsp.STATE_INITIALISED And methd="initialize"
+				logfile.critical( "## Server already initialized~n"+J.stringify() )
+				lsp.send( Response_Error( ERR_INVALID_REQUEST, "Server already initialized", id ) )
 				Continue
-			Case Not lsp.initialised And methd<>"initialize"
-				client.send( Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized", id ))
+			Case lsp.state <> lsp.STATE_INITIALISED And methd<>"initialize"
+				logfile.critical( "## Server is not initialized~n"+J.stringify() )
+				lsp.send( Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized", id ))
 				Continue
             End Select
 
@@ -253,7 +322,7 @@ EndRem
 	'V0.1
     ' Thread based message sender
     Function SenderThread:Object( data:Object )
-        Local lsp:TLSP = TLSP( data )
+        Local lsp:TLanguageServer = TLanguageServer( data )
         Local quit:Int = False          ' Always got to know when to quit!
         
         'DebugLog( "SenderThread()" )
@@ -290,7 +359,6 @@ EndRem
         'Publish( "debug", "SenderThread - Exit" )
         logfile.debug( "SenderThread - Exit" )
     End Function  
-
 
 	'V0.2
 	' Add a Capability
@@ -348,6 +416,8 @@ EndRem
 	Method on_Initialize:JSON( message:TMessage )				' REQUEST
 		Local id:String = message.getid()
 		Local params:JSON = message.params
+		
+		state = STATE_INITIALISING
 				
 		'logfile.debug( "onInitialise()~n"+message.J.prettify() )
 		'logfile.debug( "ONINITIALISE ID="+id )
@@ -406,6 +476,12 @@ EndRem
 		' initializationOptions = params.find( "initializationOptions" )
 		' trace = params.find( "trace" )
 		
+		Local value:String = params.find( "trace" ).toString()
+		If value = "off" Or value="messages" Or value="verbose"
+			trace = value
+		End If
+		logfile.info( "# TraceValue is '"+trace+"'" )
+		
 		' Respond to the client
 		Local serverCapabilities:JSON = New JSON()
 		serverCapabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
@@ -461,8 +537,9 @@ EndRem
 		'Publish( "log", "DEBG", "CAPABLITIES: "+serverCapabilities.Prettify() )
 
 		' Enable all other message processing
-		initialised = True
-
+		' initialised = True 
+		state = STATE_INITIALISED
+		
 		' REQUEST: Return response
 		Return InitializeResult
 	End Method
@@ -483,7 +560,7 @@ EndRem
 		'workspaceFolders.set( "params", "null" )
 		'client.send( workspaceFolders )
 
-		logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
+		'logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
 		
 		'	MODULE COMPATABILITY
 
@@ -499,7 +576,7 @@ EndRem
 
 	Method on_Shutdown:JSON( message:TMessage )			' REQUEST
 		logfile.debug( "TLSP.onShutdown()" )
-		shutdown = True
+		state = STATE_SHUTDOWN
 		' SEND RESPONSE
 		Return Response_OK( message.getid() )
 	End Method
@@ -510,26 +587,33 @@ EndRem
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
 	Method on_dollar_setTrace:JSON( message:TMessage )					' NOTIFICATION
 		logfile.debug( "TLSP.on_dollar_setTrace()~n"+message.J.prettify() )
-		trace = message.params.find( "value" ).toString()
-		logfile.info( "? setTrace is now: '"+trace+"'" )
+		Local value:String = message.params.find( "value" ).toString()
+		If value = "off" Or value="messages" Or value="verbose"
+			trace = value
+			logfile.info( "## TraceValue is '"+trace+"'" )
+		End If
 		' NOTIFICATION: No response necessary
 	End Method
 	
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
+	' Library version in BlitzMax Extension updated by Hezkore 12/11/21 fixed this issue
 	' Trace notifications
-	Method on_dollar_setTraceNotification:JSON( message:TMessage )			' NOTIFICATION
-		logfile.debug( "TLSP.on_dollar_setTraceNotification()~n"+message.J.prettify() )
-		trace = message.params.find( "value" ).toString()
-		logfile.info( "? setTrace is now: '"+trace+"'" )
-		' NOTIFICATION: No response necessary
-	End Method
+'	Method on_dollar_setTraceNotification:JSON( message:TMessage )			' NOTIFICATION
+'		logfile.debug( "TLSP.on_dollar_setTraceNotification()~n"+message.J.prettify() )
+'		Local value:String = message.params.find( "value" ).toString()
+'		If value = "off" Or value="message" Or value="verbose"
+'			trace = value
+'			logfile.info( "? TraceValue is now: '"+trace+"'" )
+'		End If
+'		' NOTIFICATION: No response necessary
+'	End Method
 	
 	'	##### WORKSPACE MESSAGES #####
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders
-	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
-		ImplementationIncomplete( message )
-	End Method
+'	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
+'		ImplementationIncomplete( message )
+'	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
 	' NOTIFICATION: workspace/didChangeWorkspaceFolders
@@ -607,51 +691,51 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
-	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
-		ImplementationIncomplete( message )
-		Local params:JSON = message.params
-		
-		'Local workspace:TWorkspace = Workspaces.findUri( uri )
-		'workspace.config_update( cfg )
-		
-		' Lint all files in workspace using new config settings
-		' foreach document in workspace
-		'	document.lint()
-		' next
-	End Method
+'	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
+'		ImplementationIncomplete( message )
+'		Local params:JSON = message.params
+'		
+'		'Local workspace:TWorkspace = Workspaces.findUri( uri )
+'		'workspace.config_update( cfg )
+'		
+'		' Lint all files in workspace using new config settings
+'		' foreach document in workspace
+'		'	document.lint()
+'		' next
+'	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
-	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
-		ImplementationIncomplete( message )
-		Local id:String = message.getid()
-		client.send( Response_OK( id ) )
-	End Method
+'	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
+'		ImplementationIncomplete( message )
+'		Local id:String = message.getid()
+'		lsp.send( Response_OK( id ) )
+'	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
-	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
-		ImplementationIncomplete( message )
-		
-		Local params:JSON = message.params
-		
-		' PSUDOCODE UNTIL I SEE A REAL MESSAGE
-		
-		' local changes:JSON[] = params.find( "changes" ).toArray()
-		' for local change:JSON = eachin changes
-		'	local uri:String = change.find( "uri" )
-		'	local extension:string = extractExt( uri )
-		'	Local workspace:TWorkspace = Workspaces.findUri( uri )
-		'	CAN BE BMX OR CONFIGURATION
-		'	select extension
-		'	case "bmx"
-		'		add, remove or delete!
-		'	case "???" ' Will this be an xml or json etc?
-		'	end select
-		'		
-		
-		'workspace.config_update( cfg )
-		
-	End Method
-
+'	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
+'		ImplementationIncomplete( message )
+'		
+'		Local params:JSON = message.params
+'		
+'		' PSUDOCODE UNTIL I SEE A REAL MESSAGE
+'		
+''		' local changes:JSON[] = params.find( "changes" ).toArray()
+'		' for local change:JSON = eachin changes
+'		'	local uri:String = change.find( "uri" )
+'		'	local extension:string = extractExt( uri )
+'		'	Local workspace:TWorkspace = Workspaces.findUri( uri )
+'		'	CAN BE BMX OR CONFIGURATION
+'		'	select extension
+'		'	case "bmx"
+'		'		add, remove or delete!
+'		'	case "???" ' Will this be an xml or json etc?
+'		'	end select
+'		'		
+'		
+'		'workspace.config_update( cfg )
+'		
+'	End Method
+'
 	'	##### TEST DOCUMENT SYNC #####
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didOpen
@@ -766,17 +850,17 @@ End Rem
 		
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSave
 	' textDocument/willSave
-	Method onWillSave:TMessage( message:TMessage )						' NOTIFICATION
-		ImplementationIncomplete( message )
-	End Method
+'	Method onWillSave:TMessage( message:TMessage )						' NOTIFICATION
+'		ImplementationIncomplete( message )
+'	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_willSaveWaitUntil
 	' textDocument/willSaveWaitUntil
-	Method onWillSaveWaitUntil:TMessage( message:TMessage )				' REQUEST
-		ImplementationIncomplete( message )
-		Local id:String = message.getid()
-		client.send( Response_OK( id ) )
-	End Method
+'	Method onWillSaveWaitUntil:TMessage( message:TMessage )				' REQUEST
+'		ImplementationIncomplete( message )
+'		Local id:String = message.getid()
+'		lsp.send( Response_OK( id ) )
+'	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
 	' NOTIFICATION: textDocument/didSave
@@ -794,28 +878,28 @@ End Rem
 	'	##### LANGUAGE FEATURES #####
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_completion
-	Method onCompletion:JSON( message:TMessage )		; 	Return bls_textDocument_completion( message )	; 	End Method
+	'Method onCompletion:JSON( message:TMessage )		; 	Return bls_textDocument_completion( message )	; 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#completionItem_resolve
-	Method onCompletionResolve:JSON( message:TMessage )	;	Return bls_textDocument_completion( message )	;	End Method
+	'Method onCompletionResolve:JSON( message:TMessage )	;	Return bls_textDocument_completion( message )	;	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover
-	Method onHover:TMessage( message:TMessage )							' REQUEST
-		ImplementationIncomplete( message )
-		Local id:String = message.getid()
-		logfile.debug( "TLSP.onHover()" )
-		If Not message Or Not message.J
-			client.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-			Return Null
-		End If
-		logfile.info( "~n"+message.j.Prettify() )
-		' We have NOT dealt with it, so return message
-		client.send( Response_OK( id ) )
-	End Method
+'	Method onHover:TMessage( message:TMessage )							' REQUEST
+'		ImplementationIncomplete( message )
+'		Local id:String = message.getid()
+'		logfile.debug( "TLSP.onHover()" )
+'		If Not message Or Not message.J
+'			lsp.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
+'			Return Null
+'		End If
+'		logfile.info( "~n"+message.j.Prettify() )
+'		' We have NOT dealt with it, so return message
+'		lsp.send( Response_OK( id ) )
+'	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_definition
 	' REQUEST: textDocument/definition
-	Method onDefinition:JSON( message:TMessage )	; Return bls_textDocument_definition( message )	;	End Method
+'	Method onDefinition:JSON( message:TMessage )	; Return bls_textDocument_definition( message )	;	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	' REQUEST: textDocument/documentSymbol

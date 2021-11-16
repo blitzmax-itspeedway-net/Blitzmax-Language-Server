@@ -22,9 +22,9 @@ Function Response_Error:JSON( code:String, message:String, id:String="null" )
     Return response
 End Function
 
-Function EmptyMessage:JSON( methd:String )
+Function EmptyResponse:JSON( methd:String="" )
     Local response:JSON = New JSON()
     response.set( "jsonrpc", JSONRPC )
-	response.set( "method", methd )
+	If methd <> "" ; response.set( "method", methd )
     Return response
 End Function

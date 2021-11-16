@@ -9,8 +9,8 @@
 Type TASTCompound Extends TASTNode
 	Field children:TList
 
-	Method New( name:String )
-		Self.name  = name
+	Method New( classname:String )
+		Self.classname = classname
 		children = New TList()
 	End Method
 
@@ -43,7 +43,9 @@ Type TASTCompound Extends TASTNode
 
 	' Used for debugging tree structure
 	Method reveal:String( indent:String = "" )
-		Local block:String = ["!","."][errors.length>0]+" "+indent+getname()
+		Local block:String = ["!","."][errors.length>0]
+		block :+ " " + pos()[..9] + " " + indent.length
+		block :+ " " + indent+getname()
 		block :+ " " + Trim(showLeafText()) + "~n"
 		'If value<>"" block :+ " "+Replace(value,"~n","\n")
 		'block :+ "~n"

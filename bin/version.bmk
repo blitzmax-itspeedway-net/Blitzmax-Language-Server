@@ -10,8 +10,8 @@
     local lines = {}
 
     -- Read existing build version (if it exists)
-    if fileExists( "build.txt" ) then
-        for line in io.lines("build.txt") do
+    if fileExists( "version.txt" ) then
+        for line in io.lines("version.txt") do
             lines[ #lines + 1 ] = line
         end
         if #lines > 1 then 
@@ -21,8 +21,12 @@
         end
     end
 
+    print( "\n## BlitzMax Language Server" )
+    print( "## (c) Copyright Si Dunford, June 2021, All Right Reserved" )
+    print( "## V"..version..", build "..build.."\n" )
+
     -- Write updated file
-    file = io.open("build.txt","w")
+    file = io.open("version.txt","w")
     file:write(version..'\n'..build..'\n')
     file:close()
 

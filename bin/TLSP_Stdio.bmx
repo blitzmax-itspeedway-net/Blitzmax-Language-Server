@@ -3,7 +3,7 @@
 '   (c) Copyright Si Dunford, July 2021, All Right Reserved
 
 ' StdIO based LSP
-Type TLSP_Stdio Extends TLSP
+Type TLSP_Stdio Extends TLanguageServer
 	Field StdIn:TStream
 
     Method New( threads:Int = 4 )
@@ -12,7 +12,7 @@ Type TLSP_Stdio Extends TLSP
         'Log.write( "Initialised")
         ' Set up instance and exit function
         instance = Self
-        OnEnd( TLSP.ExitProcedure )
+        OnEnd( TLanguageServer.ExitProcedure )
         ' Debugstop
         ThreadPoolSize = threads
 		ThreadPool = TThreadPoolExecutor.newFixedThreadPool( ThreadPoolSize )
