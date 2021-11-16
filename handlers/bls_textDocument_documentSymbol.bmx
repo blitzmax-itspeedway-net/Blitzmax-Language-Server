@@ -533,11 +533,12 @@ End Rem
 		If Not node Or Not node.name Return
 		
 		Local documentSymbol:JSON = New JSON()
-		documentSymbol.set( "name", "Method "+node.name.value+"() "+node.pos() )
 		'documentSymbol.set( "detail", "" )
-		If node.name.value = "new"
+		If node.name.id = TK_New		' Constructor
+			documentSymbol.set( "name", "Constructor New() "+node.pos() )
 			documentSymbol.set( "kind", SymbolKind._Constructor.ordinal() )
 		Else
+			documentSymbol.set( "name", "Method "+node.name.value+"() "+node.pos() )
 			documentSymbol.set( "kind", SymbolKind._Method.ordinal() )
 		End If
 		'documentSymbol.set( "tags", "" )

@@ -987,7 +987,9 @@ End Rem
 		advance()
 
 		' Get properties
-		ast.name = eat( TK_ALPHA )
+'DebugLog( "METHOD NAME IS "+token.reveal() )
+		ast.name = eat( [TK_ALPHA,TK_new] )
+'DebugLog( "METHOD NAME IS "+ast.name.reveal() )
 		ast.colon = eatOptional( TK_COLON, Null )
 		If ast.colon ast.returntype = eat( TK_ALPHA )
 		ast.lparen = eat( TK_lparen )

@@ -5,9 +5,8 @@ SuperStrict
 
 Rem WHERE AM I?
 
-### Adding TK_ENUM to the "SYM_PROGRAM_BODY" in TBlitzMaxParser.bmx kills the language server!
+* Outline CONSTRUCTOR shows Method() instead of NEW due to token not being alpha!
 
-* Get ENUM working
 * Check message order and content
 * SHUTDOWN/EXIT methods!
 	- Shutdown is processed (When it is sent)
