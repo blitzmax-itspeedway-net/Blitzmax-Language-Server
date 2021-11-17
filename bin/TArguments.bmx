@@ -2,19 +2,49 @@
 '   BLITZMAX LANGUAGE SERVER
 '   (c) Copyright Si Dunford, July 2021, All Right Reserved
 
-'	COMMAND LINE ARGUMENTS
+Rem	IMPLEMENTED ARGUMENTS
 
-Rem
-	IMPLEMENTED ARGUMENTS
+	Arguments can be combined. For example "-o:ast" and "-o:eol" can be combined into "-o:ast,eol"
 	
-	-x:<option>	Enable experimental option
-	+ast		Show AST in outline
-	-ast		Hide AST in outline		(DEFAULT)
-	+eol		Show EOL in AST
-	-eol		Hide EOL in AST			(DEFAULT)
+	-x:<option>		Enable experimental option
+	-ast			DEPRECIATED, PLEAE USE -o:ast
+	-eol			DEPRECIATED, PLEAE USE -o:eol
+	-o:ast			Show AST in outline
+	-o:eol			Show EOL in AST
+	-o:noname		Do not display token name in outline
 	
+	TERMINAL ONLY ARGUMENTS
+	
+	--version		Return current version number
+	--help			Show list of supported arguments
+
+	THINGS TO DO
+	
+	* Update help page
+	
+	FEATURE TO ARGUMENT MAPPING
+	
+	linting									-l:FEATURE:VALUE
+	
+	Diagnostics 							-diag
+	Code Completion Provider 				-cc
+	Code Action Provider					-ca
+	Codelens Provider 						-cl
+	Color Provider 							-c
+	Definition Provider						-d
+	Document Formatting Provider			-df
+	Document Range Formatting Provider		-dr
+	Document On-Type Formatting Provider 	-do
+	Document Highlight Provider				-dh
+	Document Symbol Provider 				-o
+	Hovers 									-h
+	References Provider						-ref
+	Rename Provider 						-ren
+	Resolve Provider 				 		-res
+	Signature Help 							-s
+	Workspace Symbol Provider 				-w
+		
 End Rem
-
 
 ' NOT IMPLEMENTED:
 '	ARGUMENTS:	
@@ -25,8 +55,6 @@ End Rem
 ' *** NONE OF THESE ARE CURRENTLY SUPPORTED ***
 '
 '	--debug:<filename>			- Turn on extended debug logging to a file
-'	-v | --version				- Return current version number
-'	-h | --help					- Show list of supported arguments
 '	--port:<port>				- Use TCP on supplied port ustead of StandardIO
 '	--lint:<options>			- Comma seperated list of linter options
 '									ifthen=<enforcer>	-	Enforce the use of THEN
@@ -49,6 +77,7 @@ End Rem
 '		--lint:ifthen=10	' Enforce THEN is not used
 '		--lint:ifthen=11	' Enforce THEN is used
 
+Rem 
 Global EXPERIMENTAL:String[][] = [..
 	[ "diag", "experimental|diag", "Diagnostic Information" ] ..
 	]
@@ -60,6 +89,42 @@ Global FEATURES:String[][] = [..
 	[ "-ast", "outline|ast", "true", "Show AST in Outline" ], ..
 	[ "-eol", "outline|eol", "true", "Show EOL in AST" ] ..
 	]
+End Rem
+
+Rem
+
+Const ARGUMENTS:String = "{" +..
+"	'-ast':{" +..
+"		'default':{ 'key':'outline|ast', 'value':'true', 'hint':'-ast is depreciated, use -o:ast'}" +..
+"	}," +..
+"	'-eol':{" +..
+"		'default':{ 'key':'outline|eol', 'value':'true', 'hint':'-eol is depreciated, use -o:eol'}" +..
+"	}," +..
+"	'-diag':{" +..
+"		'default':{ 'key':'experimental|diag', 'value':'true', 'hint':'Diagnostic Information' }" +..
+"	}," +..
+"	'--help':{" +..
+"		'default':{ 'key':'cli|help', 'value':'true' }" +..
+"	}," +..
+"	'-l':{" +..
+"		'a001':{ 'key':'linter|xyz', 'hint':'Enable XYZ' }" +..
+"	}," +..
+"	'-o':{" +..
+"		'ast':{ 'key':'outline|ast', 'value':'true', 'hint':'Show AST in Outline' }," +..
+"		'eol':{ 'key':'outline|eol', 'value':'true', 'hint':'Show EOL in AST'}," +..
+"		'noname':{ 'key':'outline|noname', 'value':'true', 'hint':'Hide Name in Outline'}" +..
+"	}," +..
+"	'--version':{" +..
+"		'default':{ 'key':'cli|version', 'value':'true' }" +..
+"	}," +..
+"	'-x':{" +..
+"		'diag':{ 'key':'experimental|diag', 'value':'true', 'hint':'Diagnostic Information' }" +..
+"	}" +..
+"}"
+End Rem
+'debuglog FEATURES.prettify()
+
+
 
 Type TArguments
 
@@ -68,6 +133,26 @@ Type TArguments
 		'   ARGUMENTS
 		'Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
 		'logfile.debug( "  ARGS:" )'       "+AppArgs.length+"~n"+("#".join(AppArgs)) )
+
+		' Load supported arguments from disk
+		Local file:TStream = ReadStream( "incbin::arguments.json" )
+		Local arguments:String
+		If file 
+			'debuglog "- File Size: "+file.size()+" bytes"
+			arguments = ReadString( file, file.size() )
+			CloseStream file
+		End If
+		
+		Local Features:JSON = JSON.PARSE( arguments )
+		DebugLog( Features.Prettify() )
+		
+		' Abort if JSON invalid
+		If Features.isInvalid() 
+			Print "INTERNAL ERROR:"
+			Print "TArguments.new() - Invalid Argment Data"
+			Print Features.error()
+			End
+		End If
 		
 		' Set the application argument in case we need it later
 		CONFIG[ "app" ] = AppArgs[0]
@@ -79,7 +164,7 @@ Type TArguments
 		For Local n:Int=1 Until AppArgs.length
 			' Split argument into KEY/VALUE pair
 			Local items:String[] = AppArgs[n].split(":")
-			Local key:String = Lower( items[0] )
+			Local section:String = Lower( items[0] )
 			Local value:String = ""
 			Select items.length
 			Case 1
@@ -88,11 +173,47 @@ Type TArguments
 				value = Lower(items[1])
 			Default
 				value = ":".join( items[1..] )
-			End Select
+			EndSelect
 			
-			'logfile.debug( "    "+n+") "+key + " = '"+value+"'" )
-			'
-			Select key
+			' Check the section key is supported
+			If Not Features.contains( section )
+				logfile.warning "## Invalid argument: "+AppArgs[n]
+				Continue
+			End If
+'DebugLog "SECTION='"+section+"'"
+			Local JSection:JSON = Features.find( section )
+			
+			' Extract keys from value
+			Local keys:String[] = value.split(",")
+			If keys[0]="" ; keys[0]="default"			
+			For Local key:String = EachIn keys
+				' Split KEY into KEY:VALUE
+				Local keyvalue:String[] = key.split("=")
+				value = ""
+				
+'D'ebugLog "- KEY='"+key+"'"
+				
+				If JSection.contains( keyvalue[0] )
+					Local JOption:JSON = JSection.find( keyvalue[0] )
+'DebugLog( "- VALID "+section+":"+keyvalue[0])
+					Local hint:String = JOption.find("hint").toString()
+					If hint <> "" ; logfile.info( "## " + hint )
+					
+					If keyvalue.length=1 
+						value = JOption.find("value").toString()
+					Else
+						value = keyvalue[1]
+					End If
+					CONFIG[ JOption.find("key").toString() ] = value
+				Else
+					logfile.warning "## Invalid argument: "+section+":"+key
+				End If
+				
+				
+			Next
+
+Rem			'
+			Select section
 			Case "-x"		' EXPERIMENTAL
 				Local lab:String[] = lookup( EXPERIMENTAL, value )
 				If lab = []
@@ -104,12 +225,14 @@ Type TArguments
 					logfile.warning( "## Feature '"+value+"' ("+lab[2]+") is experimental" )
 'DebugLog( config.J.prettify() )
 				End If
+			Case "-o"
+				
 			Case "-h","-help"
 				CONFIG["cli|help"] = "true"  
 			Case "-v","-ver","-version"
 				CONFIG["cli|version"] = "true"
 			Default
-				Local feature:String[] = lookup( FEATURES, key )
+				Local feature:String[] = lookup( FEATURES, section )
 				If feature = []
 					logfile.warning( "## Argument '"+AppArgs[n] + "' is invalid" )
 				Else
@@ -117,8 +240,10 @@ Type TArguments
 					logfile.info( "## "+ feature[3] )
 				End If
 			End Select
+End Rem	
 		Next
 
+DebugLog( "CHECKING CLI OPTIONS" )
 		' Parse CLI commands
 		If CONFIG.isTrue( "cli|help" )
 			help()
@@ -133,7 +258,7 @@ Type TArguments
 
 		'Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
 		'logfile.debug( "CONFIG:~n"+CONFIG.J.Prettify() )
-DebugLog( CONFIG.J.prettify() )
+'DebugLog( CONFIG.J.prettify() )
 	End Method
 	
 	'Method experiment:String( criteria:String )

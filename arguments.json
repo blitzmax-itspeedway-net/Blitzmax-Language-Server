@@ -1,0 +1,29 @@
+{
+    "--help": {
+        "default":{ "key":"cli|help", "value":"true", "hint":"" }
+    },
+    "--version": {
+        "default":{ "key":"cli|version", "value":"true", "hint":"" }
+    },
+    "-ast": {
+        "default":{ "key":"outline|ast", "value":"true", "hint":"-ast is depreciated use '-o:ast'" }
+    },
+    "-diag": {
+        "default":{ "key":"experimental|diag", "value":"true", "hint":"Diagnostic Information" }
+    },
+    "-eol": {
+        "default":{ "key":"outline|eol", "value":"true", "hint":"-eol is depreciated use '-o:eol'"  }
+    },
+    "-l": {
+        "a001":{ "key":"linter|xyz", "hint": "Enable XYZ" }
+    },
+    "-o": {
+        "ast":{ "key":"outline|ast",  "value":"true", "hint":"Show AST in Outline"},
+        "eol":{ "key":"outline|eol", "value":"true", "hint":"Show EOL in AST" },
+        "noname":{ "key":"outline|noname", "value":"true", "hint":"Hide Name in Outline"}
+    },
+    "-x": {
+        "diag":{ "key":"experimental|diag", "value":"true", "hint":"Feature 'diag' (Diagnostic Information) is experimental
+"}
+    }
+}

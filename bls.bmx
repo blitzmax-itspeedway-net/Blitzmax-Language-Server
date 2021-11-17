@@ -172,6 +172,10 @@ Include "handlers/handlers.bmx"
 
 Include "bin/constants.bmx"
 
+'	INCLUDE SUPPORTED ARGUMENTS
+
+Incbin "arguments.json"
+
 '	COMPATABILITY
 
 Const JSON_MINIMUM_VERSION:Float = 2.1
