@@ -101,7 +101,7 @@ Type TLanguageServer Extends TEventHandler
 			client.sendMessage( Text )
 		Else		' ADD TO BUFFER
 			logfile.debug( "# BUFFERING MESSAGE:~n"+Text )
-			'sendbuffer :+ [Text]
+			sendbuffer :+ [Text]
 		End If
 		
 		' Send buffered messages?
@@ -559,6 +559,41 @@ EndRem
 		'workspaceFolders.set( "method", "workspace/workspaceFolders" )
 		'workspaceFolders.set( "params", "null" )
 		'client.send( workspaceFolders )
+
+' TEST A PROGRESS BAR
+If client.has( "window|workDoneProgress" )
+	logfile.debug( "## CLIENT SUPPORTS: window|workDoneProgress" )
+	Local J:JSON = EmptyResponse( "$/progress" )
+	J.set( "params|token", "1d546990-40a3-4b77-b134-46622995f6ae" )
+	J.set( "params|value|kind", "begin" )
+	J.set( "params|value|title", "Testing a progress Bar" )
+	J.set( "params|value|message", String(MilliSecs())+"ms" )
+	J.set( "params|value|percentage", 0 )
+	client.sendMessage( J.stringify() )
+	
+	Local time:Int = MilliSecs() + 1000
+	Local finished:Int = MilliSecs() + 10000
+	Local count:Int = 0
+	Repeat
+		If MilliSecs() > time
+			time :+ 1000
+			J = EmptyResponse( "$/progress" )
+			J.set( "params|token", "1d546990-40a3-4b77-b134-46622995f6ae" )
+			J.set( "params|value|kind", "report" )
+			J.set( "params|value|message", String(time)+"ms" )
+			J.set( "params|value|percentage", count )
+			client.sendMessage( J.stringify() )
+			count :+ 10
+		End If	
+	Until MilliSecs() > finished
+	
+	J = EmptyResponse( "$/progress" )
+	J.set( "params|token", "1d546990-40a3-4b77-b134-46622995f6ae" )
+	J.set( "params|value|kind", "end" )
+	J.set( "params|value|message", "Completed" )
+	client.sendMessage( J.stringify() )
+End If
+
 
 		'logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
 		

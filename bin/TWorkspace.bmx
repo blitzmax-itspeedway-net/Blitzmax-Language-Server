@@ -5,7 +5,7 @@
 Type TWorkspaces Extends TEventHandler
 
 	Global list:TMap = New TMap()
-	
+		
 	' Add a Workspace
 	Method add( uri:TURI, workspace:TWorkspace )
 logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
@@ -15,6 +15,7 @@ logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
 		'For Local key:String = EachIn list.keys()
 		'	logfile.debug( key )
 		'Next
+		
 	End Method
 	
 	' Remove a Workspace
@@ -106,10 +107,18 @@ Type TWorkspace
 	Field name:String
 	'Field uri:String
 
+	' Object lock
+	Field lock:TMutex = CreateMutex()
+
 	' Threaded Validator
 	Field DocThread:TThread
 	Field QuitDocThread:Int = True
 	Field semaphore:TSemaphore = CreateSemaphore( 0 )
+
+	' Threaded document scanner
+	Field scanThread:TThread
+	Field scanThreadExit:Int = False
+
 
 	Method New( name:String, uri:TURI )
 		Self.name = name
@@ -118,6 +127,14 @@ Type TWorkspace
 		
 		' Create a document manager thread
 		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
+		
+		' Create thread to scan workspace for documents
+		If uri.folder() = "/"
+			logfile.debug( "## NOT RUNNING SCANNER ON ROOT" )
+		Else
+			logfile.debug( "## RUNNING SCANNER ON "+uri.folder() )
+			' scanThread = new TThread( WorkSpaceScan, self )	
+		End If
 		
 		' Request Workspace configuration
 		getConfiguration()
@@ -259,4 +276,23 @@ logfile.debug( "# VALIDATING DOCUMENTS" )
             End Try
 		Until CompareAndSwap( workspace.QuitDocThread, quit, True )
 	End Function
+	
+	' Scan a workspace folder to obtain a list of files within it
+Rem	Method scan:String[]( folder:String, list:String[] Var )
+		Local dir:Byte Ptr = ReadDir( folder )
+		If Not dir Return Null
+		Repeat
+			Local filename:String = NextFile( dir )
+			If filename="" Exit
+			If filename="." Or filename=".." Continue
+			Select FileType( folder+"/"+filename )
+			Case FILETYPE_DIR
+				workspace_scan2( folder + "/" + filename, list )
+			Case FILETYPE_FILE
+				If Lower(ExtractExt(filename))="bmx" ; list :+ [ folder+"/"+filename ]
+			End Select
+		Forever
+		CloseDir dir
+	End Method
+End Rem
 End Type
