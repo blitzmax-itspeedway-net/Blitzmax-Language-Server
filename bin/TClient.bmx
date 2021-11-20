@@ -80,6 +80,7 @@ Type TClient Extends TMessageQueue
 	End Method
 	
 	' HELPER: Send a message to client by pushing it to the send queue
+	' MESSAGE MUST BE VALID JSON REQUEST/REPLY OR NOTIFICATION
 	Method SendMessage( message:String )
 
 		' Check we have a valid JSON object, or replace with error

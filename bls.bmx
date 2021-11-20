@@ -4,69 +4,7 @@ SuperStrict
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
 Rem WHERE AM I?
-
-* Outline CONSTRUCTOR shows Method() instead of NEW due to token not being alpha!
-
-* Check message order and content
-* SHUTDOWN/EXIT methods!
-	- Shutdown is processed (When it is sent)
-	- Exit is a notification
-	- See setTrace() results to check whats happening
-* Savign settings DOES NOT restart the language server! (No Shutdown is sent)
--> SIGN OFF -x:docsym AS PRODUCTION (V1.0)
-
-
-WHEN THERE IS AN ERROR, THE SERVER EXITS
-IN THIS CASE THE SHUTDOWN WAS SEEN, BUT EXIT FAILED BECAUSE SERVER HAD CLOSED.
-
-[Trace - 09:16:27] Sending request 'textDocument/documentSymbol - (14)'.
-[Error - 09:16:27] Connection to server is erroring. Shutting down server.
-[Trace - 09:16:27] Sending request 'shutdown - (15)'.
-[Trace - 09:16:27] Received notification 'textDocument/publishDiagnostics'.
-[Trace - 09:16:27] Received response 'textDocument/documentSymbol - (14)' in 113ms.
-[Trace - 09:16:27] Received response 'shutdown - (15)' in 172ms.
-[Trace - 09:16:27] Sending notification 'exit'.
-Error reading from stream
-
-14-11-2021 09:16:27 DEBG TLSP_Stdio.getRequest() received 45 bytes
-14-11-2021 09:16:27 DEBG - ID:      15
-14-11-2021 09:16:27 DEBG - METHOD:  shutdown
-14-11-2021 09:16:27 DEBG - TYPE:    REQUEST
-14-11-2021 09:16:27 DEBG TClient.SendMessage()
-{"id":"15","jsonrpc":"2.0","result":null}
-14-11-2021 09:16:27 DEBG TLSP.SenderThread is awake
-14-11-2021 09:16:27 DEBG TLSP.SenderThread going To sleep
-14-11-2021 09:16:27 INFO Running Exit Procedure
-
-
-* Create LOAD TASK
-* Create PARSE TASK
-* Create VALIDATE TASK
-
-* OUTLINE:			PARSER	VISITOR	OUTLINE	AST
-	- program		DONE	DONE	n/a		n/a
-	- function		Should be a Compound with Children, not a node with a body!
-	- type			DONE	DONE	DONE	DONE
-	- method		DONE	DONE	DONE	DONE
-	- struct		DONE	DONE	Error!		
-	- include		DONE	DONE	DONE
-	- import		DONE	DONE	DONE
-	- interface		DONE	DONE	Error!	
-	- enum			TK_EndEnum is missing!
-* AST:
-	- comment		DONE	DONE	DONE
-	- remark		DONE	MISSING
-
-* Add a unique task for openfile, parsing and validation etc. (Instead of running during onChange)
-	
-* Currently not getting configuration change or workspace change messages
-* GOt To get setTrace Working
-* Got To get this working:
-https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#logging-support-For-language-server
-
-* Fix ENUM in LEXER
-* Update version.bmx to edit README.md and replace VERSION and BUILD
-
+* Working on TASKS and WORKSPACE SYMBOLS
 End Rem
 
 '	OBJECT HEIRARCHY

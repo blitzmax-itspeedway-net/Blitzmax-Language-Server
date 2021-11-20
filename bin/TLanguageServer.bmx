@@ -560,6 +560,7 @@ EndRem
 		'workspaceFolders.set( "params", "null" )
 		'client.send( workspaceFolders )
 
+Rem
 ' TEST A PROGRESS BAR
 If client.has( "window|workDoneProgress" )
 	logfile.debug( "## CLIENT SUPPORTS: window|workDoneProgress" )
@@ -593,7 +594,7 @@ If client.has( "window|workDoneProgress" )
 	J.set( "params|value|message", "Completed" )
 	client.sendMessage( J.stringify() )
 End If
-
+EndRem
 
 		'logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
 		
@@ -602,7 +603,7 @@ End If
 		If Not JSON.VersionCheck( JSON_MINIMUM_VERSION, JSON_MINIMUM_BUILD )
 			Local error:String = "JSON Version "+JSON.Version()+" is not compatible."
 			logfile.critical( "## "+error )
-			client.logMessage( error, MessageType.Error.Ordinal() )
+			client.logMessage( error, EMessageType.Error.Ordinal() )
 		'	Print( error )
 		End If
 		

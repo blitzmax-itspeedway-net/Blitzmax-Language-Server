@@ -39,7 +39,7 @@ EndEnum
 Enum DocumentHighlightKind	;	Text = 1 ; Read ; Write ; EndEnum
 Enum InsertTextFormat ; PlainText = 1 ; Snippet ; EndEnum
 
-Enum MessageType ; Error = 1 ; Warning ; Info ; Log ; EndEnum
+Enum EMessageType ; Error = 1 ; Warning ; Info ; Log ; EndEnum
 
 Enum SymbolKind
     _File			= 1

@@ -2,6 +2,9 @@
 '	WORKSPACE MANAGER
 '	(c) Copyright Si Dunford, October 2021, All Rights Reserved
 
+Const CACHE_FOLDER:String = ".bls-cache"
+Const CACHE_FILE:String = "workspace.cache"
+
 Type TWorkspaces Extends TEventHandler
 
 	Global list:TMap = New TMap()
@@ -102,7 +105,8 @@ End Type
 Type TWorkspace
 
 	Field uri:TURI
-
+	Field cachefile:String = ""
+	
 	Field documents:TMap
 	Field name:String
 	'Field uri:String
@@ -123,19 +127,44 @@ Type TWorkspace
 	Method New( name:String, uri:TURI )
 		Self.name = name
 		Self.uri = uri
+		Local location:String = uri.path
 		documents = New TMap()
-		
+
+		' Check if workspace contains a cache folder
+'		logfile.debug( "# WORKSPACE IS "+uri.tostring()+", "+location )
+		If location <> "/"
+'			logfile.debug( "# WORKSPACE IS NOT ROOT ("+location+")" )
+			Local cachefolder:String = location + "/" + CACHE_FOLDER
+'			logfile.debug( "# CACHE FOLDER("+cachefolder+")" )
+			Select FileType( cachefolder )
+			Case 0	' DOES NOT EXIST
+'				logfile.critical( "# WORKSPACE CACHE FOLDER DOES NOT EXIST" )
+				If CreateDir( cachefolder ) 
+'					logfile.critical( "# CREATED CACHE FOLDER" )
+					cachefile = cachefolder + "/" + CACHE_FILE
+				Else
+					logfile.critical( "# UNABLE TO CREATE CACHE FOLDER" )
+					client.logmessage( "Unable to create cache folder.", EMessageType.Error.ordinal() )
+				End If
+			Case FILETYPE_FILE
+				logfile.critical( "# WORKSPACE CACHE FOLDER IS A FILE!" )
+				client.logmessage( "Workspace cache folder is a File! Please delete it!", EMessageType.Error.ordinal() )
+			Case FILETYPE_DIR
+'				logfile.debug( "# WORKSPACE CACHE FOLDER EXISTS" )
+			End Select
+		End If
+
 		' Create a document manager thread
-		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
+'		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
 		
 		' Create thread to scan workspace for documents
-		If uri.folder() = "/"
+		If location = "/"
 			logfile.debug( "## NOT RUNNING SCANNER ON ROOT" )
 		Else
-			logfile.debug( "## RUNNING SCANNER ON "+uri.folder() )
+			logfile.debug( "## RUNNING SCANNER ON "+location )
 			' scanThread = new TThread( WorkSpaceScan, self )	
 		End If
-		
+
 		' Request Workspace configuration
 		getConfiguration()
 	End Method

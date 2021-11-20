@@ -20,7 +20,7 @@
     "-o": {
         "ast":{ "key":"outline|ast",  "value":"true", "hint":"Show AST in Outline"},
         "eol":{ "key":"outline|eol", "value":"true", "hint":"Show EOL in AST" },
-        "noname":{ "key":"outline|noname", "value":"true", "hint":"Hide Name in Outline"}
+        "notype":{ "key":"outline|notype", "value":"true", "hint":"Hide node type in Outline"}
     },
     "-x": {
         "diag":{ "key":"experimental|diag", "value":"true", "hint":"Feature 'diag' (Diagnostic Information) is experimental
