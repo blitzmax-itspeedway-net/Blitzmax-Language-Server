@@ -3,6 +3,31 @@
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 '   MESSAGE QUEUE
 
+Rem	MESSAGE PRIORITIES
+
+	1		Notifications from the Client					didOpen
+	2		DocumentValidate (UNIQUE)
+	3		Requests from the client						textDocument/DocumentSymbol (workdone)	
+	4		
+	5		DocumentParser (UNIQUE), TDiagnostic (UNIQUE)
+
+REQUEST: initialise (workdone) - (contains workspaces)
+- SCAN WORKSPACES 
+	- Add files to workspace as they are found
+	- Report on progress to initialize progress
+		- Call progressBar( token,
+	- Create taskk
+	- When progress complete, return result from initialise.
+NOTIFICATION: initialized
+NOTIFICATION: didOpen
+	- loads details into workspace document, flags it as OPEN
+	- Creates task to validate document
+REQUEST: documentSymbol (workdone)
+	- If document is locked (by validation), it should send progress
+	- When unlocked, it returns results.
+
+EndRem
+
 Type TMessageQueue Extends TEventHandler
     Global requestThread:TThread
     Global sendqueue:TQueue<String>         ' Messages waiting to deliver to Language Client
@@ -88,8 +113,14 @@ End Rem
     
     ' Retrieve a message from task queue
     Method popTaskQueue:TTask()
-        LockMutex( TaskMutex )
-        Local result:TTask = TTask( taskqueue.removefirst() )
+        Local result:TTask = Null
+		LockMutex( TaskMutex )
+		If Not taskqueue.isEmpty() 
+			result = TTask( taskqueue.removefirst() )
+			logfile.debug( "MESSAGEQUEUE: Popped "+result.name+ ", priority "+result.priority )
+		'Else
+		'	logfile.debug( "MESSAGEQUEUE: Empty!" )
+		End If
         UnlockMutex( TaskMutex )
         Return result
     End Method
@@ -144,12 +175,14 @@ End Rem
 			Local item:TTask = TTask( link.value )
 			' Check Uniqueness
 			If unique And task.identifier=item.identifier And task.subject = item.subject
+				logfile.debug( "MESSAGEQUEUE: Unique task already exists "+task.name )
 				' Task already exists with this name and identifier, so drop it.
 				UnlockMutex( TaskMutex )
 				Return				
 			End If
 			' Check Priority
 			If item.priority<=task.priority
+				logfile.debug( "MESSAGEQUEUE: Inserting "+task.name+", Priority "+task.priority )
 				taskqueue.insertAfterLink( task, link )
 				UnlockMutex( TaskMutex )
 				Return
@@ -157,6 +190,7 @@ End Rem
 			link = link.prevLink
 		Wend
 		' Queue is empty, or task goes at end...
+		logfile.debug( "MESSAGEQUEUE: Appending "+task.name+", Priority "+task.priority )
 		taskqueue.addFirst( task )
         UnlockMutex( TaskMutex )
     End Method

@@ -32,7 +32,7 @@ Type TClient Extends TMessageQueue
 	Method initialise( params:JSON )
 		logfile.debug( "TClient.initialize()" )
 		initialized = True
-		
+		'logfile.debug( "PARAMS:~n"+params.prettify() )
 		If Not params Return
 		'logfile.write( "PARAMS EXIST" )
 

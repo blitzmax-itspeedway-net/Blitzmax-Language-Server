@@ -2,6 +2,29 @@
 '	SYMBOL TABLE
 '	(c) Copyright Si Dunford, July 2021, All Rights Reserved
 
+Rem NOTES
+
+	We need to include an AST visitor that extracts a symbol table from the AST
+	Probably use the "short visitor" (paperboy)
+	
+	Variable scopes.
+	Scopes are created by different type, for example a function creates a new scope.
+	Include adds variable to a top level scope, under "program".
+	Import creates a new scope under filename, or pehaps module.
+	The scope should probably be the AST node itself, although the AST will not exist when the 
+	scope is saved and the file is not open, so we need to reference it anotehr way.
+	We could use a string of token ID's, (100|123|111) or a string of token values (Program|Function|xyz)
+	Alternativey we could generate GUID's for each scope in the parser and use that.
+	
+	The issue occurs when we want to lookup a symbol. How do we find the scope....
+	textDocument will have an AST at this point (Or we have to geenrate one).
+	Using the cursor, we identify the current symbol in the AST tree and generate a scope from it.
+	(Instead of identifying the symbol in the source text as we do now).
+	Scanning the AST for a position should be simple. Basically we search the node children until we 
+	find the range, and continue to a leaf.
+	
+End Rem
+
 Type TSymbolTable
 	
 	Field fileuri:String 

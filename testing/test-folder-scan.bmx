@@ -1,123 +1,30 @@
 SuperStrict
 
+' NOTE:
+' Blitzmax appears to cache the folder scan because the first run is always quicker than the next
+
 Import Text.regex
 Import bmx.json
 
-Include "../bin/TTask.bmx"
-Include "../bin/TWorkspaceScanTask.bmx"
-'Include "../bin/language-server-protocol.bmx"
-
-'Type TASTErrorMessage
-'End Type
-
 Local start:Int, finish:Int
 
-Local task:TWorkspaceScanTask = New TWorkspaceScanTask( "/home/si/dev/example" )
-
-' Start the task running...
-
-' Wait a short amount of time and interrupt the scanner
-
-finish = MilliSecs() + 5000	' 5 seconds
-Repeat Until MilliSecs()> finish Or task.complete
-
-'AtomicSwap( scanThreadExit, True )   ' Inform thread it must exit
-'DetachThread( scanThread )
-
-
-' Create a Queue Thread
-' If client.has( "window|workDoneProgress" ) to make sure that progress is supported 
-' Allocate GUID for progress bar
-'	Create a Progress Bar for Indexing task
-'	{ method:"window/workDoneProgress/create",params:{token:"GUID",kind:"begin",title:"Indexing Workspace","message":uri.toString(),"percentage":0}}
-' Add Scan Task
-' Scan Task adds DocumentLoad Tasks to Queue
-'	Percentage = 1, total tasks
-' DocumentLoad task:
-'	Checks if valid symbol table in cache.
-'		Load the symbol table. 
-'		Add Document of type "DOCUMENT_SYMTABLE"
-'	No symbol cache: Add Parse Task
-'		Creates Task to load Symbol Table and Exits
-'	Otherwise:
-'		Checks is AST in cache & loads it
-'		Otherwise
-'run Lexer / Parser To Create AST
-'	(Or load AST)
-
-' Load symbol Table Task
-'	Imports Symbol Table into Workspace Cache
-
-'	END Progress Bar for Indexing task
-'	{ method:$/progress,params:{token:"GUID",kind:"end","message":"complete in Xminutes, seconds etc"}}
-
-
-
-Type TWS
-	
-	' Threaded scanner
-	Field scanThread:TThread
-	Field scanThreadExit:Int = False
-
-	Function WorkSpaceScanner:Object( data:Object )
-		Const FSM_SCAN_FILES:Int = 0
-		Local workspace:TWorkspace = TWorkspace( data )
-		Local quit:Int = False
-		Local fsm:Int = FSM_SCAN_FILES
-		Local filelist:String[]
-
-		' Create Progress counter
-
-		' Scan the workspace folder obtaining files.
-		dir_scanner( workspace.uri.folder(), filelist )
-
-		If CompareAndSwap( workspace.scanThreadExit, quit, True )
-			' Cancel Progress Bar
-			Return
-		End If
-
-		Repeat
-			Select fwm
-			Case FSM_SCAN_FILES
-				fsm = FSM_
-			End Select
-		Until CompareAndSwap( workspace.scanThreadExit, quit, True )
-
-
-
-	End Function
-	
-	
-End Type
-
-'Local this:TWS = New TWS()
-'test.scanThread = CreateThread( TWS.WorkspaceScanner, this )
-
-
-'Local strlist:String[]
-'start = MilliSecs()
-'strlist = workspace_scan( "/home/si/dev" )
-'finish = MilliSecs()
-'Print "TIME: "+ (finish-start)+"ms"
-'For Local file:String = EachIn strlist
-'	Print( "* "+file )
-'Next
-Rem
-strlist = []
+Local strlist:String[]
 start = MilliSecs()
-'workspace_scan2( "/home/si/dev", strlist )
-workspace_scan2( uri.folder(), strlist )
+strlist = workspace_scan( "/home/si/dev" )
 finish = MilliSecs()
 Print "TIME: "+ (finish-start)+"ms"
 For Local file:String = EachIn strlist
 	Print( "* "+file )
 Next
 
-Print "THREAD RUNNING"...
-
-' To force quit prematurely; 
-AtomicSwap( scanThreadExit, True )   ' Inform thread it must exit
-DetachThread( scanThread )
+strlist = []
+start = MilliSecs()
+workspace_scan2( "/home/si/dev", strlist )
+finish = MilliSecs()
+Print "TIME: "+ (finish-start)+"ms"
+For Local file:String = EachIn strlist
+	Print( "* "+file )
+Next
 
 Local strtlist:TList = New TList()
 start = MilliSecs()
@@ -353,4 +260,4 @@ Type TURI
 	
 End Type
 
-End Rem
+

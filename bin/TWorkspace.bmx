@@ -92,11 +92,11 @@ logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
 	End Method
 	
 	Method shutdown()
-		For Local key:String = EachIn list.keys()
-			Local workspace:TWorkspace = TWorkspace( list[key] )
-			If workspace ; workspace.shutdown()
-		Next
-		' Clean up the TMAP
+	'	For Local key:String = EachIn list.keys()
+	'		Local workspace:TWorkspace = TWorkspace( list[key] )
+	'		If workspace ; workspace.shutdown()
+	'	Next
+	'	' Clean up the TMAP
 		list.clear()
 	End Method
 	
@@ -115,13 +115,13 @@ Type TWorkspace
 	Field lock:TMutex = CreateMutex()
 
 	' Threaded Validator
-	Field DocThread:TThread
-	Field QuitDocThread:Int = True
-	Field semaphore:TSemaphore = CreateSemaphore( 0 )
+	'Field DocThread:TThread
+	'Field QuitDocThread:Int = True
+	'Field semaphore:TSemaphore = CreateSemaphore( 0 )
 
 	' Threaded document scanner
-	Field scanThread:TThread
-	Field scanThreadExit:Int = False
+	'Field scanThread:TThread
+	'Field scanThreadExit:Int = False
 
 
 	Method New( name:String, uri:TURI )
@@ -155,7 +155,8 @@ Type TWorkspace
 		End If
 
 		' Create a document manager thread
-'		DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
+		' OLD: Please use a task!
+		'DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
 		
 		' Create thread to scan workspace for documents
 		If location = "/"
@@ -183,7 +184,7 @@ Type TWorkspace
 		
 		' Request document validation
 		document.validated = False
-		PostSemaphore( semaphore )
+		'PostSemaphore( semaphore )
 	End Method
 	
 	' Apply a change to a document
@@ -192,7 +193,7 @@ Type TWorkspace
 		If document
 			document.change( changes, version )
 			document.validated = False
-			PostSemaphore( semaphore )
+			'PostSemaphore( semaphore )
 		End If
 	End Method
 		
@@ -216,7 +217,7 @@ Type TWorkspace
 	Method invalidate( document:TFullTextDocument )
 		If document
 			document.validated = False
-			PostSemaphore( semaphore )
+			'PostSemaphore( semaphore )
 		End If
 	End Method
 
@@ -225,7 +226,7 @@ Type TWorkspace
 		Local document:TFullTextDocument = TFullTextDocument( documents.valueForKey( doc_uri ) )
 		If document
 			document.validated = False
-			PostSemaphore( semaphore )
+			'PostSemaphore( semaphore )
 		End If
 	End Method
 
@@ -249,15 +250,15 @@ logfile.debug( "# VALIDATING DOCUMENTS" )
 	End Method
 
 	' SHUTDOWN IN PROGRESS
-	Method shutdown()
+	'Method shutdown()
 		' Close the document thread
-		AtomicSwap( QuitDocThread, False )  ' Inform thread it must exit
-		PostSemaphore( semaphore )  		' Wake the thread from it's slumber
-        DetachThread( DocThread )
-        logfile.debug( "Workspace '"+name+"' thread closed" )
+		'AtomicSwap( QuitDocThread, False )  ' Inform thread it must exit
+		'PostSemaphore( semaphore )  		' Wake the thread from it's slumber
+        'DetachThread( DocThread )
+        'logfile.debug( "Workspace '"+name+"' thread closed" )
 	
 		' Save cache, ast or anything should be done here!
-	End Method
+	'End Method
 	
 	' Get workspace configuration
 	Method getConfiguration()
@@ -287,6 +288,7 @@ logfile.debug( "# VALIDATING DOCUMENTS" )
 	End Method
 	
 	    ' Thread to manage documents
+Rem
     Function DocManagerThread:Object( data:Object )
         Local workspace:TWorkspace = TWorkspace( data )
         Local quit:Int = False          ' Always got to know when to quit!
@@ -305,7 +307,8 @@ logfile.debug( "# VALIDATING DOCUMENTS" )
             End Try
 		Until CompareAndSwap( workspace.QuitDocThread, quit, True )
 	End Function
-	
+End Rem	
+
 	' Scan a workspace folder to obtain a list of files within it
 Rem	Method scan:String[]( folder:String, list:String[] Var )
 		Local dir:Byte Ptr = ReadDir( folder )

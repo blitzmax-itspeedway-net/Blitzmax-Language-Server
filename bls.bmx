@@ -10,7 +10,7 @@ End Rem
 '	OBJECT HEIRARCHY
 '	----------------
 '	TEventHandler
-'		TLSP extends TEventHandler
+'		TLanguageServer extends TEventHandler
 '			TLSP_Stdio Extends TLSP
 '			TLSP_TCP Extends TLSP
 '		TMessageQueue Extends TEventHandler
@@ -32,6 +32,7 @@ Import brl.stringbuilder
 Import brl.system
 Import brl.threads
 Import brl.threadpool
+Import brl.randomdefault	' Used by genWorkDoneToken()
 Import Text.RegEx
 
 Import pub.freeprocess
@@ -82,6 +83,9 @@ Include "bin/TSymbolTable.bmx"
 Include "bin/TTextDocument.bmx"	
 Include "bin/TWorkspace.bmx"
 'Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - Will be replaced by TWorkspace
+
+' Tasks
+Include "bin/TDiagnosticTask.bmx"
 
 ' SANDBOX LEXER
 'Include "lexer/TLexer.bmx"
@@ -216,6 +220,16 @@ End Function
 '	Return True
 'End Function
 
+' Generate a random work done token for progress bars
+Function genWorkDoneToken:String()
+	Local token:String
+	token :+ Hex(Rand(-$0FFFFFFF,$0FFFFFFF))+"-"
+	token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
+	token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
+	token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
+	token :+ Hex(Rand(-$0FFFFFFF,$0FFFFFFF))
+	Return Lower(token)
+End Function
 
 '   Run the Application
 logfile.debug( "Starting Language Server..." )

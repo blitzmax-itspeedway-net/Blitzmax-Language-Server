@@ -77,6 +77,7 @@ Type TMessage Extends TTask
 			_id = payload.find( "id" ).toString()
 		End If
 
+		Self.name = "Message{"+methd+"/"+_id+"}"
 	End Method
 			
 	' Getter!

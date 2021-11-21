@@ -227,13 +227,16 @@ End Rem
 				logfile.debug( "- TYPE:    REQUEST" )
 				' This is a request, add to queue
 				'logfile.debug( "Pushing request '"+methd+"' to queue")
+				message.priority = 3
 				client.pushTaskQueue( message )		
 			Else
 				' The message is a notification, send it now.
 				logfile.debug( "- TYPE:    NOTIFICATION" )
 				'Publish( "debug", "Executing notification "+methd )
 				'New TMessage( methd, message.J, params ).emit()
-				message.execute()
+				message.priority = 1
+				client.pushTaskQueue( message )	
+				'message.execute()
 			End If
 
 Rem V0.2 depreciated
@@ -414,9 +417,10 @@ EndRem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialize
 	Method on_Initialize:JSON( message:TMessage )				' REQUEST
+		'logfile.debug( "MESSAGE:~n"+message.J.prettify() )
 		Local id:String = message.getid()
 		Local params:JSON = message.params
-		
+	
 		state = STATE_INITIALISING
 				
 		'logfile.debug( "onInitialise()~n"+message.J.prettify() )
@@ -495,7 +499,8 @@ EndRem
 		'serverCapabilities.set( "implementationProvider", [] )
 		'serverCapabilities.set( "referencesProvider", [] )
 		'serverCapabilities.set( "documentHighlightProvider", [] )
-		serverCapabilities.set( "documentSymbolProvider", True )
+'		serverCapabilities.set( "documentSymbolProvider", True )
+'		serverCapabilities.set( "documentSymbolProvider|workDoneProgress", True )
 		'serverCapabilities.set( "codeActionProvider", [] )
 		'serverCapabilities.set( "codeLensProvider", [] )
 		'serverCapabilities.set( "documentLinkProvider", [] )
@@ -560,18 +565,38 @@ EndRem
 		'workspaceFolders.set( "params", "null" )
 		'client.send( workspaceFolders )
 
-Rem
+
+
 ' TEST A PROGRESS BAR
 If client.has( "window|workDoneProgress" )
 	logfile.debug( "## CLIENT SUPPORTS: window|workDoneProgress" )
-	Local J:JSON = EmptyResponse( "$/progress" )
-	J.set( "params|token", "1d546990-40a3-4b77-b134-46622995f6ae" )
+	Local J:JSON
+	
+	Local workDoneToken:String = genWorkDoneToken()
+	
+	' CREATE A PROGRESS TOKEN
+	J = EmptyResponse( "window/workDoneProgress/create" )
+	J.set( "id", "99" )
+	
+	''J.set( "token", workDoneToken )
+	''J.set( "workDoneToken", workDoneToken )
+	''J.set( "params|workDoneToken", workDoneToken )
+	J.set( "params|token", workDoneToken )
+	client.sendMessage( J.stringify() )
+
+Local wait:Int = MilliSecs()+1000
+Repeat Until MilliSecs()>wait
+	
+	' SEND A BEGIN
+	J = EmptyResponse( "$/progress" )
+	J.set( "params|token", workDoneToken )
 	J.set( "params|value|kind", "begin" )
 	J.set( "params|value|title", "Testing a progress Bar" )
+	J.set( "params|value|cancellable", False )
 	J.set( "params|value|message", String(MilliSecs())+"ms" )
 	J.set( "params|value|percentage", 0 )
 	client.sendMessage( J.stringify() )
-	
+
 	Local time:Int = MilliSecs() + 1000
 	Local finished:Int = MilliSecs() + 10000
 	Local count:Int = 0
@@ -579,7 +604,7 @@ If client.has( "window|workDoneProgress" )
 		If MilliSecs() > time
 			time :+ 1000
 			J = EmptyResponse( "$/progress" )
-			J.set( "params|token", "1d546990-40a3-4b77-b134-46622995f6ae" )
+			J.set( "params|token", workDoneToken )
 			J.set( "params|value|kind", "report" )
 			J.set( "params|value|message", String(time)+"ms" )
 			J.set( "params|value|percentage", count )
@@ -589,12 +614,14 @@ If client.has( "window|workDoneProgress" )
 	Until MilliSecs() > finished
 	
 	J = EmptyResponse( "$/progress" )
-	J.set( "params|token", "1d546990-40a3-4b77-b134-46622995f6ae" )
+	J.set( "params|token", workDoneToken )
 	J.set( "params|value|kind", "end" )
 	J.set( "params|value|message", "Completed" )
 	client.sendMessage( J.stringify() )
+
+Else
+	logfile.debug( "## CLIENT DOES NOT SUPPORT: window|workDoneProgress" )
 End If
-EndRem
 
 		'logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
 		
@@ -854,6 +881,10 @@ End Rem
 
 		Local workspace:TWorkspace = Workspaces.get( uri )
 		workspace.change( uri, contentChanges, version )	
+
+		' Add unique low priority tasks to test message queue
+		Local uniquetask:TTestTask = New TTestTask()
+		client.pushTaskQueue( uniquetask, True )
 
 		' Run Linter
 		'lint( document )

@@ -7,6 +7,8 @@ Const TASK_PARSE:Int = 1
 
 Rem UNIQUE TASKS
 
+	PRIORITY 1 is HIGHEST, 5 is LOWEST
+
 	A unique task is a task with an identifier and a subject.
 	They are added to the queue using the unique value of TRUE which inserts them only if
 	there is not another task with the same identifier and subject
@@ -26,7 +28,22 @@ Type TTask
 	Field identifier:Int = 0	' Used by Priority Queue when "unique is TRUE"
 	Field subject:String		' Used by Priority Queue when "unique is TRUE"
 	
-	Method execute()
+	Field name:String			' Optional task name
+	Field complete:Int = False	' Optional completion status
+	
+	Method execute() Abstract
+
+End Type
+
+Type TTestTask Extends TTask
+
+	Method New()
+		name = "TASKTASK"
+		priority = 5
 	End Method
 
+	Method execute()
+		logfile.debug( "TEST TASK RAN SUCCESSFULLY" )
+	End Method
+	
 End Type
