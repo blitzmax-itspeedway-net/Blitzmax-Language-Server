@@ -25,14 +25,19 @@ End Rem
 
 Type TTask
 	Field priority:Int = 3		' Used by Priority Queue
-	Field identifier:Int = 0	' Used by Priority Queue when "unique is TRUE"
-	Field subject:String		' Used by Priority Queue when "unique is TRUE"
+	'Field identifier:Int = 0	' Used by Priority Queue when "unique is TRUE"
+	'Field subject:String		' Used by Priority Queue when "unique is TRUE"
+	Field unique:Int = False
 	
-	Field name:String			' Optional task name
+	Field name:String			' Optional task name (Used by Priority Queue when "unique is TRUE")
 	Field complete:Int = False	' Optional completion status
 	
 	Method execute() Abstract
 
+	Method post()
+		client.pushTaskQueue( Self )
+	End Method
+	
 End Type
 
 Type TTestTask Extends TTask

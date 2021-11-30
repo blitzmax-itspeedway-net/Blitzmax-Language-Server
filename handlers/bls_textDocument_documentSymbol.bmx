@@ -67,7 +67,7 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
 '	logfile.debug( "Workspace IS NULL" )
 'EndIf
 
-	Local document:TFullTextDocument = TFullTextDocument( workspace.get( doc_uri ) )
+	Local document:TTextDocument = TTextDocument( workspace.get( doc_uri ) )
 
 'logfile.debug( "Got document" )
 

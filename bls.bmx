@@ -33,9 +33,12 @@ Import brl.system
 Import brl.threads
 Import brl.threadpool
 Import brl.randomdefault	' Used by genWorkDoneToken()
+Import bah.database
+Import bah.dbsqlite
+Import Crypto.MD5Digest		' Used by MD5 checksums in TWorkspace
+Import pub.freeprocess
 Import Text.RegEx
 
-Import pub.freeprocess
 'debugstop
 '   INCLUDE APPLICATION COMPONENTS
 
@@ -65,10 +68,16 @@ Include "bin/language-server-protocol.bmx"
 
 ' Load order - SECOND
 Include "bin/TLanguageServer.bmx"
+Include "bin/TURI.bmx"					' URI Support
 Include "bin/responses.bmx"
 
-' Load order - ANY
+' Tasks
 Include "bin/TTask.bmx"
+Include "bin/TTaskDiagnostic.bmx"
+Include "bin/TTaskDocumentParse.bmx"
+Include "bin/TTaskWorkspaceScan.bmx"
+
+' Events and Messages
 Include "bin/TEventHandler.bmx"
 Include "bin/TMessage.bmx"
 Include "bin/TMessageQueue.bmx"
@@ -81,11 +90,12 @@ Include "bin/TClient.bmx"		' Represents the remote IDE
 ' Text Document Manager
 Include "bin/TSymbolTable.bmx"	
 Include "bin/TTextDocument.bmx"	
-Include "bin/TWorkspace.bmx"
-'Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - Will be replaced by TWorkspace
+Include "bin/TWorkspaces.bmx"		' Manages ALL workspaces
+Include "bin/TWorkspace.bmx"		' Manages a single workspace
+Include "bin/TWorkspaceCache.bmx"	' Manages the workspace cache
+Include "bin/TDBDocument.bmx"		' Database Document Interaction
 
-' Tasks
-Include "bin/TDiagnosticTask.bmx"
+'Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - replaced by TWorkspace
 
 ' SANDBOX LEXER
 'Include "lexer/TLexer.bmx"
@@ -220,16 +230,7 @@ End Function
 '	Return True
 'End Function
 
-' Generate a random work done token for progress bars
-Function genWorkDoneToken:String()
-	Local token:String
-	token :+ Hex(Rand(-$0FFFFFFF,$0FFFFFFF))+"-"
-	token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
-	token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
-	token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
-	token :+ Hex(Rand(-$0FFFFFFF,$0FFFFFFF))
-	Return Lower(token)
-End Function
+
 
 '   Run the Application
 logfile.debug( "Starting Language Server..." )

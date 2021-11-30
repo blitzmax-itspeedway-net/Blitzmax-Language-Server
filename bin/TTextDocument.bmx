@@ -13,54 +13,49 @@ Interface ITextDocument
 	
 End Interface
 
-' A TTextDocument is not currently open in the language client
+' A TTextDocument
 Type TTextDocument Implements ITextDocument
 
 	Private
 	
 	Field uri : TURI
+	
 	Field languageId : String
-	Field version : ULong		' Incremented after each change including Undo/Redo
-	'Field lineCount: UInt
-
-	' Language server specific
-	Field symbols:TSymbolTable
-		
-	Public
-
-	Field content:String
-	Field validated:Int = False		' Used by validation thread to identify documents requiring validation
-
-	Method New( uri:TURI, content:String="", version:ULong = 0 )
-		Self.uri = uri
-		Self.content = content
-		Self.version = version
-	End Method
-
-	Method get_languageId:String()	;	Return languageId				;	End Method
-	Method get_uri:TURI()			;	Return uri						;	End Method
-	Method get_version:Int()		;	Return version					;	End Method
-
-	Method getText:String( range:TRange = Null ) 	;	End Method
-	Method positionAt:TPosition( offset:UInt ) 		;	End Method
-	Method offsetAt:UInt( position:TPosition )		;	End Method
-	
-	Method validate() 				;	validated = True				;	End Method
-End Type
-
-' A TFullTextDocument is open in the language client
-
-Type TFullTextDocument Extends TTextDocument
-
-	Private
-	
+	Field version : ULong		' Incremented after each change including Undo/Redo	
 	Field lineOffsets:UInt[]
+
+	' File properties
+
+	Field file_size:Int
+	Field file_date:Long
+	Field file_checksum:String
 	
 	' Language server specific
 	Field ast:TASTNode
 	Field lexer:TLexer
-		
+	Field symbols:TSymbolTable
+
 	Public
+	
+	Field isOpen:Int = False	' Is this document OPEN in the client
+	Field content:String
+	Field validated:Int = False		' Used by validation thread to identify documents requiring validation
+
+	Method New( uri:TURI )
+		Self.uri = uri
+		Self.isopen = False
+		content = loadfile( uri.path )
+		file_size = FileSize( uri.path )
+		file_date = FileTime( uri.path )
+		file_checksum = computeChecksum( content )
+	End Method
+
+	Method New( uri:TURI, content:String, version:ULong )
+		Self.uri = uri
+		Self.content = content
+		Self.version = version
+		Self.isopen = True
+	End Method
 	
 	Method New( uri:TURI, languageId:String, content:String, version:ULong )
 		Self.uri = uri
@@ -68,6 +63,22 @@ Type TFullTextDocument Extends TTextDocument
 		Self.version = version
 		Self.content = content
 		lineOffsets = []
+		Self.isopen = True
+	End Method
+
+	Method get_languageId:String()	;	Return languageId				;	End Method
+	Method get_uri:TURI()			;	Return uri						;	End Method
+	Method get_version:Int()		;	Return version					;	End Method
+	
+'	Method validate() 				;	validated = True				;	End Method
+
+	Method LoadFile:String(filename:String)
+		Local file:TStream = ReadStream( filename )
+		If Not file Return ""
+		'Print "- File Size: "+file.size()+" bytes"
+		Local content:String = ReadString( file, file.size() )
+		CloseStream file
+		Return content
 	End Method
 
 	Method change( changes:JSON[], version:Int )
@@ -221,6 +232,7 @@ End Rem
 
 '	End Method
 
+Rem Moved to TTaskDocumentParse 22/11/21
 	Method validate()
 		If Not validated And content <> ""
 			logfile.debug( "> Parsing "+uri.tostring() )
@@ -240,6 +252,7 @@ End Rem
 		' Mark document as validated
 		validated = True
 	End Method
+EndRem
 
 	'Method DocumentSymbolProvider()
 	'End Method
@@ -306,6 +319,12 @@ End Rem
 			Return list + node.errors
 		End Function
 		
+	End Method
+	
+	Method computeChecksum:String( data:String )
+		Local digest:TMessageDigest = GetMessageDigest("MD5")
+		If digest ; Return digest.Digest( data )
+		Return ""
 	End Method
 
 End Type

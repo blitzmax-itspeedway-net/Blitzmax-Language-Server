@@ -6,6 +6,8 @@ Type TClient Extends TMessageQueue
 	Field documentSettings:JSON = New JSON()
 	Field initialized:Int = False
 	
+	Field messageCounter:Int = 0		' Outgoing message ID
+	
 	' Fields taken from "initialize" message
 	Field clientname:String = "Unknown"
 	Field clientver:String = ""
@@ -98,6 +100,63 @@ Type TClient Extends TMessageQueue
 
 		If message ; pushSendQueue( message )
 	End Method
+	
+	' Generate a random work done token for progress bars
+	Method genWorkDoneToken:String()
+		Local token:String
+		token :+ Hex(Rand(-$0FFFFFFF,$0FFFFFFF))+"-"
+		token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
+		token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
+		token :+ Hex(Rand(0,$0000FFFF))[4..8]+"-"
+		token :+ Hex(Rand(-$0FFFFFFF,$0FFFFFFF))
+		Return Lower(token)
+	End Method
+	
+	Method getNextMsgID:Int()
+		Local id:Int = messageCounter
+		messageCounter :+ 1
+		Return id
+	End Method
+	
+	' CREATE A PROGRESS TOKEN
+	Method progress_register:String()
+		Local J:JSON = EmptyResponse( "window/workDoneProgress/create" )
+		Local token:String = genWorkDoneToken() 
+		J.set( "id", getNextMsgID() )
+		J.set( "params|token", token )
+		sendMessage( J.stringify() )
+		Return token
+	End Method
+	
+	' SEND A PROGRESS BEGIN
+	Method progress_begin( workDoneToken:String, title:String, message:String, cancellable:Int=False )
+		Local J:JSON = EmptyResponse( "$/progress" )
+		J.set( "params|token", workDoneToken )
+		J.set( "params|value|kind", "begin" )
+		J.set( "params|value|title", title )
+		J.set( "params|value|cancellable", cancellable )
+		J.set( "params|value|message", message )
+		J.set( "params|value|percentage", 0 )
+		sendMessage( J.stringify() )
+	End Method
+
+	Method progress_update( workDoneToken:String, message:String, percentage:Int )
+		Local J:JSON = EmptyResponse( "$/progress" )
+		J.set( "params|token", workDoneToken )
+		J.set( "params|value|kind", "report" )
+		J.set( "params|value|message", message )
+		J.set( "params|value|percentage", percentage )
+		sendMessage( J.stringify() )
+	End Method
+	
+	Method progress_end( workDoneToken:String, message:String )
+		Local J:JSON = EmptyResponse( "$/progress" )
+		J.set( "params|token", workDoneToken )
+		J.set( "params|value|kind", "end" )
+		J.set( "params|value|message", message )
+		sendMessage( J.stringify() )
+	End Method
+	
 	
 End Type
 

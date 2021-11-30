@@ -12,12 +12,17 @@ Rem	MESSAGE PRIORITIES
 	5		DocumentParser (UNIQUE), TDiagnostic (UNIQUE)
 
 REQUEST: initialise (workdone) - (contains workspaces)
+** INITIALISE DOES NOT WEND WORKDONETOKEN
+	LSP client lib you needs to ask the client to sent a progress token in the initialize request using: the progressOnInitialization client option.
 - SCAN WORKSPACES 
 	- Add files to workspace as they are found
 	- Report on progress to initialize progress
 		- Call progressBar( token,
 	- Create taskk
 	- When progress complete, return result from initialise.
+	
+I think I need to insert WORKSPACE SCAN TASK as priority 1 and move notifications to priority 2
+ - in this way the scan will be performed before anything else can interrupt it.
 NOTIFICATION: initialized
 NOTIFICATION: didOpen
 	- loads details into workspace document, flags it as OPEN
@@ -27,6 +32,11 @@ REQUEST: documentSymbol (workdone)
 	- When unlocked, it returns results.
 
 EndRem
+
+Const QUEUE_PRIORITY_WORKSPACE_SCAN:Int = 1
+Const QUEUE_PRIORITY_NOTIFICATION:Int = 2
+Const QUEUE_PRIORITY_DOCUMENT_PARSE:Int = 3
+Const QUEUE_PRIORITY_REQUEST:Int = 4
 
 Type TMessageQueue Extends TEventHandler
     Global requestThread:TThread
@@ -164,17 +174,18 @@ End Rem
     Private
 
     ' Add a new message to the queue
-    Method pushTaskQueue( task:TTask, unique:Int=False )
+    Method pushTaskQueue( task:TTask, unique:String = "" )
         'Publish( "debug", "PushTaskQueue()" )
         If Not task Return
         LockMutex( TaskMutex )
+		If unique<>"" ; task.unique = True
 
 		' PRIORITY QUEUE (12/11/21)
 		Local link:TLink = taskqueue.lastlink()
 		While link 
 			Local item:TTask = TTask( link.value )
 			' Check Uniqueness
-			If unique And task.identifier=item.identifier And task.subject = item.subject
+			If task.unique And task.name=item.name
 				logfile.debug( "MESSAGEQUEUE: Unique task already exists "+task.name )
 				' Task already exists with this name and identifier, so drop it.
 				UnlockMutex( TaskMutex )

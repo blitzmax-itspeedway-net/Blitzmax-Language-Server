@@ -153,6 +153,11 @@ Type TASTNode
 		If data ; Return eval( Self, data, options )
 		Return data
 	End Method
+
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object, options:Int[] ), data:Object, options:Int[]=[] )
+		If data ; Return eval( Self, data, options )
+		Return data
+	End Method
 	
 End Type
 

@@ -2,7 +2,7 @@
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-Type TDiagnosticTask Extends TTask
+Type TTaskDiagnostic Extends TTask
 
 	Method New()
 		name = "Diagnostic"

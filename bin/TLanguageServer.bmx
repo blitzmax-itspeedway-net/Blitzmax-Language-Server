@@ -227,15 +227,17 @@ End Rem
 				logfile.debug( "- TYPE:    REQUEST" )
 				' This is a request, add to queue
 				'logfile.debug( "Pushing request '"+methd+"' to queue")
-				message.priority = 3
-				client.pushTaskQueue( message )		
+				message.priority = QUEUE_PRIORITY_REQUEST
+				message.post()
+				'client.pushTaskQueue( message )		
 			Else
 				' The message is a notification, send it now.
 				logfile.debug( "- TYPE:    NOTIFICATION" )
 				'Publish( "debug", "Executing notification "+methd )
 				'New TMessage( methd, message.J, params ).emit()
-				message.priority = 1
-				client.pushTaskQueue( message )	
+				message.priority = QUEUE_PRIORITY_NOTIFICATION
+				message.post()
+				'client.pushTaskQueue( message )	
 				'message.execute()
 			End If
 
@@ -490,17 +492,21 @@ EndRem
 		Local serverCapabilities:JSON = New JSON()
 		serverCapabilities.set( "textDocumentSync", TextDocumentSyncKind.INCREMENTAL.ordinal() )
 		'serverCapabilities.set( "completionProvider|resolveProvider", "true" )
+		'serverCapabilities.set( "completionProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "definitionProvider", "true" )
 		'serverCapabilities.set( "hoverProvider", "true" )
+		'serverCapabilities.set( "hoverProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "signatureHelpProvider", [] )
+		'serverCapabilities.set( "signatureHelpProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "declarationProvider", [] )
 		'serverCapabilities.set( "definitionProvider", [] )
 		'serverCapabilities.set( "typeDefinitionProvider", [] )
 		'serverCapabilities.set( "implementationProvider", [] )
 		'serverCapabilities.set( "referencesProvider", [] )
+		'serverCapabilities.set( "referencesProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "documentHighlightProvider", [] )
-'		serverCapabilities.set( "documentSymbolProvider", True )
-'		serverCapabilities.set( "documentSymbolProvider|workDoneProgress", True )
+		serverCapabilities.set( "documentSymbolProvider", True )
+		serverCapabilities.set( "documentSymbolProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "codeActionProvider", [] )
 		'serverCapabilities.set( "codeLensProvider", [] )
 		'serverCapabilities.set( "documentLinkProvider", [] )
@@ -511,11 +517,13 @@ EndRem
 		'serverCapabilities.set( "renameProvider", [] )
 		'serverCapabilities.set( "foldingRangeProvider", [] )
 		'serverCapabilities.set( "executeCommandProvider", [] )
+		'serverCapabilities.set( "executeCommandProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "selectionRangeProvider", [] )
 		'serverCapabilities.set( "linkedEditingRangeProvider", [] )
 		'serverCapabilities.set( "callHierarchyProvider", [] )
 		'serverCapabilities.set( "monikerProvider", [] )
 		'serverCapabilities.set( "workspaceSymbolProvider", [] )
+		'serverCapabilities.set( "workspaceSymbolProvider|workDoneProgress", "true" )
 		If client.has( "workspace|workspaceFolders" ) 
 			logfile.debug( "# Client HAS workspace|workspaceFolders" )
 			serverCapabilities.set( "workspace|workspaceFolders|supported", "true" )
@@ -565,37 +573,13 @@ EndRem
 		'workspaceFolders.set( "params", "null" )
 		'client.send( workspaceFolders )
 
-
-
-' TEST A PROGRESS BAR
+Rem ' TEST A PROGRESS BAR
 If client.has( "window|workDoneProgress" )
 	logfile.debug( "## CLIENT SUPPORTS: window|workDoneProgress" )
-	Local J:JSON
 	
-	Local workDoneToken:String = genWorkDoneToken()
-	
-	' CREATE A PROGRESS TOKEN
-	J = EmptyResponse( "window/workDoneProgress/create" )
-	J.set( "id", "99" )
-	
-	''J.set( "token", workDoneToken )
-	''J.set( "workDoneToken", workDoneToken )
-	''J.set( "params|workDoneToken", workDoneToken )
-	J.set( "params|token", workDoneToken )
-	client.sendMessage( J.stringify() )
-
-Local wait:Int = MilliSecs()+1000
-Repeat Until MilliSecs()>wait
-	
-	' SEND A BEGIN
-	J = EmptyResponse( "$/progress" )
-	J.set( "params|token", workDoneToken )
-	J.set( "params|value|kind", "begin" )
-	J.set( "params|value|title", "Testing a progress Bar" )
-	J.set( "params|value|cancellable", False )
-	J.set( "params|value|message", String(MilliSecs())+"ms" )
-	J.set( "params|value|percentage", 0 )
-	client.sendMessage( J.stringify() )
+	' Generate and register a token
+	Local workDoneToken:String = client.progress_register()
+	client.progress_begin( workDoneToken, "Testing a progress Bar", String(MilliSecs())+"ms" )
 
 	Local time:Int = MilliSecs() + 1000
 	Local finished:Int = MilliSecs() + 10000
@@ -603,25 +587,15 @@ Repeat Until MilliSecs()>wait
 	Repeat
 		If MilliSecs() > time
 			time :+ 1000
-			J = EmptyResponse( "$/progress" )
-			J.set( "params|token", workDoneToken )
-			J.set( "params|value|kind", "report" )
-			J.set( "params|value|message", String(time)+"ms" )
-			J.set( "params|value|percentage", count )
-			client.sendMessage( J.stringify() )
+			client.progress_update( workDoneToken, String(time)+"ms", count )
 			count :+ 10
 		End If	
-	Until MilliSecs() > finished
-	
-	J = EmptyResponse( "$/progress" )
-	J.set( "params|token", workDoneToken )
-	J.set( "params|value|kind", "end" )
-	J.set( "params|value|message", "Completed" )
-	client.sendMessage( J.stringify() )
-
+	Until MilliSecs() > finished	
+	client.progress_end( workDoneToken, "Completed" )
 Else
 	logfile.debug( "## CLIENT DOES NOT SUPPORT: window|workDoneProgress" )
 End If
+EndRem
 
 		'logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
 		
@@ -799,14 +773,11 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 '		
 '	End Method
 '
-	'	##### TEST DOCUMENT SYNC #####
+	'	##### TEXT DOCUMENT SYNC #####
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didOpen
-	' textDocument/didOpen
-	Method on_textDocument_didOpen:JSON( message:TMessage )						' NOTIFICATION
-		'ImplementationIncomplete( message )
-		'
-Try
+	' NOTIFICATION: textDocument/didOpen
+	Method on_textDocument_didOpen:JSON( message:TMessage )
 		Local params:JSON = message.params
 		Local uri:TURI = New TURI( params.find( "textDocument|uri" ).tostring() )
 		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
@@ -814,36 +785,19 @@ Try
 		Local version:UInt = params.find( "textDocument|version" ).toint()
 		
 		logfile.debug( "DOCUMENT: "+uri.tostring() )
-		Local document:TFullTextDocument = New TFullTextDocument( uri, Text, version )
-		logfile.debug( "Created document" )
+
 		Local workspace:TWorkspace = Workspaces.get( uri )
-	If Not workspace logfile.debug( "WORKSPACE IS NULL" )
-	If Not document logfile.debug( "DOCUMENT IS NULL" )
-		If workspace And document
-			logfile.debug( "Got workspace" )
-			workspace.add( uri, document )
-	'logfile( "Document is in workspace: "+workspace.name )
-			logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
-			
-			' Invalidate document
-			workspace.invalidate( document )
-			
-			' Run Linter
-			'lint( document )
-		
-			' Wake up the Document Thread
-			'PostSemaphore( semaphore )
-		End If
-	Catch Exception:Object
-			logfile.debug( Exception.toString() )
-	End Try
+If Not workspace logfile.debug( "WORKSPACE IS NULL" )
+		If Not workspace ; Return Null
+
+		workspace.open( uri, Text, version )
 		
 		' NOTIFICATION: No response required.
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didChange
-	' textDocument/didChange
-	Method on_textDocument_didChange:JSON( message:TMessage )						' NOTIFICATION
+	' NOTIFICATION: textDocument/didChange
+	Method on_textDocument_didChange:JSON( message:TMessage )
 		ImplementationIncomplete( message )
 Rem
 {
@@ -884,7 +838,7 @@ End Rem
 
 		' Add unique low priority tasks to test message queue
 		Local uniquetask:TTestTask = New TTestTask()
-		client.pushTaskQueue( uniquetask, True )
+		client.pushTaskQueue( uniquetask, "UNIQUETASK" )
 
 		' Run Linter
 		'lint( document )
@@ -931,7 +885,7 @@ End Rem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
 	' NOTIFICATION: textDocument/didSave
-	Method on_textDocument_didSave:TMessage( message:TMessage )						' 
+	Method on_textDocument_didSave:TMessage( message:TMessage )
 		ImplementationIncomplete( message )
 		Local params:JSON = message.params
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
@@ -971,6 +925,7 @@ End Rem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	' REQUEST: textDocument/documentSymbol
 	Method on_textDocument_documentSymbol:JSON( message:TMessage )
+		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
 		Return bls_textDocument_documentSymbol( message )
 	End Method
 

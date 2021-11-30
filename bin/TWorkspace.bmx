@@ -2,110 +2,11 @@
 '	WORKSPACE MANAGER
 '	(c) Copyright Si Dunford, October 2021, All Rights Reserved
 
-Const CACHE_FOLDER:String = ".bls-cache"
-Const CACHE_FILE:String = "workspace.cache"
-
-Type TWorkspaces Extends TEventHandler
-
-	Global list:TMap = New TMap()
-		
-	' Add a Workspace
-	Method add( uri:TURI, workspace:TWorkspace )
-logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
-		list[ uri.toString() ] = workspace
-		
-		'logfile.debug( "Workspaces now contain:" )
-		'For Local key:String = EachIn list.keys()
-		'	logfile.debug( key )
-		'Next
-		
-	End Method
-	
-	' Remove a Workspace
-	Method remove( uri:TURI )
-		list.remove( uri.toString() )
-	End Method
-
-	' Find a workspace for a file uri
-	Method get:TWorkspace( doc_uri:String )
-		Local uri:TURI = New TURI( doc_uri )
-'If uri
-'	logfile.debug( "uri is "+uri.toString() )
-'Else
-'	logfile.debug( "uri is NULL" )
-'EndIf
-		If uri ; Return get( uri )
-	End Method
-	
-	Method get:TWorkspace( uri:TURI )
-		If Not uri; Return Null
-		
-		'Local uri:TURI = TURI.file( file_uri )
-		
-		
-		' Extract filepath from uri path (Drop the filename)
-		'logfile.debug( "FOLDER IS:" + ExtractDir( uri.path ) )
-		Local path:String = uri.folder()
-		Local candidate:TWorkspace
-		'logfile.debug( "Finding URI: "+ uri.toString()+"~n  SCHEME:"+uri.scheme+"~n  AUTHORITY:"+uri.authority+"~n  PATH: "+path )
-		
-		' Match workspaces
-		For Local key:String = EachIn list.keys()
-			Local workspace:TWorkspace = TWorkspace( list[key] )
-			'logfile.debug( "Comparing: "+ workspace.uri.toString()+"~n  SCHEME:"+workspace.uri.scheme+"~n  AUTHORITY:"+workspace.uri.authority+"~n  PATH: "+workspace.uri.path )
-			If workspace.uri.scheme = uri.scheme And ..
-			   workspace.uri.authority = uri.authority 
-				If workspace.uri.path = path
-					' We have a match
-					Return workspace
-				ElseIf path.startswith( workspace.uri.path )
-					' We have a candidate
-					If Not candidate Or Len( workspace.uri.path ) > Len( candidate.uri.path ) ; candidate = workspace
-				End If
-			End If
-		Next
-
-		'logfile.debug( "# No workspace match was found" )
-		'If candidate ; logfile.debug( "# Using candidate "+candidate.uri.toString() )
-
-		' We get here if no exact match has been found
-		' In this case, we return the closest candidate (if found)
-		If candidate ; Return candidate
-		
-	End Method
-	
-	' Retrieve the first workspace
-	Method getFirst:TWorkspace()
-		For Local workspace:TWorkspace = EachIn list
-			Return workspace
-		Next
-	End Method
-
-	' DEBUGGING METHOD
-	Method reveal:String()
-		Local str:String=""
-		For Local key:String = EachIn list.keys()
-			Local workspace:TWorkspace = TWorkspace( list[key] )
-			str :+ workspace.uri.tostring() + "~n" + workspace.reveal()
-		Next
-		Return str
-	End Method
-	
-	Method shutdown()
-	'	For Local key:String = EachIn list.keys()
-	'		Local workspace:TWorkspace = TWorkspace( list[key] )
-	'		If workspace ; workspace.shutdown()
-	'	Next
-	'	' Clean up the TMAP
-		list.clear()
-	End Method
-	
-End Type
-
 Type TWorkspace
 
 	Field uri:TURI
-	Field cachefile:String = ""
+	Field cachefile:String = ""		' Name of the cache file
+	Field cache:TWorkspaceCache
 	
 	Field documents:TMap
 	Field name:String
@@ -130,7 +31,10 @@ Type TWorkspace
 		Local location:String = uri.path
 		documents = New TMap()
 
-		' Check if workspace contains a cache folder
+		' Create/Open Workspace Cache
+		cache = New TWorkspaceCache( location )
+		
+Rem	
 '		logfile.debug( "# WORKSPACE IS "+uri.tostring()+", "+location )
 		If location <> "/"
 '			logfile.debug( "# WORKSPACE IS NOT ROOT ("+location+")" )
@@ -153,17 +57,21 @@ Type TWorkspace
 '				logfile.debug( "# WORKSPACE CACHE FOLDER EXISTS" )
 			End Select
 		End If
+End Rem
 
 		' Create a document manager thread
 		' OLD: Please use a task!
 		'DocThread = CreateThread( DocManagerThread, Self )	' Document Manager
 		
 		' Create thread to scan workspace for documents
+		
 		If location = "/"
 			logfile.debug( "## NOT RUNNING SCANNER ON ROOT" )
 		Else
 			logfile.debug( "## RUNNING SCANNER ON "+location )
 			' scanThread = new TThread( WorkSpaceScan, self )	
+			Local task:TTaskWorkspaceScan = New TTaskWorkspaceScan( Self )
+			task.post()
 		End If
 
 		' Request Workspace configuration
@@ -175,21 +83,100 @@ Type TWorkspace
 		Return documents
 	End Method
 
-	' Add a document
-	Method add( uri:TURI, document:TTextDocument )
-		'logfile.debug( "Adding document!" )
-		'If Not uri logfile.debug( "uri IS NULL" )
-		'logfile.debug( "Adding document to "+ uri.tostring() )
-		documents[ uri.toString() ] = document
-		
-		' Request document validation
-		document.validated = False
-		'PostSemaphore( semaphore )
+	' Add a document reference
+'	Method addOrInsert:TTextDocument( uri:TURI )
+'		If Not uri ; Return	Null
+'		Local index:String = uri.toString() 	
+'		Local document:TTextDocument
+'		If documents.contains( index )
+'			' Document already exists (Which it should)
+'			document = TTextDocument( documents[ index ] )
+'		Else
+'			' Create the document
+'			document = New TTextDocument( uri )
+'			documents[ index ] = document
+'		End If
+'		Return document
+'	End Method
+
+	' Add a document to the workspace
+	Method add( document:TTextDocument )
+		If Not document ; Return
+		Local index:String = document.uri.toString()
+		logfile.debug( "-Adding "+index+" to workspace" )
+		If documents.contains( index ) ; Return			' Just ignore...
+		' Add document to list
+		documents[ index ] = document
+	End Method
+
+	' Confirm if a document exists in the workspace
+	Method exists:Int( document:TTextDocument )
+		If Not document ; Return False
+		Return documents.contains( document.uri.toString() )
 	End Method
 	
+	' Open a file in the workspace
+	Method open( uri:TURI, content:String, version:UInt )
+
+		Try
+			Local document:TTextDocument
+			Local index:String = uri.tostring()
+
+			' Add or Insert the document
+			If documents.contains( index )
+				document = TTextDocument( documents.valueForKey( index ) )
+			Else
+				' Document does not exist
+				' This can happen if a document is added outside of IDE and then opened
+				document = New TTextDocument( uri )
+				documents[ index ] = document
+				'
+				' Add document to cache
+				cache.addDocument( document )
+			End If
+		
+			' Populate document
+			document.isOpen = True
+			document.content = content
+			document.version = version
+
+			' Create PARSE task
+			Local task:TTaskDocumentParse = New TTaskDocumentParse( document )
+			task.post()
+		
+'			Local document:TFullTextDocument = New TFullTextDocument( uri, Text, version )
+'			logfile.debug( "Created document" )
+'	If Not document logfile.debug( "DOCUMENT IS NULL" )
+'			If workspace And document
+'				logfile.debug( "Got workspace" )
+'				' Add document to workspace
+'				workspace.add( uri, document )
+'	'logfile( "Document is in workspace: "+workspace.name )
+'				logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+'				
+'				' Invalidate document
+'				workspace.invalidate( document )
+'				
+'				' Create PARSE task
+'				Local task:TTaskDocumentParse = New TTaskDocumentParse( document, True )
+'				task.post( QUEUE_PRIORITY_DOCUMENT_PARSE )
+'				
+'				' Run Linter
+'				'lint( document )
+'			
+'				' Wake up the Document Thread
+'				'PostSemaphore( semaphore )
+'			End If
+			logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+
+		Catch Exception:Object
+			logfile.critical( "## EXCEPTION: TWorkspace.open()~n"+Exception.toString() )
+		End Try
+	End Method
+
 	' Apply a change to a document
 	Method change( doc_uri:String, changes:JSON[], version:Int=0 )
-		Local document:TFullTextDocument = TFullTextDocument( documents.valueForKey( doc_uri ) )
+		Local document:TTextDocument = TTextDocument( documents.valueForKey( doc_uri ) )
 		If document
 			document.change( changes, version )
 			document.validated = False
@@ -214,7 +201,7 @@ Type TWorkspace
 	End Method
 
 	' Invalidate a document (forcing a re-validation)
-	Method invalidate( document:TFullTextDocument )
+	Method invalidate( document:TTextDocument )
 		If document
 			document.validated = False
 			'PostSemaphore( semaphore )
@@ -222,22 +209,22 @@ Type TWorkspace
 	End Method
 
 	' Invalidate a document by URI
-	Method invalidate( doc_uri:TURI )
-		Local document:TFullTextDocument = TFullTextDocument( documents.valueForKey( doc_uri ) )
-		If document
-			document.validated = False
-			'PostSemaphore( semaphore )
-		End If
-	End Method
+'	Method invalidate( doc_uri:TURI )
+'		Local document:TTextDocument = TTextDocument( documents.valueForKey( doc_uri ) )
+'		If document
+'			document.validated = False
+'			'PostSemaphore( semaphore )
+'		End If
+'	End Method
 
 	' Validation of all documents
-	Method validate()
-logfile.debug( "# VALIDATING DOCUMENTS" )
-		For Local key:String = EachIn documents.keys()
-			Local document:TTextDocument = TTextDocument( documents[key] )
-			If document ; document.validate()
-		Next
-	End Method
+'	Method validate()
+'logfile.debug( "# VALIDATING DOCUMENTS" )
+'		For Local key:String = EachIn documents.keys()
+'			Local document:TTextDocument = TTextDocument( documents[key] )
+'			If document ; document.validate()
+'		Next
+'	End Method
 
 	' DEBUGGING METHOD
 	Method reveal:String()
@@ -327,4 +314,6 @@ Rem	Method scan:String[]( folder:String, list:String[] Var )
 		CloseDir dir
 	End Method
 End Rem
+
+
 End Type

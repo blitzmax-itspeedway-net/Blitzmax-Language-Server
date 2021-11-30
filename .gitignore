@@ -6,6 +6,7 @@
 # Exclude folders
 .bmx/
 .vscode/
+.bls-cache/
 notes/
 old/
 
