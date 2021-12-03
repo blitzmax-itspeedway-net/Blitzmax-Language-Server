@@ -33,7 +33,7 @@ Type TTextDocument Implements ITextDocument
 	' Language server specific
 	Field ast:TASTNode
 	Field lexer:TLexer
-	Field symbols:TSymbolTable
+	'Field symbols:TSymbolTable
 
 	Public
 	

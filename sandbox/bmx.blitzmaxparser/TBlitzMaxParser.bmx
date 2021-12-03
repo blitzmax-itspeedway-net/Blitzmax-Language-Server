@@ -31,15 +31,15 @@ End Rem
 
 Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, TK_IMPORT, TK_MODULEINFO ]
 
-Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_FOR, TK_REPEAT, TK_WHILE ]
+Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_CONST, TK_FOR, TK_REPEAT, TK_WHILE ]
 
-Global SYM_PROGRAM_BODY:Int[] = [ TK_INCLUDE, TK_ENUM, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE, TK_INTERFACE, TK_STRUCT ]+SYM_BLOCK_KEYWORDS
-Global SYM_MODULE_BODY:Int[] = [ TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
+Global SYM_PROGRAM_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_ENUM, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE, TK_INTERFACE, TK_STRUCT ]+SYM_BLOCK_KEYWORDS
+Global SYM_MODULE_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
 
-Global SYM_TYPE_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
+Global SYM_TYPE_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
 
-Global SYM_FUNCTION_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
-Global SYM_METHOD_BODY:Int[] = [ TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
+Global SYM_FUNCTION_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
+Global SYM_METHOD_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
 
 Global SYM_ENUM_BODY:Int[] = [ TK_INCLUDE ]
 Global SYM_INTERFACE_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD ]
@@ -311,6 +311,8 @@ EndRem
 						error.classname = "TODO"
 						error.errors :+ [ New TDiagnostic( "Expression is not implemented", DiagnosticSeverity.Information ) ]
 						ast.add( error )				
+					Case TK_Const
+						ast.add( Parse_Const() )
 					Case TK_Enum
 						ast.add( Parse_Enum() )
 					Case TK_Field
@@ -772,6 +774,31 @@ End Rem
 	'	Return ast
 	'End Method
 
+Rem
+
+		    CONST:TASTAssignment
+		____________|_____________
+		|                        |
+		LNODE: TAST_VARDEF          RNODE: TASTNODE
+		NAME:TToken
+		COLON:TToken
+		VARTYPE:TToken
+		
+EndRem
+
+	Method Parse_Const:TASTNode()
+		Local ast:TAST_Assignment = New TAST_Assignment( token )	' LOCAL, GLOBAL or FIELD
+		ast.lnode = Parse_VarDef()	
+		' Do we have an assignment operator
+		Local equals:TToken = eatOptional( TK_Equals, Null )
+		If equals
+			eat( TK_Equals )	' Throw that away
+'TODO: Implement variable definition
+			ast.rnode = eatUntil( [TK_EOL], token )
+		End If
+		Return ast
+	End Method
+	
 	Method Parse_End:TASTNode()
 		Local ast:TASTKeyword = New TASTKeyword( token )
 		advance()
@@ -795,14 +822,15 @@ End Rem
 	End Method
 	
 	Method Parse_Field:TASTNode()
-		Local ast:TAST_VARDECL = New TAST_VARDECL( token )	' LOCAL, GLOBAL or FIELD
-'DebugStop
-		advance()
-		ast.lnode = New TASTNode( token )
-		
+		Local ast:TAST_Assignment = New TAST_Assignment( token )	' LOCAL, GLOBAL or FIELD
+		ast.lnode = Parse_VarDef()	
+		' Do we have an assignment operator
+		Local equals:TToken = eatOptional( TK_Equals, Null )
+		If equals
+			eat( TK_Equals )	' Throw that away
 'TODO: Implement variable definition
-		ast.operation  = eat( TK_Equals )
-		ast.rnode = eatUntil( [TK_EOL], token )
+			ast.rnode = eatUntil( [TK_EOL], token )
+		End If
 		Return ast
 	End Method
 
@@ -911,13 +939,15 @@ End Rem
 	End Method
 
 	Method Parse_Global:TASTNode()
-		Local ast:TAST_VARDECL = New TAST_VARDECL( token )	' LOCAL, GLOBAL or FIELD
-		'ast.name = "vardecl"
-'DebugStop
-		advance()
-		ast.lnode = New TASTNode( token )
+		Local ast:TAST_Assignment = New TAST_Assignment( token )	' LOCAL, GLOBAL or FIELD
+		ast.lnode = Parse_VarDef()	
+		' Do we have an assignment operator
+		Local equals:TToken = eatOptional( TK_Equals, Null )
+		If equals
+			eat( TK_Equals )	' Throw that away
 'TODO: Implement variable definition
-		ast.rnode = eatUntil( [TK_EOL], token )
+			ast.rnode = eatUntil( [TK_EOL], token )
+		End If
 		Return ast
 	End Method
 		
@@ -967,17 +997,15 @@ End Rem
 	End Method
 	
 	Method Parse_Local:TASTNode()
-		Local ast:TAST_VARDECL = New TAST_VARDECL( token )	' LOCAL, GLOBAL or FIELD
-'DebugStop
-		advance()
-		ast.lnode = Parse_VarDecl()
-		'advance()
-		ast.operation  = eat( TK_Equals )
-'DebugStop
-		ast.rnode = ParseExpression()
-
+		Local ast:TAST_Assignment = New TAST_Assignment( token )	' LOCAL, GLOBAL or FIELD
+		ast.lnode = Parse_VarDef()	
+		' Do we have an assignment operator
+		Local equals:TToken = eatOptional( TK_Equals, Null )
+		If equals
+			eat( TK_Equals )	' Throw that away
 'TODO: Implement variable definition
-		'ast.rnode = eatUntil( [TK_EOL], token )
+			ast.rnode = eatUntil( [TK_EOL], token )
+		End If
 		Return ast
 	End Method
 	
@@ -1206,14 +1234,39 @@ End Rem
 		Return ast
 	End Method
 
+	Method Parse_VarDef:TASTNode()
+'DebugStop
+		Local ast:TAST_VARDEF = New TAST_VARDEF( token )	' Variable Defintion (Const, Field, Global, Local )
+		advance()
+		ast.name = eat( TK_ALPHA )
+		ast.colon = eatOptional( TK_Colon, Null )
+		If ast.colon ; ast.vartype = eat( SYM_DATATYPES+[TK_ALPHA] )
+		
+		' Check for Function Variables:
+		Local paren:TToken = eatOptional( TK_LParen, Null )
+		If paren
+			ast.func = New TAST_Function()
+			advance()
+			ast.func.name = eat( TK_ALPHA )
+			ast.func.colon = eatOptional( TK_Colon, Null )
+			If ast.func.colon ; ast.func.returntype = eat( SYM_DATATYPES+[TK_ALPHA] )
+			ast.func.lparen = eat( TK_LParen )
+			ast.func.def = eatUntil( [TK_RParen], token)
+			ast.func.rparen = eat( TK_RParen )		
+			Return ast
+		End If
 
-	Rem PARSES
+		' Standard Variable declaration
+		Return ast
+	End Method
+	
+	Rem VARDECL
 	Local X:Int = 25
 	Local X:Int = 10*a
 	Local X( y:Int ) = something
 	Local X:Int( y:Int ) = something
 	End Rem
-	Method Parse_VarDecl:TASTNode()
+Rem	Method Parse_VarDecl:TASTNode()
 'DebugStop
 		Local ltoken:TTOken = eat( TK_ALPHA )
 		Local colon:TToken = eatOptional( TK_Colon, Null )
@@ -1241,7 +1294,8 @@ End Rem
 		ast.rnode = New TASTNode( vartype )
 		Return ast
 	End Method
-	
+EndRem
+
 	' WHILE...WEND
 	Method Parse_While:TASTNode()
 'DebugStop

@@ -56,6 +56,8 @@ Type TASTCompound Extends TASTNode
 		End If
 		If Not children Return block
 		For Local child:TASTNode = EachIn children
+'Print( child.classname +":"+child.tokenid+"="+child.value )
+'If child.tokenid=645 DebugStop
 			block :+ child.reveal( indent+"  " )
 		Next
 		Return block

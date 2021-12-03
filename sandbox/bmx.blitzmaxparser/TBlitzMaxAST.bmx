@@ -102,9 +102,34 @@ End Type
 '		
 'End Type
 
-' This AST Node is used for LOCAL, GLOBAL and FIELD definitions
-'Type TAST_VariableDeclaration Extends TASTBinary { class="VariableDeclaration" }
-'End Type
+' A Variable Assigment
+'	NODE WILL BE ONE OF THE FOLLOWING:
+'		TK_Local, TK_Global, TK_Field, TK_COnst
+'		lnode will be of type TAST_VARDEF - BEFORE the equals sign
+'		rnode will be the expression AFTER the equals sign (or null if undefined)
+Type TAST_Assignment Extends TASTBinary { class="ASSIGNMENT" }
+
+	Method New( token:TToken )
+		consume( token )
+		' Need to do this here or they are initialised with $000000000 and null detection fails!
+		lnode = Null
+		rnode = Null
+	End Method
+
+	Method validate()
+Rem
+	* Const must have an EQUALS and an expression
+	* Const canot be a funnction type
+End Rem
+	End Method
+	
+End Type
+
+' Node used to represent a condition
+'	Node itself will usually be an "EQUAL", but could be a NULL in a "IF TRUE" scenario
+'	lnode and rnode are the two expressions to be evaluated
+Type TAST_Condition Extends TASTBinary { class="CONDITION" }
+End Type
 
 Type TAST_Comment Extends TASTNode { class="COMMENT" }
 '	Method validate() ; valid = True ; error = [] ; End Method
@@ -192,6 +217,16 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 		
 	End Method
 
+End Type
+
+Type TAST_IFTHEN Extends TASTNode { class="IFTHEN" }
+	Field condition:TAST_Condition
+
+	' Used for debugging tree structure
+	Method showLeafText:String()
+		Return "UNDEFINED"
+	End Method
+	
 End Type
 
 Type TAST_Import Extends TASTNode { class="IMPORT" }
@@ -311,12 +346,15 @@ Type TAST_Type Extends TASTCompound { class="TYPE" }
 	
 End Type
 
-' A Variable Declaration
-Type TAST_VARDECL Extends TASTBinary { class="VARDECL" }
-End Type
-
 ' A Variable Definition
-Type TAST_VARDEF Extends TASTBinary { class="VARDEF" }
+'	NODE WILL BE TK_Colon
+'		lnode = Variable Name (BEFORE COLON)
+'		rnode = Variable Type (AFTER COLON)
+Type TAST_VarDef Extends TASTNode { class="VARDEF" }
+	Field name:TToken
+	Field colon:TToken
+	Field vartype:TToken
+	Field func:TAST_Function	' Function variables
 End Type
 
 Type TAST_While Extends TASTCompound { class="WHILEWEND" }

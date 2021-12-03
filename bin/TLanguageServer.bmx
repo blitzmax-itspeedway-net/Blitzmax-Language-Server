@@ -727,6 +727,15 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	End Method
 
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_symbol
+	' REQUEST: workspace/symbol
+	Method on_workspace_symbol:JSON( message:TMessage )		
+		ImplementationIncomplete( message )
+		
+		' NOTE: Request may include a params/query, but I don;t know what format this will be.
+		' Look for params/workdone flag to create a Progress Bar
+	End Method
+
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
 '	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
 '		ImplementationIncomplete( message )

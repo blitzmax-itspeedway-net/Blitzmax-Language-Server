@@ -37,7 +37,7 @@ Type TWorkspaceCache
 	
 	Const CACHEPATH:String = ".bls-cache"
 	Const CACHEFILE:String = "workspace.cache"
-	Const CACHEVERSION:Int = 1
+	Const CACHEVERSION:Int = 2
 	
 	Field db:TDBConnection
 	Field dbpath:String
@@ -95,7 +95,7 @@ Type TWorkspaceCache
 			update()
 		Else
 			Print "- Creating tables"
-			Self.build()
+			Self.buildDatabase()
 			'build()
 		End If
 		
@@ -112,23 +112,22 @@ Type TWorkspaceCache
 		Local version:Int = record.getint(1)
 		If version >= CACHEVERSION ; Return ' No update necessary
 		'
-		Select version
-		Case 1
-			update_from_v1()
-		Default
-			' Delete tables and rebuild.
-		End Select
+		If version <2 ; update_from_v1()	' Version 1 had a mistake in the column names
+
 		' Update the version attribute
-		exec( "UPDATE attr SET value="+CACHEVERSION+" WHERE key='version';" ) 
+		exec( "UPDATE attr SET value="+CACHEVERSION+";" ) 
 	End Method
 	
 	' Update from cache V1
 	Method update_from_v1()
-		' This is ready for next update!
+		' Version 1 had a mistake in the column names, so we need to rebuild this table
+		' Not ideal, but version 1 didn't use it, so it won't make any difference.
+		exec( "DROP TABLE symbols;" )
+		buildDatabase()
 	End Method
 	
 	' Build the database
-	Method build()
+	Method buildDatabase()
 
 		'	attr table
 		
@@ -153,9 +152,10 @@ Type TWorkspaceCache
 				"uri VARCHAR(255) NOT NULL DEFAULT '', " +..
 				"name VARCHAR(255) NOT NULL DEFAULT '', " +..
 				"kind INT NOT NULL DEFAULT 0, " +..
-				"line_start INTEGER NOT NULL DEFAULT 0, " +..
-				"line_end INTEGER NOT NULL DEFAULT 0, " +..
-				"containerName VARCHAR(255) NOT NULL DEFAULT '' " +..
+				"start_line INTEGER NOT NULL DEFAULT 0, " +..
+				"start_char INTEGER NOT NULL DEFAULT 0, " +..
+				"end_line INTEGER NOT NULL DEFAULT 0, " +..
+				"end_char INTEGER NOT NULL DEFAULT 0 " +..
 				");" )
 		
 		' 	Insert initial data
@@ -228,5 +228,30 @@ Type TWorkspaceCache
 	' #
 	' ##### SYMBOL TABLE SERVICES
 	' #
-
+	
+	' Add symbols from a document
+	Method addSymbols( uri:TUri, symbols:TSymbolTable )
+		If Not symbols Or Not uri Return
+		Local sql:String
+		Local fileuri:String = uri.toString()
+		LockMutex( lock )
+		' Remove old symbols
+		exec( "DELETE FROM symbols WHERE uri='"+fileuri+"';" )
+		
+		For Local symbol:TSymbolTableRow = EachIn symbols.data
+			If Not symbol.location Or Not symbol.location.range Or Not symbol.location.range.start Or Not symbol.location.range.ends ; Continue
+			sql = "INSERT INTO symbols( uri,name,kind,start_line,start_char,end_line,end_char) "+ ..
+				  "VALUES(" +..
+					"'"+fileuri+"'," +..
+					"'"+symbol.name+"'," +..
+					symbol.kind+"," +..
+					symbol.location.range.start.line+"," +..
+					symbol.location.range.start.character+"," +..
+					symbol.location.range.ends.line+"," +..
+					symbol.location.range.ends.character+");"
+			exec( sql )
+		Next
+		UnlockMutex( lock )
+	End Method
+	
 End Type

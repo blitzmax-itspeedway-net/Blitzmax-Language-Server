@@ -12,11 +12,13 @@
 Type TTaskDocumentParse Extends TTask
 
 	Field document:TTextDocument
-
-	Method New( document:TTextDocument, priority:Int = QUEUE_PRIORITY_DOCUMENT_PARSE )
+	Field workspace:TWorkspace = Null		' The workspace we are updating
+	
+	Method New( document:TTextDocument, workspace:TWorkspace, priority:Int = QUEUE_PRIORITY_DOCUMENT_PARSE )
 		name = "document{"+document.uri.tostring()+"}"
 		Self.priority = priority
 		Self.document = document
+		Self.workspace = workspace
 	End Method
 
 	Method execute()
@@ -32,8 +34,10 @@ Type TTaskDocumentParse Extends TTask
 		document.lexer = New TBlitzMaxLexer( document.content )
 		Local parser:TParser = New TBlitzMaxParser( document.lexer )
 		document.ast = parser.parse_ast()
+		
 		' Parse the AST into a symbol table
-		createSymbolTable()
+		workspace.cache.addSymbols( document.uri, New TSymbolTable( document.ast ) )
+		
 		finish = MilliSecs()
 		
 		'logfile.debug( "FILE '"+uri.tostring()+"':" )

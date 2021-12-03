@@ -179,18 +179,6 @@ logfile.debug( "CREATED DATA" )
 
 End Function
 
-' A Gift is an Argument brought by a Visitor... ;) ha ha... 
-Type TGift
-	Field node:TASTNode
-	Field data:JSON
-	Field prefix:String
-	Method New( node:TASTNode, data:JSON, prefix:String )
-		Self.node = node
-		Self.data = data
-		Self.prefix = prefix
-	End Method
-EndType
-
 Type TDocumentSymbolVisitor Extends TVisitor
 
 	Field ast:TASTNode
@@ -209,7 +197,6 @@ Type TDocumentSymbolVisitor Extends TVisitor
 		Self.options = options
 	End Method
 
-	' Create source code from the AST
 	Method run:JSON()
 		Local J:JSON = New JSON( JSON_ARRAY )	' DocumentSymbol[]
 		visit( ast, J, "outline" )
@@ -325,7 +312,8 @@ End Rem
 		documentSymbol.set( "range", JRange( node ) )
 		documentSymbol.set( "selectionRange", JRange( node ) )
 		' Add to mother node
-		arg.data.addLast( documentSymbol )
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 	End Method
 
 	Method outline_ERROR( arg:TGift )
@@ -342,7 +330,8 @@ End Rem
 		'documentSymbol.set( "children", children )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 		'visitChildren( arg.node, children, arg.prefix )
 	End Method
 	
@@ -361,7 +350,8 @@ End Rem
 		'documentSymbol.set( "children", children )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 		' Children nodes
 		Local children:JSON = New JSON( JSON_ARRAY )
 		documentSymbol.set( "children", children )
@@ -383,7 +373,8 @@ End Rem
 		documentSymbol.set( "children", children )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 		'visitChildren( arg.node, children, arg.prefix )
 		
 	End Method
@@ -402,7 +393,8 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 		
 		' Add to mother node
-		arg.data.addLast( documentSymbol )	
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 	End Method
 	
 	' END OF LINE (EOL)
@@ -418,7 +410,8 @@ End Rem
 			documentSymbol.set( "range", JRange( arg.node ) )
 			documentSymbol.set( "selectionRange", JRange( arg.node ) )
 			' Add to mother node
-			arg.data.addLast( documentSymbol )
+			Local data:JSON = JSON( arg.data )
+			data.addLast( documentSymbol )
 		End If
 	End Method
 		
@@ -436,7 +429,9 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
+
 		' Children nodes
 		Local children:JSON = New JSON( JSON_ARRAY )
 		documentSymbol.set( "children", children )
@@ -462,7 +457,8 @@ End Rem
 		'documentSymbol.set( "children", children )
 		
 		' Add to mother node
-		arg.data.addLast( documentSymbol )	
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 
 		'If node.body ; visitChildren( node.body, children, arg.prefix )
 		' Children nodes
@@ -485,7 +481,8 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 		
 		' Add to mother node
-		arg.data.addLast( documentSymbol )	
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 	End Method
 
 	Method outline_IMPORT( arg:TGift )
@@ -502,7 +499,8 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )			
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 	End Method
 
 	Method outline_INTERFACE( arg:TGift )
@@ -519,7 +517,9 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
+
 		' Children nodes
 		Local children:JSON = New JSON( JSON_ARRAY )
 		documentSymbol.set( "children", children )
@@ -550,7 +550,9 @@ End Rem
 		'documentSymbol.set( "children", children )
 		
 		' Add to mother node
-		arg.data.addLast( documentSymbol )	
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
+
 		' Children nodes
 		Local children:JSON = New JSON( JSON_ARRAY )
 		documentSymbol.set( "children", children )
@@ -576,7 +578,9 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 		
 		' Add to mother node
-		arg.data.addLast( documentSymbol )	
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
+
 	End Method
 	
 	Method outline_STRUCT( arg:TGift )
@@ -593,7 +597,9 @@ End Rem
 		documentSymbol.set( "selectionRange", JRange( node ) )
 
 		' Add to mother node
-		arg.data.addLast( documentSymbol )
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
+
 		' Children nodes
 		Local children:JSON = New JSON( JSON_ARRAY )
 		documentSymbol.set( "children", children )
@@ -620,7 +626,8 @@ End Rem
 		'documentSymbol.set( "children", children )
 		
 		' Add to mother node
-		arg.data.addLast( documentSymbol )	
+		Local data:JSON = JSON( arg.data )
+		data.addLast( documentSymbol )
 
 		' Children nodes
 		Local children:JSON = New JSON( JSON_ARRAY )

@@ -123,7 +123,18 @@ End Type
 ' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#location
 Type TLocation
 	Field uri:String
-	Field range:TRange
+	Field range:TRange = Null
+
+	Method New( uri:String, token:TToken )
+		Self.uri = uri
+		If token ; range = New TRange( New TPosition( token ), New TPosition( token.line, token.pos+token.value.length ) )
+	End Method
+
+	Method reveal:String()
+		If range ; Return range.reveal()
+        Return "[]"
+	End Method
+
 End Type
 
 ' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#position
@@ -199,7 +210,8 @@ Type TRange
 			str :+ ends.reveal()
 		Else
 			str = "[]"
-		End If		
+		End If
+		Return str	
 	End Method
 	
 End Type

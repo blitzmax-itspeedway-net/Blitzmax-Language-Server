@@ -94,6 +94,7 @@ Include "bin/TWorkspaces.bmx"		' Manages ALL workspaces
 Include "bin/TWorkspace.bmx"		' Manages a single workspace
 Include "bin/TWorkspaceCache.bmx"	' Manages the workspace cache
 Include "bin/TDBDocument.bmx"		' Database Document Interaction
+Include "bin/TGift.bmx"				' Gift brought by a Visitor ;)
 
 'Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - replaced by TWorkspace
 

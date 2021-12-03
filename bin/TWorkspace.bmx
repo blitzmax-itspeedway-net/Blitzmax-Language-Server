@@ -15,6 +15,7 @@ Type TWorkspace
 	' Object lock
 	Field lock:TMutex = CreateMutex()
 
+	'Field symbolTable:TSymbolTable = Null
 	' Threaded Validator
 	'Field DocThread:TThread
 	'Field QuitDocThread:Int = True
@@ -33,7 +34,7 @@ Type TWorkspace
 
 		' Create/Open Workspace Cache
 		cache = New TWorkspaceCache( location )
-		
+				
 Rem	
 '		logfile.debug( "# WORKSPACE IS "+uri.tostring()+", "+location )
 		If location <> "/"
@@ -141,7 +142,7 @@ End Rem
 			document.version = version
 
 			' Create PARSE task
-			Local task:TTaskDocumentParse = New TTaskDocumentParse( document )
+			Local task:TTaskDocumentParse = New TTaskDocumentParse( document, self )
 			task.post()
 		
 '			Local document:TFullTextDocument = New TFullTextDocument( uri, Text, version )

@@ -50,7 +50,7 @@ Type TTaskWorkspaceScan Extends TTask
 					' Add it to the cache:
 					workspace.cache.addDocument( file )
 					' Create task to rescan document
-					Local task:TTaskDocumentParse = New TTaskDocumentParse( file )
+					Local task:TTaskDocumentParse = New TTaskDocumentParse( file, workspace )
 					task.post()
 				Else
 					' File has not changed, add it to the workspace:
@@ -65,7 +65,7 @@ Type TTaskWorkspaceScan Extends TTask
 				' Add it to the cache:
 				workspace.cache.addDocument( file )
 				' Create task to scan document
-				Local task:TTaskDocumentParse = New TTaskDocumentParse( file )
+				Local task:TTaskDocumentParse = New TTaskDocumentParse( file, workspace )
 				task.post()
 			End If
 		Next
