@@ -131,7 +131,7 @@ Const JSON_MINIMUM_VERSION:Float = 2.2		' Need support for search()
 Const JSON_MINIMUM_BUILD:Int = 2
 
 ' USING PRINT SCREWS UP STDIO SO DONT USE IT!
-Function Print( Message:String ) ; End Function
+'Function Print( Message:String ) ; End Function
 
 'Local td:TDiagnostic = New TDiagnostic()
 

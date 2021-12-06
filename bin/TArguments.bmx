@@ -138,10 +138,63 @@ Type TArguments
 	Method New()
 'DebugStop
 		'   ARGUMENTS
+'		DebugLog( "ARGS: ("+AppArgs.length+")" )
 		'Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
 		'logfile.debug( "  ARGS:" )'       "+AppArgs.length+"~n"+("#".join(AppArgs)) )
 		'DebugStop
 		
+'DebugStop		
+
+		' Parse CLI commands
+		Select Lower(AppArgs[1])
+		Case "--help", "-h", "/?"
+			help()
+			exit_(1)
+		Case "--version", "-v", "/v"
+			Print AppTitle
+			Print "Version "+version+"."+build
+			exit_(1)
+		Case "set"
+			If AppArgs.length<=3
+				Print( "Missing argument" )
+				Print()
+				Print( "Syntax:" )
+				Print( "  "+StripDir(AppArgs[0])+ " set <key> <value>" )
+				Print()
+				Print( "  <key> options can be split using '.', for example" )
+				Print( "  "+StripDir(AppArgs[0])+ " set my.user.variable TRUE" )
+				Exit_(1)
+			End If
+			Local key:String = AppArgs[2].Replace(".","|")
+			Local value:String = " ".join( AppArgs[3..] )
+'DebugLog( "Setting '"+key+"' to '"+value+"'" )
+			CONFIG[key]=value
+			CONFIG.save()
+			Print( CONFIG.J.prettify() )
+			exit_(1)			
+		Case "clear", "unset"
+			If AppArgs.length<=2
+				Print( "Missing argument" )
+				Print()
+				Print( "Syntax:" )
+				Print( "  "+StripDir(AppArgs[0])+" "+AppArgs[1]+" <key>" )
+				Print()
+				Print( "  <key> options can be split using '.', for example" )
+				Print( "  "+StripDir(AppArgs[0])+" "+AppArgs[1]+" my.user.variable" )
+				Exit_(1)
+			End If
+			Local key:String = AppArgs[2].Replace(".","|")
+			CONFIG[key]="null"
+			CONFIG.save()
+			Print( CONFIG.J.prettify() )
+			exit_(1)
+		Case "show", "--show", "/show"
+			Print( CONFIG.J.prettify() )
+			exit_(1)
+		EndSelect
+
+		'	PARSE FEATURES
+
 		' Load supported arguments from disk
 		Local file:TStream = ReadStream( "incbin::arguments.json" )
 		Local arguments:String
@@ -258,16 +311,16 @@ End Rem
 
 'DebugLog( "CHECKING CLI OPTIONS" )
 		' Parse CLI commands
-		If CONFIG.isTrue( "cli|help" )
-			help()
-			exit_(1)
-		EndIf
+'		If CONFIG.isTrue( "cli|help" )
+'			help()
+'			exit_(1)
+'		EndIf
 
-		If CONFIG.isTrue( "cli|version" )
-			Print AppTitle
-			Print "Version "+version+"."+build
-			exit_(1)
-		EndIf
+'		If CONFIG.isTrue( "cli|version" )
+'			Print AppTitle
+'			Print "Version "+version+"."+build
+'			exit_(1)
+'		EndIf
 
 		'Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
 		'logfile.debug( "CONFIG:~n"+CONFIG.J.Prettify() )

@@ -4,12 +4,13 @@
 
 Type TConfig ' Extends TMap
 	Field J:JSON = New JSON()
+	Field filename:String
 
     Method New()
         'logfile.write( "Config started" )
         'defaults()
+        filename = AppDir+"/bls.config"
         Try
-            Local filename:String = AppDir+"/bls.config"
             ' Check if file exists
             Select FileType( filename )
             Case 0  ' File does not exist
@@ -35,7 +36,7 @@ Type TConfig ' Extends TMap
     Method defaults()
 		If Not J.Contains("logfile") ; J.set( "logfile", "" )
 		If Not J.Contains("loglevel") ; J.set( "loglevel", "7" )
-		If Not J.Contains("threadpool") ; J.set( "threadpool", "4" )
+		'If Not J.Contains("threadpool") ; J.set( "threadpool", "4" )
 		If Not J.Contains("transport") ; J.set( "transport", "stdio" )		' STDIO or TCP
     End Method 
 
@@ -83,7 +84,6 @@ Rem
     End Method
 End Rem
 
-	' Language server NEVER writes config back. That is a one-way street!
 Rem
     Method writeconfig( filename:String )
         Local file:TStream = WriteStream( filename )
@@ -93,6 +93,13 @@ Rem
         file.Close()
     End Method
 End Rem
+
+    Method save()
+		If filename="" ; Return
+        Local file:TStream = WriteStream( filename )
+        WriteString( file, J.Stringify() )
+        file.Close()
+    End Method
 
 	Method Operator []:String( key:String )
 		Local JResult:JSON = J.find( key )
@@ -106,7 +113,7 @@ End Rem
 	End Method
 	
     ' Method to match other capability queries
-    method has:int( path:string )
+    Method has:Int( path:String )
 		Local key:JSON = J.find( path )
 		Return key.isTrue()
 	End Method
