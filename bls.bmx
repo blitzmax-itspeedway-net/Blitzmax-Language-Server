@@ -3,10 +3,6 @@ SuperStrict
 '   BLITZMAX LANGUAGE SERVER
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-Rem WHERE AM I?
-* Working on TASKS and WORKSPACE SYMBOLS
-End Rem
-
 '	OBJECT HEIRARCHY
 '	----------------
 '	TEventHandler
@@ -131,8 +127,8 @@ Incbin "arguments.json"
 
 '	COMPATABILITY
 
-Const JSON_MINIMUM_VERSION:Float = 2.1
-Const JSON_MINIMUM_BUILD:Int = 10
+Const JSON_MINIMUM_VERSION:Float = 2.2		' Need support for search()
+Const JSON_MINIMUM_BUILD:Int = 2
 
 ' USING PRINT SCREWS UP STDIO SO DONT USE IT!
 Function Print( Message:String ) ; End Function

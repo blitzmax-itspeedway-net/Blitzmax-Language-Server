@@ -23,7 +23,7 @@
         "notype":{ "key":"outline|notype", "value":"true", "hint":"Hide node type in Outline"}
     },
     "-x": {
-        "diag":{ "key":"experimental|diag", "value":"true", "hint":"Feature 'diag' (Diagnostic Information) is experimental
-"}
+        "diag":{ "key":"experimental|diag", "value":"true", "hint":"Feature 'diag' (Diagnostic Information) is experimental"},
+        "wsym":{ "key":"experimental|wsym", "value":"true", "hint":"Feature 'wsym' (Workspace Symbols) is experimental"}
     }
 }

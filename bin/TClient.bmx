@@ -65,6 +65,11 @@ Type TClient Extends TMessageQueue
 		Return capabilities.find( resource )
 	End Method
 	
+	' Check if Client has a particular capability (works by name only)
+	Method contains:Int( capability:String )
+		Return Not( capabilities.search( capability ) = Null )
+	End Method
+
 	' Check if Client has a particular capability (Only works with Boolean types)
 	Method has:Int( capability:String )
 		Local J:JSON = capabilities.find( capability )
@@ -72,7 +77,7 @@ Type TClient Extends TMessageQueue
 		'If Not J Return False
 		'Return ( J.tostring() = "true" )
 	End Method
-
+	
 	' HELPER: Send a message to client by pushing it to the send queue
 	Method logMessage( message:String, messagetype:Int )
 		Local J:JSON = EmptyResponse( "window/logMessage" )

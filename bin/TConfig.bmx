@@ -105,6 +105,12 @@ End Rem
 		J.set( key, value )
 	End Method
 	
+    ' Method to match other capability queries
+    method has:int( path:string )
+		Local key:JSON = J.find( path )
+		Return key.isTrue()
+	End Method
+
 	Method isTrue:Int( path:String )
 		Local key:JSON = J.find( path )
 'logfile.debug( "KEY:"+key.stringify() )

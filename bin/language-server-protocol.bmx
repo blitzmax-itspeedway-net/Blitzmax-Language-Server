@@ -127,7 +127,7 @@ Type TLocation
 
 	Method New( uri:String, token:TToken )
 		Self.uri = uri
-		If token ; range = New TRange( New TPosition( token ), New TPosition( token.line, token.pos+token.value.length ) )
+		If token ; range = New TRange( New TPosition( token ), New TPosition( UInt(token.line), UInt(token.pos+token.value.length )) )
 	End Method
 
 	Method reveal:String()

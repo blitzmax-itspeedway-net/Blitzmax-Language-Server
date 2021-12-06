@@ -7,11 +7,18 @@ Rem	IMPLEMENTED ARGUMENTS
 	Arguments can be combined. For example "-o:ast" and "-o:eol" can be combined into "-o:ast,eol"
 	
 	-x:<option>		Enable experimental option
+					diag		Diagnostics Provider
+					wsym		Workspace Symbol Provider
 	-ast			DEPRECIATED, PLEAE USE -o:ast
 	-eol			DEPRECIATED, PLEAE USE -o:eol
-	-o:ast			Show AST in outline
-	-o:eol			Show EOL in AST
-	-o:noname		Do not display token name in outline
+	-o:<options>
+					ast			Show AST in outline
+					eol			Show EOL in AST
+					noname		Do not display token name in outline
+	
+	** Options can be combined by seperating them with a cooa, for example:
+		
+		-o:ast,noname
 	
 	TERMINAL ONLY ARGUMENTS
 	
@@ -42,7 +49,7 @@ Rem	IMPLEMENTED ARGUMENTS
 	Rename Provider 						-ren
 	Resolve Provider 				 		-res
 	Signature Help 							-s
-	Workspace Symbol Provider 				-w
+	Workspace Symbol Provider 				-w			-x:wsym
 		
 End Rem
 
@@ -133,7 +140,8 @@ Type TArguments
 		'   ARGUMENTS
 		'Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
 		'logfile.debug( "  ARGS:" )'       "+AppArgs.length+"~n"+("#".join(AppArgs)) )
-
+		'DebugStop
+		
 		' Load supported arguments from disk
 		Local file:TStream = ReadStream( "incbin::arguments.json" )
 		Local arguments:String
@@ -145,72 +153,72 @@ Type TArguments
 		
 		Local Features:JSON = JSON.PARSE( arguments )
 		DebugLog( Features.Prettify() )
-		
-		' Abort if JSON invalid
-		If Features.isInvalid() 
-			Print "INTERNAL ERROR:"
-			Print "TArguments.new() - Invalid Argment Data"
-			Print Features.error()
-			End
-		End If
-		
+
 		' Set the application argument in case we need it later
 		CONFIG[ "app" ] = AppArgs[0]
 		
+		' Parse JSON or report error
+		If Features.isInvalid() 
+			DebugLog "INTERNAL ERROR:"
+			DebugLog "TArguments.new() - Invalid Argment Data"
+			DebugLog Features.error()
+			logfile.critical( "## INTERNAL ERROR" )
+			logfile.critical( "## TArguments.New() - Invalid Argument Data" )
+		Else
 'DebugStop
 		'DebugLog( "ARGS:"+AppArgs.length )
 		
-		' Parse all the arguments, splitting them by ":"
-		For Local n:Int=1 Until AppArgs.length
-			' Split argument into KEY/VALUE pair
-			Local items:String[] = AppArgs[n].split(":")
-			Local section:String = Lower( items[0] )
-			Local value:String = ""
-			Select items.length
-			Case 1
-				value = ""
-			Case 2
-				value = Lower(items[1])
-			Default
-				value = ":".join( items[1..] )
-			EndSelect
-			
-			' Check the section key is supported
-			If Not Features.contains( section )
-				logfile.warning "## Invalid argument: "+AppArgs[n]
-				Continue
-			End If
-'DebugLog "SECTION='"+section+"'"
-			Local JSection:JSON = Features.find( section )
-			
-			' Extract keys from value
-			Local keys:String[] = value.split(",")
-			If keys[0]="" ; keys[0]="default"			
-			For Local key:String = EachIn keys
-				' Split KEY into KEY:VALUE
-				Local keyvalue:String[] = key.split("=")
-				value = ""
+			' Parse all the arguments, splitting them by ":"
+			For Local n:Int=1 Until AppArgs.length
+				' Split argument into KEY/VALUE pair
+				Local items:String[] = AppArgs[n].split(":")
+				Local section:String = Lower( items[0] )
+				Local value:String = ""
+				Select items.length
+				Case 1
+					value = ""
+				Case 2
+					value = Lower(items[1])
+				Default
+					value = ":".join( items[1..] )
+				EndSelect
 				
-'D'ebugLog "- KEY='"+key+"'"
-				
-				If JSection.contains( keyvalue[0] )
-					Local JOption:JSON = JSection.find( keyvalue[0] )
-'DebugLog( "- VALID "+section+":"+keyvalue[0])
-					Local hint:String = JOption.find("hint").toString()
-					If hint <> "" ; logfile.info( "## " + hint )
-					
-					If keyvalue.length=1 
-						value = JOption.find("value").toString()
-					Else
-						value = keyvalue[1]
-					End If
-					CONFIG[ JOption.find("key").toString() ] = value
-				Else
-					logfile.warning "## Invalid argument: "+section+":"+key
+				' Check the section key is supported
+				If Not Features.contains( section )
+					logfile.warning "## Invalid argument: "+AppArgs[n]
+					Continue
 				End If
+	'DebugLog "SECTION='"+section+"'"
+				Local JSection:JSON = Features.find( section )
 				
-				
-			Next
+				' Extract keys from value
+				Local keys:String[] = value.split(",")
+				If keys[0]="" ; keys[0]="default"			
+				For Local key:String = EachIn keys
+					' Split KEY into KEY:VALUE
+					Local keyvalue:String[] = key.split("=")
+					value = ""
+					
+	'D'ebugLog "- KEY='"+key+"'"
+					
+					If JSection.contains( keyvalue[0] )
+						Local JOption:JSON = JSection.find( keyvalue[0] )
+	'DebugLog( "- VALID "+section+":"+keyvalue[0])
+						Local hint:String = JOption.find("hint").toString()
+						If hint <> "" ; logfile.info( "## " + hint )
+						
+						If keyvalue.length=1 
+							value = JOption.find("value").toString()
+						Else
+							value = keyvalue[1]
+						End If
+						CONFIG[ JOption.find("key").toString() ] = value
+					Else
+						logfile.warning "## Invalid argument: "+section+":"+key
+					End If
+					
+					
+				Next
 
 Rem			'
 			Select section
@@ -241,9 +249,14 @@ Rem			'
 				End If
 			End Select
 End Rem	
-		Next
+			Next
 
-DebugLog( "CHECKING CLI OPTIONS" )
+		End If
+
+'DebugStop
+'		If CONFIG.has( "experimental|wsym" ) ; DebugLog( "WORKSPACE SYMBOLS ENABLED" )
+
+'DebugLog( "CHECKING CLI OPTIONS" )
 		' Parse CLI commands
 		If CONFIG.isTrue( "cli|help" )
 			help()
@@ -258,7 +271,8 @@ DebugLog( "CHECKING CLI OPTIONS" )
 
 		'Publish( "log", "DBG", "CONFIG:~n"+CONFIG.J.Prettify() )
 		'logfile.debug( "CONFIG:~n"+CONFIG.J.Prettify() )
-'DebugLog( CONFIG.J.prettify() )
+		
+		DebugLog( CONFIG.J.prettify() )
 	End Method
 	
 	'Method experiment:String( criteria:String )

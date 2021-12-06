@@ -505,8 +505,6 @@ EndRem
 		'serverCapabilities.set( "referencesProvider", [] )
 		'serverCapabilities.set( "referencesProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "documentHighlightProvider", [] )
-		serverCapabilities.set( "documentSymbolProvider", True )
-		serverCapabilities.set( "documentSymbolProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "codeActionProvider", [] )
 		'serverCapabilities.set( "codeLensProvider", [] )
 		'serverCapabilities.set( "documentLinkProvider", [] )
@@ -522,10 +520,28 @@ EndRem
 		'serverCapabilities.set( "linkedEditingRangeProvider", [] )
 		'serverCapabilities.set( "callHierarchyProvider", [] )
 		'serverCapabilities.set( "monikerProvider", [] )
-		'serverCapabilities.set( "workspaceSymbolProvider", [] )
-		'serverCapabilities.set( "workspaceSymbolProvider|workDoneProgress", "true" )
+
+		'	TEXT DOCUMENT CAPABILITIES
+		
+		'If client.has( "textDocument|documentSymbol" )
+			serverCapabilities.set( "documentSymbolProvider", True )
+			serverCapabilities.set( "documentSymbolProvider|workDoneProgress", "true" )
+		'End If
+
+		
+		'	WORKSPACE CAPABILITIES
+		
+		If client.contains( "workspace|symbol" ) And config.has( "experimental|wsym" )
+			logfile.debug( "# ENABLING: workspaceSymbolProvider" )
+			If client.has( "workspace|symbol|workDone" )	'Progress support
+			'serverCapabilities.set( "workspaceSymbolProvider", [] )
+				serverCapabilities.set( "workspaceSymbolProvider|workDoneProgress", "true" )
+			Else
+				serverCapabilities.set( "workspaceSymbolProvider", "true" )
+			End If
+		End If
 		If client.has( "workspace|workspaceFolders" ) 
-			logfile.debug( "# Client HAS workspace|workspaceFolders" )
+			logfile.debug( "# ENABLING: workspace|workspaceFolders" )
 			serverCapabilities.set( "workspace|workspaceFolders|supported", "true" )
 			' send plural and non-plural due to a typo in the LSP 3.16 documentation that doesn't explain
 			' which one is correct!
@@ -540,6 +556,8 @@ EndRem
 		'serverCapabilities.set( "workspace|fileOperations|didDelete|filters|scheme", "file" )
 		'serverCapabilities.set( "workspace|fileOperations|willDelete|filters|scheme", "file" )
 		'serverCapabilities.set( "experimental", [] )
+		
+		'	PREPARE RESPONSE
 		
 		Local InitializeResult:JSON = Response_OK( id )
 
