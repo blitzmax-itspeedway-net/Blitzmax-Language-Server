@@ -662,143 +662,6 @@ EndRem
 '		End If
 '		' NOTIFICATION: No response necessary
 '	End Method
-	
-	'	##### WORKSPACE MESSAGES #####
-	
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders
-'	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
-'		ImplementationIncomplete( message )
-'	End Method
-
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
-	' NOTIFICATION: workspace/didChangeWorkspaceFolders
-	Method on_workspace_didChangeWorkspaceFolders:JSON( message:TMessage )		
-		'ImplementationIncomplete( message )
-		
-		Local params:JSON = message.params
-		
-		Local add:JSON = params.find( "event|added" )
-logfile.debug( add.getClassName()+":"+add.stringify() )
-		Local sub:JSON = params.find( "event|removed" )
-logfile.debug( sub.getClassName()+":"+sub.stringify() )
-		
-		Local added:JSON[] = params.find( "event|added" ).toArray()
-		Local removed:JSON[] = params.find( "event|removed" ).toArray()
-
-logfile.debug( "ADDED: "+added.length )
-If added.length>0 ; logfile.debug( added[0].stringify() )
-logfile.debug( "REMOVED: "+removed.length )
-If removed.length>0 ; logfile.debug( removed[0].stringify() )
-
-
-		' Add new Workspaces
-		For Local item:JSON = EachIn added
-			Local name:String = item.find( "name" ).toString()
-			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
-			logfile.debug( "Adding "+name+" - "+ uri.tostring() )
-			logfile.debug( item.stringify() )
-			If uri ; Workspaces.add( uri, New TWorkspace( name, uri ) )
-		Next
-
-		' Remove Workspaces (and files within them)
-		For Local item:JSON = EachIn removed
-			Local name:String = item.find( "name" ).toString()
-			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
-			logfile.debug( "Removing "+name+" - "+ uri.tostring() )
-			logfile.debug( item.stringify() )
-
-			If uri ; Workspaces.remove( uri )
-			
-			' Check if we just removed the root workspace
-			'If rooturi = uri
-			'	
-			'	If added.length >0
-			'		' Use the newly added record as new root uri
-			'		rooturi = added[0].find( "uri" ).toString()
-			'		rootworkspace = Workspaces.get( rooturi )
-			'	Else
-			'		Local workspace:TWorkspace = Workspaces.getfirst()
-			'		If Not workspace ; Continue	' This seems to only occur when server shutting down
-			'		rooturi = workspace.uri
-			'		rootworkspace = workspace
-			'	End If
-			'	
-			'End If
-		Next
-		
-logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
-
-		'If Not rootworkspace Return Null
-
-'logfile.debug( ">> REVIEWING WORKSPACES" )
-
-		' Check if any documents in the root workspace should be moved
-		'For Local document:TTextDocument = EachIn rootworkspace.all()
-		'	Local workspace:TWorkspace = Workspaces.get( document.uri )
-		'	If Not workspace ; Continue
-		'	' Candidate found, so move it...
-		'	workspace.document_add( document.uri, document )
-		'	rootworkspace.document_remove( document.uri )
-		'Next
-
-'logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
-
-	End Method
-
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_symbol
-	' REQUEST: workspace/symbol
-	Method on_workspace_symbol:JSON( message:TMessage )		
-		ImplementationIncomplete( message )
-		
-		' NOTE: Request may include a params/query, but I don;t know what format this will be.
-		' Look for params/workdone flag to create a Progress Bar
-	End Method
-
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
-'	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
-'		ImplementationIncomplete( message )
-'		Local params:JSON = message.params
-'		
-'		'Local workspace:TWorkspace = Workspaces.findUri( uri )
-'		'workspace.config_update( cfg )
-'		
-'		' Lint all files in workspace using new config settings
-'		' foreach document in workspace
-'		'	document.lint()
-'		' next
-'	End Method
-
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
-'	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
-'		ImplementationIncomplete( message )
-'		Local id:String = message.getid()
-'		lsp.send( Response_OK( id ) )
-'	End Method
-
-	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
-'	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
-'		ImplementationIncomplete( message )
-'		
-'		Local params:JSON = message.params
-'		
-'		' PSUDOCODE UNTIL I SEE A REAL MESSAGE
-'		
-''		' local changes:JSON[] = params.find( "changes" ).toArray()
-'		' for local change:JSON = eachin changes
-'		'	local uri:String = change.find( "uri" )
-'		'	local extension:string = extractExt( uri )
-'		'	Local workspace:TWorkspace = Workspaces.findUri( uri )
-'		'	CAN BE BMX OR CONFIGURATION
-'		'	select extension
-'		'	case "bmx"
-'		'		add, remove or delete!
-'		'	case "???" ' Will this be an xml or json etc?
-'		'	end select
-'		'		
-'		
-'		'workspace.config_update( cfg )
-'		
-'	End Method
 '
 	'	##### TEXT DOCUMENT SYNC #####
 	
@@ -955,6 +818,177 @@ End Rem
 		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
 		Return bls_textDocument_documentSymbol( message )
 	End Method
+
+	'	##### WORKSPACE MESSAGES #####
+	
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders
+'	Method onWorkspaceFolders:TMessage( message:TMessage )				' NOTIFICATION
+'		ImplementationIncomplete( message )
+'	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
+	' NOTIFICATION: workspace/didChangeWorkspaceFolders
+	Method on_workspace_didChangeWorkspaceFolders:JSON( message:TMessage )		
+		'ImplementationIncomplete( message )
+		
+		Local params:JSON = message.params
+		
+		Local add:JSON = params.find( "event|added" )
+logfile.debug( add.getClassName()+":"+add.stringify() )
+		Local sub:JSON = params.find( "event|removed" )
+logfile.debug( sub.getClassName()+":"+sub.stringify() )
+		
+		Local added:JSON[] = params.find( "event|added" ).toArray()
+		Local removed:JSON[] = params.find( "event|removed" ).toArray()
+
+logfile.debug( "ADDED: "+added.length )
+If added.length>0 ; logfile.debug( added[0].stringify() )
+logfile.debug( "REMOVED: "+removed.length )
+If removed.length>0 ; logfile.debug( removed[0].stringify() )
+
+
+		' Add new Workspaces
+		For Local item:JSON = EachIn added
+			Local name:String = item.find( "name" ).toString()
+			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
+			logfile.debug( "Adding "+name+" - "+ uri.tostring() )
+			logfile.debug( item.stringify() )
+			If uri ; Workspaces.add( uri, New TWorkspace( name, uri ) )
+		Next
+
+		' Remove Workspaces (and files within them)
+		For Local item:JSON = EachIn removed
+			Local name:String = item.find( "name" ).toString()
+			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
+			logfile.debug( "Removing "+name+" - "+ uri.tostring() )
+			logfile.debug( item.stringify() )
+
+			If uri ; Workspaces.remove( uri )
+			
+			' Check if we just removed the root workspace
+			'If rooturi = uri
+			'	
+			'	If added.length >0
+			'		' Use the newly added record as new root uri
+			'		rooturi = added[0].find( "uri" ).toString()
+			'		rootworkspace = Workspaces.get( rooturi )
+			'	Else
+			'		Local workspace:TWorkspace = Workspaces.getfirst()
+			'		If Not workspace ; Continue	' This seems to only occur when server shutting down
+			'		rooturi = workspace.uri
+			'		rootworkspace = workspace
+			'	End If
+			'	
+			'End If
+		Next
+		
+logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+
+		'If Not rootworkspace Return Null
+
+'logfile.debug( ">> REVIEWING WORKSPACES" )
+
+		' Check if any documents in the root workspace should be moved
+		'For Local document:TTextDocument = EachIn rootworkspace.all()
+		'	Local workspace:TWorkspace = Workspaces.get( document.uri )
+		'	If Not workspace ; Continue
+		'	' Candidate found, so move it...
+		'	workspace.document_add( document.uri, document )
+		'	rootworkspace.document_remove( document.uri )
+		'Next
+
+'logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+
+	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_symbol
+	' REQUEST: workspace/symbol
+	Method on_workspace_symbol:JSON( message:TMessage )		
+		'ImplementationIncomplete( message )
+'logfile.debug( "WORKSPACE/SYMBOLS - START" )
+
+		Local id:String = message.getid()
+		Local params:JSON = message.params
+		'
+		If Not params ; Return Response_Error( ERR_INVALID_PARAMS, "Invalid Params", id )
+		Local query:String = ""
+		Local criteria:JSON  = params.search( "query" )
+		If criteria ; query = criteria.toString()
+		'logfile.debug( "QUERY: "+query )
+				
+		Local response:JSON = Response_OK( id )
+		
+		' The request does not tell us which workspace the query should look in.
+		' So for now, we need to return ALL symbols in ALL workspaces!!!
+		Local data:JSON = New JSON( JSON_Array )
+		
+		For Local key:String = EachIn Workspaces.list.keys()
+			Local workspace:TWorkspace = TWorkspace( Workspaces.list[key] )
+'logfile.debug( "WORKSPACE:" + workspace.name + "/" + key )
+			If workspace.cache
+				Local symbols:JSON[] = workspace.cache.getSymbols( query )
+				' Append workspace symbols to results
+				For Local symbol:JSON = EachIn symbols
+					data.addlast( symbol )
+				Next
+'			Else
+'logfile.debug( "- invalid cache" )
+			End If
+		Next
+
+
+		' Insert workspace results set into response.
+		response.set( "result", data )
+'logfile.debug( "RESPONSE~n"+response.stringify() )
+'logfile.debug( "WORKSPACE/SYMBOLS - FINISH" )
+		Return response
+	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeConfiguration
+'	Method onDidChangeConfiguration:TMessage( message:TMessage )		' NOTIFICATION
+'		ImplementationIncomplete( message )
+'		Local params:JSON = message.params
+'		
+'		'Local workspace:TWorkspace = Workspaces.findUri( uri )
+'		'workspace.config_update( cfg )
+'		
+'		' Lint all files in workspace using new config settings
+'		' foreach document in workspace
+'		'	document.lint()
+'		' next
+'	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
+'	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
+'		ImplementationIncomplete( message )
+'		Local id:String = message.getid()
+'		lsp.send( Response_OK( id ) )
+'	End Method
+
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
+'	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION
+'		ImplementationIncomplete( message )
+'		
+'		Local params:JSON = message.params
+'		
+'		' PSUDOCODE UNTIL I SEE A REAL MESSAGE
+'		
+''		' local changes:JSON[] = params.find( "changes" ).toArray()
+'		' for local change:JSON = eachin changes
+'		'	local uri:String = change.find( "uri" )
+'		'	local extension:string = extractExt( uri )
+'		'	Local workspace:TWorkspace = Workspaces.findUri( uri )
+'		'	CAN BE BMX OR CONFIGURATION
+'		'	select extension
+'		'	case "bmx"
+'		'		add, remove or delete!
+'		'	case "???" ' Will this be an xml or json etc?
+'		'	end select
+'		'		
+'		
+'		'workspace.config_update( cfg )
+'		
+'	End Method
 
 	' HANDLER TEMPLATE
 	

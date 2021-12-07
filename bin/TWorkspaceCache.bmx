@@ -254,4 +254,37 @@ Type TWorkspaceCache
 		UnlockMutex( lock )
 	End Method
 	
+	' Get a WorkspaceSymbol[] JSON array from the cache
+	Method getSymbols:JSON[]( criteria:String )
+		Local SQL:String = ..
+			"SELECT uri,name,kind,start_line,start_char,end_line,end_char " +..
+			"FROM symbols"
+		If criteria = ""
+			SQL :+ ";"
+		Else
+			SQL :+ " WHERE name LIKE '%"+criteria+"%';"
+		End If
+		
+		LockMutex( lock )
+		Local query:TDatabaseQuery = db.executeQuery( SQL )
+		UnlockMutex( lock )
+		
+		Local data:JSON[] = []
+		While query.nextRow()
+			Local record:TQueryRecord = query.rowRecord()
+			Local symbol:JSON = New JSON()
+			symbol.set( "name", record.getStringByName( "name" ) )
+			symbol.set( "kind", record.getIntbyName( "kind" ) )
+			'symbol.set( "tags", [] )
+			symbol.set( "location|uri", record.getStringByName( "uri" ) )
+			symbol.set( "location|range|start|line", record.getIntbyName( "start_line" ) )
+			symbol.set( "location|range|start|character", record.getIntbyName( "start_char" ) )
+			symbol.set( "location|range|end|line", record.getIntbyName( "end_line" ) )
+			symbol.set( "location|range|end|character", record.getIntbyName( "end_char" ) )
+			data :+ [symbol]
+			'logfile.debug( symbol.stringify() )
+		Wend
+		Return data
+	End Method
+	
 End Type

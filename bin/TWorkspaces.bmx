@@ -7,7 +7,7 @@ Const CACHE_FILE:String = "workspace.cache"
 
 Type TWorkspaces Extends TEventHandler
 
-	Global list:TMap = New TMap()
+	Field list:TMap = New TMap()
 		
 	' Add a Workspace
 	Method add( uri:TURI, workspace:TWorkspace )
