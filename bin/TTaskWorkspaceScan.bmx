@@ -10,19 +10,20 @@ Type TTaskWorkspaceScan Extends TTask
 	Const PROGRESS_FREQUENCY:Int = 1000
 		
 	Field workspace:TWorkspace
-	
-	' Threads
-	Field thread:TThread
-	Field quit:Int
 
 	Method New( workspace:TWorkspace, priority:Int = QUEUE_PRIORITY_WORKSPACE_SCAN )
+		Super.New( BLOCKING )
 		name = "WorkspaceScan{"+workspace.uri.path+"}"
 		Self.priority = priority
-		'Self.folder = folder
 		Self.workspace = workspace
+		
+		' Request a work-done token
+		' local workdone:TTask = new TRequestTask( TClient.progress_register:String() )
+		
+		' Need to register a request so we receive a reply
 	End Method
 	
-	Method execute()
+	Method launch()
 		logfile.debug( "## WORKSPACE SCAN - STARTED" )
 		logfile.debug( "   ("+workspace.uri.tostring()+")" )
 		
@@ -37,6 +38,12 @@ Type TTaskWorkspaceScan Extends TTask
 		' If it is in the cache and it has changed - RESCAN IT
 		' If it is not in the cache it is a new file - SCAN IT
 
+		' Progress Bar
+		Local progress:Int = 0
+		'Local total:Int = Max( filesystem.length, cachedfiles.length )
+		' Cannot do this here, because token may not have been returned
+		'client.progress_begin( token )
+		
 		For Local filename:String = EachIn filesystem
 			Local uri:TURI = New TURI( filename )
 
@@ -51,7 +58,7 @@ Type TTaskWorkspaceScan Extends TTask
 					workspace.cache.addDocument( file )
 					' Create task to rescan document
 					Local task:TTaskDocumentParse = New TTaskDocumentParse( file, workspace )
-					task.post()
+					task.postv1()
 				Else
 					' File has not changed, add it to the workspace:
 					workspace.add( file )				
@@ -66,31 +73,34 @@ Type TTaskWorkspaceScan Extends TTask
 				workspace.cache.addDocument( file )
 				' Create task to scan document
 				Local task:TTaskDocumentParse = New TTaskDocumentParse( file, workspace )
-				task.post()
+				task.postv1()
 			End If
+			
+			' Update progress bar
+			progress :+ 1
+			'client.progress_update( token, progress, total )
 		Next
 
 		' Files remaining in cachedfiles list exist in database, but not on disk
 		For Local filename:String = EachIn cachedfiles.keys()
 			logfile.debug( "## WORKSPACE SCAN - REMOVE DELETED FILE '"+filename+"'" )
 			workspace.cache.DeleteDocument( filename )
+			' Update progress bar
+			progress :+ 1
+			'client.progress_update( token, progress, total )
 		Next
+		'client.progress_close( token )
 
 		logfile.debug( "## WORKSPACE SCAN - FINISHED" )
-		logfile.debug( "WORKSPACE:~n"+workspace.reveal() )
+		logfile.debug( workspaces.reveal() )
 	End Method
 	
 	Method progress( percent:Int )
 	End Method
 
-	'Function Threaded_Scanner:Object( data:Object )
-	'	Local this:TWorkspaceScanTask = TWorkspaceScanTask( data )
-	'	If Not this ; Return
-		
-		' First we get all BMX files in the workspace
-		
-		
-	'End Function
+	' This method recieves responses from client if you send any requests.
+	Method response( message:TMessage )
+	End Method
 
 	' Folder scanner
 	Function dir_scanner( folder:String, list:String[] Var )

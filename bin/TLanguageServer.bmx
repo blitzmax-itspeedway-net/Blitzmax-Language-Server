@@ -12,6 +12,8 @@ Type TLanguageServer Extends TEventHandler
 	Const STATE_INITIALISING:Int	= 1
 	Const STATE_INITIALISED:Int		= 2
 	Const STATE_SHUTDOWN:Int		= 3
+	
+	Const REQUEST_EXPIRATION:Int	= 350000 ' 5 minutes in milliseconds
 
     Field exitcode:Int				= 0
 
@@ -20,6 +22,8 @@ Type TLanguageServer Extends TEventHandler
     'Field shutdown:Int				= False		' Set by "shutdown" message
 	Field trace:String				= "off"		' Set by $/setTrace or OnTraceNotification
 	Field sendbuffer:String[]		= []
+	
+	Field requests:TMap							' Requests that have been sent to client
 	
 	' ROOT URI and ROOT WORKSPACE are now saved into TWorkspaces
 	'Field rooturi:String					' Root URI
@@ -51,6 +55,7 @@ Type TLanguageServer Extends TEventHandler
 'DebugStop
 		' V4 - Register handler
 		register()
+		requests = New TMap()				' Requests sent to client
 	End Method
 	
     Method run:Int() Abstract
@@ -63,28 +68,40 @@ Type TLanguageServer Extends TEventHandler
 		Local response:Int = False
 		' Check we have a valid JSON object, or replace with error
 		If Not message ; message = Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) 
+		Local id:String = message.find("id").toString()
+		Local methd:String = message.find("method").toString()
 		
 		' Extract message
 		Local Text:String = message.stringify()
 		If Not Text ; Return
-		If message.contains("id") ; response = True
 		
-		logfile.debug( "# METHOD IS '"+ message.find("method").tostring()+"'" )
-		If response 
-			logfile.debug( "# MESSAGE IS A RESPONSE" )
-		Else
-			logfile.debug( "# MESSAGE IS A NOTIFICATION" )
-		End If
+		' Message Classification
+		Local class:Int = $000
+		If id<>""    ; class = TMessage._ID
+		If methd<>"" ; class :+ TMessage._METHOD
+		
+		'logfile.debug( "# METHOD IS '"+ message.find("method").tostring()+"'" )
+		'If response 
+		logfile.debug( "# MESSAGE CLASS IS "+class )
 
 		' Validation
-		Local allowed:Int = response | (state=STATE_INITIALISED)	
-		logfile.debug( "allowed="+allowed )
+		Local allowed:Int = ( state = STATE_INITIALISED )
+		Select class 
+		Case TMessage._RESPONSE
+			allowed = True
+		Case TMessage._REQUEST
+			' REQUESTS should be inserted into requests queue
+			message.set( "created", MilliSecs() )
+			requests.insert( id, New TMessage( message ) )
+		EndSelect
+
+		' Check if we are allowed to send!
 		If Not allowed
 			Select state
 			Case STATE_UNINITIALISED		' Server not connected, nothing to send to!
 				logfile.critical( "## SERVER IS UNINITIALISED:~n"+Text )
 			Case STATE_INITIALISING
-				Select message.find( "method" ).toString()
+				Select methd
 				Case "initialize", "window/showMessage", "window/logMessage", "telemetry/event", "window/showMessageRequest"
 					allowed = True
 				End Select
@@ -115,7 +132,27 @@ Type TLanguageServer Extends TEventHandler
 		End If
 			
 	End Method
+	
+	Method matchResponseToRequest:TMessage( id:String )
+		
+		' Pop Request (if it exists)
+		Local request:TMessage = TMessage( requests.valueForKey( id ) )
+		If request ; requests.remove( id )
 
+		' Timeout old messages			
+		For Local key:String = EachIn requests.keys()
+			Local message:TMessage = TMessage( requests[key] )
+			If message 
+				If message.timeout(); requests.remove( key )
+			Else
+				' Invalid message, remove key
+				requests.remove( key )
+			End If
+		Next
+		
+		Return request
+	End Method
+	
 	'V0.0
     Function ExitProcedure()
         'Publish( "debug", "Exit Procedure running" )
@@ -123,6 +160,12 @@ Type TLanguageServer Extends TEventHandler
 		logfile.info( "Running Exit Procedure" )
         instance.Close()
         'Logfile.Close()
+
+		'	STOP the global message queue
+		logfile.debug( "- Stopping Message Queue" )
+		TaskQueue.stop()
+		logfile.debug( "- Message Queue Stopped" )
+		
     End Function
 
 	'V0.1
@@ -182,7 +225,51 @@ TMEssageQueue.on_ReceiveFromClient() validates method and message
 End Rem
 
 			' J is my JSON (Freshly arrived from IDE)
+
+			Local message:TMessage = New TMessage( J )
+			Local methd:String = message.methd
+
+			logfile.debug( "- ID:      "+message.id )
+			logfile.debug( "- METHOD:  "+message.methd )
+			logfile.debug( "- CLASS:   "+message.classname() )
+		
+			Select message.class
+			Case TMessage._REQUEST
 			
+				' Check server has initialised
+				Select True
+				Case lsp.state = lsp.STATE_INITIALISED And methd="initialize"
+					logfile.critical( "## Server already initialized~n"+J.stringify() )
+					lsp.send( Response_Error( ERR_INVALID_REQUEST, "Server already initialized", message.id ) )
+					Continue
+				Case lsp.state <> lsp.STATE_INITIALISED And methd<>"initialize"
+					logfile.critical( "## Server is not initialized~n"+J.stringify() )
+					lsp.send( Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized", message.id ))
+					Continue
+				End Select
+				
+				' Add message to queue
+				message.priority = QUEUE_PRIORITY_REQUEST
+				message.postv1()
+				
+			Case TMessage._RESPONSE
+
+				' Add message to queue
+				message.priority = QUEUE_PRIORITY_RESPONSE
+				message.postv1()
+				
+			Case TMessage._NOTIFICATION
+			
+				' Add message to queue
+				message.priority = QUEUE_PRIORITY_NOTIFICATION
+				message.postv1()
+				
+			Default
+				logfile.critical( "## Invalid message~n"+J.Stringify() )
+				Continue
+			End Select
+
+Rem 10/12/21, Redundant now that TMessage classifies itself.			
 			' Check for a method
 			If Not J.contains("method")
 				'client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
@@ -197,9 +284,6 @@ End Rem
 				logfile.critical( "## Method cannot be empty~n"+J.stringify() )
 				Continue
 			End If
-				
-			' Extract "Params" if they exist (They should)
-			'Local params:JSON = J.find( "params" )
 
 			' Create a Message object
 			Local message:TMessage = New TMessage( methd, J ) ', params )
@@ -240,6 +324,7 @@ End Rem
 				'client.pushTaskQueue( message )	
 				'message.execute()
 			End If
+End Rem
 
 Rem V0.2 depreciated
             ' Check for a method
@@ -321,7 +406,7 @@ EndRem
 
 	' Report an Implementation Incomplete State
 	Method ImplementationIncomplete( message:TMessage )
-		logfile.error( "## IMPLEMENTATION INCOMPLETE: '"+message.methd+"'~n"+message.J.Prettify() )
+		logfile.error( "## IMPLEMENTATION INCOMPLETE: "+message.className()+"{"+message.getid()+"|"+message.methd+"}~n"+message.J.Prettify() )
 	End Method
 
 	'V0.1
@@ -408,17 +493,22 @@ EndRem
 	' ############################################################
 	' ##### GENERAL MESSAGES #####################################
 
-	Method on_Exit:JSON( message:TMessage )						' NOTIFICATION
+	Method on_Exit:JSON( message:TMessage, notused:Object )						' NOTIFICATION
 		logfile.debug( "TLSP.onExit()" )
 
 		' QUIT MAIN LOOP
         AtomicSwap( QuitMain, False )
 
+		'	STOP the global message queue
+		logfile.debug( "- Stopping Message Queue" )
+		TaskQueue.stop()
+		logfile.debug( "- Message Queue Stopped" )
+		
 		' NOTIFICATION: No response necessary
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialize
-	Method on_Initialize:JSON( message:TMessage )				' REQUEST
+	Method on_Initialize:JSON( message:TMessage, notused:Object )				' REQUEST
 		'logfile.debug( "MESSAGE:~n"+message.J.prettify() )
 		Local id:String = message.getid()
 		Local params:JSON = message.params
@@ -548,8 +638,11 @@ EndRem
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotifications", "true" )
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotification", "true" )
 		End If
-		serverCapabilities.set( "workspace|configuration", "file" )
-		'serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", "file" )
+		'If client.has( "workspace|configuration" )
+		'	logfile.debug( "# ENABLING: workspace|configuration" )
+		'	serverCapabilities.set( "workspace|configuration", "file" )
+		'End If
+		'serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", ["file"] )
 		'serverCapabilities.set( "workspace|fileOperations|willCreate|filters|scheme", "file" )
 		'serverCapabilities.set( "workspace|fileOperations|didRename|filters|scheme", "file" )
 		'serverCapabilities.set( "workspace|fileOperations|willRename|filters|scheme", "file" )
@@ -575,7 +668,7 @@ EndRem
 		Return InitializeResult
 	End Method
 	
-	Method on_Initialized:JSON( message:TMessage )		' NOTIFICATION
+	Method on_Initialized:JSON( message:TMessage, notused:Object )		' NOTIFICATION
 		'publish( "log", "DBG", "EVENT onInitialized()" )
 		logfile.debug( "TLSP.on_Initialized()" )
 		
@@ -629,7 +722,7 @@ EndRem
 		' NOTIFICATION: No response necessary
 	End Method 
 
-	Method on_Shutdown:JSON( message:TMessage )			' REQUEST
+	Method on_Shutdown:JSON( message:TMessage, notused:Object )			' REQUEST
 		logfile.debug( "TLSP.onShutdown()" )
 		state = STATE_SHUTDOWN
 		' SEND RESPONSE
@@ -640,7 +733,7 @@ EndRem
 	' #####TRACE NOTIFICATIONS ###################################
 
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
-	Method on_dollar_setTrace:JSON( message:TMessage )					' NOTIFICATION
+	Method on_dollar_setTrace:JSON( message:TMessage, notused:Object )					' NOTIFICATION
 		logfile.debug( "TLSP.on_dollar_setTrace()~n"+message.J.prettify() )
 		Local value:String = message.params.find( "value" ).toString()
 		If value = "off" Or value="messages" Or value="verbose"
@@ -667,7 +760,7 @@ EndRem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didOpen
 	' NOTIFICATION: textDocument/didOpen
-	Method on_textDocument_didOpen:JSON( message:TMessage )
+	Method on_textDocument_didOpen:JSON( message:TMessage, notused:Object )
 		Local params:JSON = message.params
 		Local uri:TURI = New TURI( params.find( "textDocument|uri" ).tostring() )
 		'Local languageid:String = params.find( "textDocument|languageId" ).toString()
@@ -687,7 +780,7 @@ If Not workspace logfile.debug( "WORKSPACE IS NULL" )
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didChange
 	' NOTIFICATION: textDocument/didChange
-	Method on_textDocument_didChange:JSON( message:TMessage )
+	Method on_textDocument_didChange:JSON( message:TMessage, notused:Object )
 		ImplementationIncomplete( message )
 Rem
 {
@@ -727,8 +820,8 @@ End Rem
 		workspace.change( uri, contentChanges, version )	
 
 		' Add unique low priority tasks to test message queue
-		Local uniquetask:TTestTask = New TTestTask()
-		client.pushTaskQueue( uniquetask, "UNIQUETASK" )
+		'Local uniquetask:TTestTask = New TTestTask()
+		'client.pushTaskQueue( uniquetask, "UNIQUETASK" )
 
 		' Run Linter
 		'lint( document )
@@ -737,7 +830,7 @@ End Rem
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didClose
 	' NOTIFICATION: textDocument/didClose
-	Method on_textDocument_didClose:JSON( message:TMessage )
+	Method on_textDocument_didClose:JSON( message:TMessage, notused:Object )
 		'ImplementationIncomplete( message )
 Rem
 {
@@ -775,7 +868,7 @@ End Rem
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_didSave
 	' NOTIFICATION: textDocument/didSave
-	Method on_textDocument_didSave:TMessage( message:TMessage )
+	Method on_textDocument_didSave:TMessage( message:TMessage, notused:Object )
 		ImplementationIncomplete( message )
 		Local params:JSON = message.params
 		Local uri:String  = params.find( "textDocument|uri" ).tostring()
@@ -814,7 +907,7 @@ End Rem
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	' REQUEST: textDocument/documentSymbol
-	Method on_textDocument_documentSymbol:JSON( message:TMessage )
+	Method on_textDocument_documentSymbol:JSON( message:TMessage, notused:Object )
 		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
 		Return bls_textDocument_documentSymbol( message )
 	End Method
@@ -828,7 +921,7 @@ End Rem
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
 	' NOTIFICATION: workspace/didChangeWorkspaceFolders
-	Method on_workspace_didChangeWorkspaceFolders:JSON( message:TMessage )		
+	Method on_workspace_didChangeWorkspaceFolders:JSON( message:TMessage, notused:Object )		
 		'ImplementationIncomplete( message )
 		
 		Local params:JSON = message.params
@@ -903,7 +996,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_symbol
 	' REQUEST: workspace/symbol
-	Method on_workspace_symbol:JSON( message:TMessage )		
+	Method on_workspace_symbol:JSON( message:TMessage, notused:Object )		
 		'ImplementationIncomplete( message )
 'logfile.debug( "WORKSPACE/SYMBOLS - START" )
 
@@ -959,11 +1052,19 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 '	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_configuration
-'	Method onWorkspaceConfiguraion:TMessage( message:TMessage )			' REQUEST
-'		ImplementationIncomplete( message )
+	' RESPONSE: workspace/symbol
+	Method on_workspace_configuration:JSON( message:TMessage, request:TMessage )		
+		ImplementationIncomplete( message )
+		
+		If request
+			logfile.debug( "# REQUEST ="+request.classname()+"{"+request.getid()+"|"+request.methd+"}" )
+			logfile.debug( "# RESPONSE="+message.classname()+"{"+message.getid()+"|"+message.methd+"}" )
+		Else
+			logfile.debug( "# RESPONSE WAS NOT MATCHED" )
+		End If
 '		Local id:String = message.getid()
 '		lsp.send( Response_OK( id ) )
-'	End Method
+	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
 '	Method onDidChangeWatchedFiles:TMessage( message:TMessage )			' NOTIFICATION

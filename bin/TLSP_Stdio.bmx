@@ -90,6 +90,8 @@ Type TLSP_Stdio Extends TLanguageServer
 		'unlisten()
 		client.Close()
 
+	
+
         Return exitcode
     End Method
     

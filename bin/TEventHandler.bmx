@@ -43,6 +43,8 @@ Type TEventHandler
 		callable = Replace( callable, "/", "_" )
 		callable = Replace( callable, "-", "" )
 		
+		' Check for Message Handler
+		
 		For Local handler:TEventHandler = EachIn handlers
 			
 			Local this:TTypeId = TTypeId.ForObject( handler )
@@ -52,32 +54,52 @@ Type TEventHandler
 	'DebugStop
 			If call 
 				logfile.debug( "CALLING: "+callable+"()" )
-				Local response:JSON = JSON( call.invoke( Self, [message] ) )
+				'Local response:JSON = JSON( call.invoke( Self, [message] ) )
 				count :+1
-				' send response if one is required...
 				
-				' REQUESTS must always return a response
-				If message.request
-					If response
+				Try
+					' Process the message...
+					Select message.class
+					Case TMessage._REQUEST 
+						' REQUESTS must always return a response to the client
+						Local response:JSON = JSON( call.invoke( Self, [message,message] ) )
+						If Not response Or response.isInvalid()
+							response = Response_Error( ERR_INTERNAL_ERROR, "Handler failed to respond" ) 
+						End If
 						lsp.send( response )
-					Else
-						lsp.send( Response_Error( ERR_INTERNAL_ERROR, "Handler failed to respond" ) )
-					End If
-				End If
-				
-			'Else
-			'	logfile.debug( "UNABLE TO CALL: "+callable+"()" )
+					Case TMessage._RESPONSE 
+					
+					
+'10-12-2021 18:21:44 DEBG MESSAGEQUEUE: Popped Message{/0/RESPONSE}, priority 2
+'10-12-2021 18:21:44 WARN ## No registered handler For ''
+'10-12-2021 18:21:44 DEBG ## Method on_() is missing
+'10-12-2021 18:21:44 DEBG MESSAGEQUEUE: Popped Message{/1/RESPONSE}, priority 2
+'10-12-2021 18:21:44 WARN ## No registered handler For ''
+'10-12-2021 18:21:44 DEBG ## Method on_() is missing
+
+
+						' RESPONSE from the client to a request we have sent.
+						' First we have To lookup the request
+						Local request:TMessage = lsp.matchResponseToRequest( message.getID() )
+						call.invoke( Self, [message,request] )
+					Case TMessage._NOTIFICATION
+						' Simple notification from client
+						call.invoke( Self, [message,message] )
+					End Select
+				Catch Exception:String
+					logfile.critical( "TEventHandler.distribute(): "+ exception )
+				End Try
+
 			End If
 		Next
 		'
 		' Report unhandled messages
 		If count=0
-			If message.request
-				'client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No handler defined" ) )
+			If message.class = TMessage._REQUEST
 				logfile.critical( "## No registered handler for '"+message.methd+"'" ) 
 			Else
 				logfile.warning( "## No registered handler for '"+message.methd+"'" ) 
-			EndIf
+			End If
 			logfile.debug( "## Method "+callable+"() is missing" )
 		End If
 	End Method

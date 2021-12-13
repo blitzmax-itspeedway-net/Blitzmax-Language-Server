@@ -142,8 +142,8 @@ End Rem
 			document.version = version
 
 			' Create PARSE task
-			Local task:TTaskDocumentParse = New TTaskDocumentParse( document, self )
-			task.post()
+			Local task:TTaskDocumentParse = New TTaskDocumentParse( document, Self )
+			task.postv1()
 		
 '			Local document:TFullTextDocument = New TFullTextDocument( uri, Text, version )
 '			logfile.debug( "Created document" )
@@ -269,8 +269,10 @@ End Rem
 			'configParams.addlast( config )
 
 			' Create a response and add configParams
-			Local request:JSON = EmptyResponse( "workspace/configuration" )
+			Local request:JSON = EmptyRequest( "workspace/configuration" )
 			request.set( "params", configParams )			
+			'Local request:JSON = EmptyResponse( "workspace/configuration" )
+			'request.set( "params", configParams )			
 			lsp.send( request )
 		End If
 	End Method

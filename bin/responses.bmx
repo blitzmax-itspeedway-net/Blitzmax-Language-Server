@@ -28,3 +28,9 @@ Function EmptyResponse:JSON( methd:String="" )
 	If methd <> "" ; response.set( "method", methd )
     Return response
 End Function
+
+Function EmptyRequest:JSON( methd:String )
+    Local request:JSON = Response_OK( client.getNextMsgID() )
+    request.set( "method", methd )
+	Return request
+End Function

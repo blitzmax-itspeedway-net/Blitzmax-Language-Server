@@ -1,0 +1,49 @@
+Send Message queue
+TLanguageServer
+
+    .send() identifies responses as those with an ID.. This is wrong it could be a request!
+    .receiverthread() thinks missing methods are invalid, but they are really replies to our requests.
+
+REQUEST TO CLIENT:
+    id is SET
+    method is SET
+
+REPLY TO CLIENT
+    ID is SET
+    METHOD IS UNSET
+
+NOTIFCATION
+    ID IS UNSET
+    METHOD IS SET
+
+REQUEST FROM CLIENT
+    ID is SET
+    METHOD IS SET
+
+RESPONSE FROM CLIENT
+    ID is SET
+
+
+client.sendmessage and client.logmessage are WRONG.
+    - The LSP is sending not the client.. The client IS the IDE, think of it as remote.
+    - The 
+
+so first:
+Upgrade TMESSAGE to contain a classifier: REQUEST, RESPONSE, NOTIFICATION Based on
+
+            REQUEST     RESPONSE    NOTIFICATION
+    ID      SET         SET         CLEAR
+    METHOD  SET         CLEAR       SET
+
+Next:
+- Create a queue of outbound requests, tracking their request number so I can save Extra
+  information in an object.
+    For example, a workspace configuration would save the workspace in an EXTRA object
+        The Request workdpne token, would save the task token so the progress bar can be updated.
+- These requests must expire if there is no response in say... 5 minutes, to stop the queue from overloading.
+
+Also SEND is just a high priority task... SHould we just add a send task to the task queue and get rid of the 
+sendqueue?
+
+
+

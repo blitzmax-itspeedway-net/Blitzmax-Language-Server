@@ -46,45 +46,74 @@
 ' MESSAGE V4
 Type TMessage Extends TTask
 	
+	Const _ID:Int          = $01
+	Const _METHOD:Int       = $10	
+	Const _REQUEST:Int      = $11	' Request has an ID and a METHOD
+	Const _RESPONSE:Int     = $01	' Response has an ID but not a METHOD
+	Const _NOTIFICATION:Int = $10	' Notification has a METHOD but not an ID
+	
+	Const EXPIRATION:Int    = 350000	' 5 minutes expiration
 	Private
 
-	Field _id:String			' Original message "id"
-
+	Field id:String				' Original message "id"
+	
 	Public
 	
 	Field J:JSON				' Original Message
 
+	Field class:Int				' Message type (Request, Reply, Notification)
 	Field methd:String			' Original message "method"
 	Field params:JSON			' Original message "params"
 	
-	Field request:Int = False	' Request or notification
+	'Field request:Int = False	' Request or notification
 	'Field taskid:int			' Message ID
+	Field created:Int			' Time message created
 
     'Field state:Int = STATE_WAITING		' State of the message
     Field cancelled:Int = False         ' Message cancellation	
 	
-	Method New( methd:String, payload:JSON )	', params:JSON=Null )
+	Method New( payload:JSON )
 		' Arguments
-		Self.methd = methd
 		Self.J = payload
-		
-		' Extractions
+		Self.created = MilliSecs()
+			
+		' Extract ID and METHOD (if they exist) 
+		If payload.contains( "id" )     ; id = payload.find( "id" ).toString()
+		If payload.contains( "method" ) ; methd = payload.find( "method" ).toString()
+		classify()
+
+		' Extract params
 		params = payload.find( "params" )
 		
-		' Extract ID (if there is one) 
-		If payload.contains( "id" )
-			request = True
-			_id = payload.find( "id" ).toString()
-		End If
-
-		Self.name = "Message{"+methd+"/"+_id+"}"
+		Self.name = "Message{"+methd+"/"+id+"/"+classname()+"}"
 	End Method
 			
 	' Getter!
 	Method getid:String()
-		Return _id
+		Return id
 	End Method
 
+	Method classify()
+		class = $0000
+		If Not J ; Return
+		If id<>"" ; class :+ TMessage._ID
+		If methd<>"" ; class :+ TMessage._METHOD
+	End Method
+	
+	' Debugging method to identify class by name
+	Method classname:String()
+		Select class
+		Case TMessage._REQUEST
+			Return "REQUEST"
+		Case TMessage._RESPONSE
+			Return "RESPONSE"
+		Case TMessage._NOTIFICATION
+			Return "NOTIFICATION"
+		Default
+			Return "INVALID("+class+")"
+		End Select
+	End Method
+	
 	' Helper function for message distribution
 	'Method send()
 	'	lsp.distribute( Self )
@@ -92,6 +121,20 @@ Type TMessage Extends TTask
 
 	Method execute()
 		lsp.distribute( Self )
+	End Method
+
+	Method Launch()
+		logfile.critical( "## TTaskDocumentParse Launch() is not implemented" )
+	End Method
+
+	Method Timeout:Int()
+		If MilliSecs() < created
+			' Milliseconds overflowed, wait but doesn;t need to be exact!
+			If MilliSecs() > EXPIRATION ; Return True
+		ElseIf created+EXPIRATION > MilliSecs()
+			Return True
+		End If
+		Return False
 	End Method
 
 End Type

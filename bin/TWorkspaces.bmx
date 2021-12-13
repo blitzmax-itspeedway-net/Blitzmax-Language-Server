@@ -13,12 +13,6 @@ Type TWorkspaces Extends TEventHandler
 	Method add( uri:TURI, workspace:TWorkspace )
 logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
 		list[ uri.toString() ] = workspace
-		
-		'logfile.debug( "Workspaces now contain:" )
-		'For Local key:String = EachIn list.keys()
-		'	logfile.debug( key )
-		'Next
-		
 	End Method
 	
 	' Remove a Workspace

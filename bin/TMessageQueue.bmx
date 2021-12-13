@@ -35,6 +35,7 @@ EndRem
 
 Const QUEUE_PRIORITY_WORKSPACE_SCAN:Int = 1
 Const QUEUE_PRIORITY_NOTIFICATION:Int = 2
+Const QUEUE_PRIORITY_RESPONSE:Int = 2
 Const QUEUE_PRIORITY_DOCUMENT_PARSE:Int = 3
 Const QUEUE_PRIORITY_REQUEST:Int = 4
 
@@ -344,7 +345,7 @@ End Rem
 	'	V4 MESSAGE HANDLERS
 	'	REQUESTS MUST RETURN A RESPONSE OTHERWISE AN ERROR IS SENT
 
-	Method on_dollar_CancelRequest:JSON( message:TMessage )			' NOTIFICATION
+	Method on_dollar_CancelRequest:JSON( message:TMessage, notused:Object )			' NOTIFICATION
 		logfile.debug( "TMessageQueue.on_CancelRequest~n"+message.j.Prettify() )
 
 		LockMutex( taskmutex )
@@ -367,7 +368,7 @@ End Rem
 	End Method
 
 
-	Method on_exit:JSON( message:TMessage )					' NOTIFICATION
+	Method on_exit:JSON( message:TMessage, notUsed:Object )					' NOTIFICATION
 		' Force waiting threads to exit
 		PostSemaphore( sendCounter )
 		' NOTIFICATION: No response required

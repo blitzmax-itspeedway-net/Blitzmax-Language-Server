@@ -4,19 +4,24 @@ SuperStrict
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
 '	OBJECT HEIRARCHY
-'	----------------
+'	----------------								12/12/21 - Planned Changes
 '	TEventHandler
-'		TLanguageServer extends TEventHandler
-'			TLSP_Stdio Extends TLSP
-'			TLSP_TCP Extends TLSP
-'		TMessageQueue Extends TEventHandler
-'			TClient Extends TMessageQueue
+'		TLanguageServer extends TEventHandler		<-
+'			TLSP_Stdio Extends TLSP					<-	DEPRECIATE
+'			TLSP_TCP Extends TLSP					<-	DEPRECIATE
+'		TMessageQueue Extends TEventHandler			<-	DEPRECIATE
+'			TClient Extends TMessageQueue			<-	EXTEND TEventHandler
+'				TClient_StdIO Extends TClient		<-	NEW
+'				TClient_TCP Extends TClient			<-	NEW
 '		TLogger Extends TEventHandler
 '		TWorkspaces Extends TEventHandler
 '	TTextDocument Implements ITextDocument
 '		TFullTextDocument Extends TTextDocument
-'	TTask
-'		TMessage Extends TTask
+'	TTask											<-	Add support for Blocking/Threaded tasks - DONE
+'		TMessage Extends TTask						<-	Consider replaces with TClientRequest, TServerRequest, TNotification etc
+'		TTaskReceiver Extended TTask				<-	Uses TClient to get messages and creates tasks
+'		TTaskDocumentParse Extends TTask			<-	Update with TTaskQueue support
+'		TTaskWorkspaceScan Extends TTask			<-	Update with TTaskQueue support
 
 Framework brl.standardio 
 Import brl.collections      ' Used for Tokeniser
@@ -69,6 +74,7 @@ Include "bin/responses.bmx"
 
 ' Tasks
 Include "bin/TTask.bmx"
+Include "bin/TTaskQueue.bmx"
 Include "bin/TTaskDiagnostic.bmx"
 Include "bin/TTaskDocumentParse.bmx"
 Include "bin/TTaskWorkspaceScan.bmx"
@@ -77,8 +83,10 @@ Include "bin/TTaskWorkspaceScan.bmx"
 Include "bin/TEventHandler.bmx"
 Include "bin/TMessage.bmx"
 Include "bin/TMessageQueue.bmx"
-Include "bin/TClient.bmx"		' Represents the remote IDE
-'Include "bin/TTemplate.bmx"    ' Depreciated (Functionality moved into JSON)
+Include "bin/TClient.bmx"			' Represents the remote IDE
+Include "bin/TClient_StdIO.bmx"		' Client StdIO communication
+Include "bin/TClient_TCP.bmx"		' Client TCP communication
+'Include "bin/TTemplate.bmx"    	' Depreciated (Functionality moved into JSON)
 'Include "bin/json.bmx"
 
 'Include "bin/sandbox.bmx"
@@ -160,13 +168,24 @@ logfile.debug( "  APPDIR:     "+AppDir )
 New TArguments()			' Arguments
 logfile.debug( "CONFIG:~n"+config.J.prettify() )
 
-Global Client:TClient = New TClient()				' Client Manager
+'	CLIENT COMMUNICATION
+Global Client:TClient 			' Client Manager
+
+' 	This will be based on arguments in the future, but for now we only support STDIO
+Config["transport"]="stdio"
+Select Config["transport"]
+Case "tcp"
+	client = New TClient()
+Default
+	client = New TClient()
+End Select
+
 
 '	LANGUAGE SERVER
 
 Global LSP:TLanguageServer									' Language Server
+
 ' This will be based on arguments in the future, but for now we only support STDIO
-Config["transport"]="stdio"
 Select Config["transport"]
 Case "tcp"
 	LSP = New TLSP_TCP()
@@ -174,11 +193,14 @@ Default
 	LSP = New TLSP_StdIO()
 End Select
 
+'	START THE MESSAGE QUEUE
+
+Global TaskQueue:TTaskQueue = New TTaskQueue()			' 12/12/21, Standardised task queue
+
 '	DOCUMENTS AND WORKSPACES
 
 'Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager, Depreciated (See Workspace)
 Global Workspaces:TWorkspaces = New TWorkspaces()
-
 
 Rem 31/8/21, Depreciated by new message queue
 '   Worker Thread
@@ -226,8 +248,6 @@ End Function
 '	Next
 '	Return True
 'End Function
-
-
 
 '   Run the Application
 logfile.debug( "Starting Language Server..." )

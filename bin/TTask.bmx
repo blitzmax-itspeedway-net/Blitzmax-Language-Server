@@ -24,22 +24,67 @@ Rem UNIQUE TASKS
 End Rem
 
 Type TTask
+
+	Const BLOCKING:Int = 0
+	Const THREADING:Int = 1
+
 	Field priority:Int = 3		' Used by Priority Queue
-	'Field identifier:Int = 0	' Used by Priority Queue when "unique is TRUE"
-	'Field subject:String		' Used by Priority Queue when "unique is TRUE"
 	Field unique:Int = False
 	
 	Field name:String			' Optional task name (Used by Priority Queue when "unique is TRUE")
-	Field complete:Int = False	' Optional completion status
-	
-	Method execute() Abstract
+'	Field complete:Int = False	' Optional completion status
 
-	Method post()
+	' Blocking and Threaded task options
+	Field operation:Int = BLOCKING
+	Field thread:TThread
+	
+	Method New( operation:Int )
+		Self.operation = operation
+	End Method
+	
+	' Revision 1
+	Method execute() 
+		logfile.debug( "TTASK.EXECUTE() IS DEPRECIATED - " + name )
+	End Method
+
+	Method postv1()
+		logfile.debug( "TTASK.POSTV1() IS DEPRECIATED - " + name )
 		client.pushTaskQueue( Self )
 	End Method
+
+	' 12 December 21
+	Method run() Final
+		Select operation
+		Case BLOCKING
+			launch()
+		Case THREADING
+			thread = CreateThread( Launcher, Self )
+			DetachThread( thread )
+		End Select
+	End Method
+
+	' Custom Tasks implement this method
+	Method launch() Abstract
+
+	' Post message to Task Queue
+	Method post( unique:Int = False )
+		taskQueue.push( Self, unique )
+	End Method
+	
+	' Threaded launcher
+	Function Launcher:Object( data:Object )
+		Local this:TTask = TTask( data )
+		If Not this ; Return Null
+		this.launch()
+	End Function
+
+	' This method recieves responses from client if you send any requests within the task
+	' Used for progress bars and Request/Response tasks
+	Method response( message:TMessage ) ; End Method
 	
 End Type
 
+Rem commented out 9/12/21, SJD
 Type TTestTask Extends TTask
 
 	Method New()
@@ -52,3 +97,36 @@ Type TTestTask Extends TTask
 	End Method
 	
 End Type
+End Rem
+
+Rem EXAMPLE ON CREATING A THREADED OR BLOCKING TASK
+
+Type TBlockingTask Extends TTask
+
+	Method New()
+		Super.New( BLOCKING )
+	End Method
+	
+	Method Launch()
+		Print( "BLOCKING TASK "+id+" LAUNCHED" )
+		Delay( 7000 )
+		Print( "BLOCKING TASK "+id+" FINISHED" )		
+	End Method
+	
+End Type
+
+Type TThreadedTask Extends TTask
+
+	Method New()
+		Super.New( THREADING )
+	End Method
+
+	Method Launch()
+		Print( "THREADED TASK "+id+" LAUNCHED" )
+		Delay( 7000 )
+		Print( "THREADED TASK "+id+" FINISHED" )		
+	End Method
+	
+End Type
+
+END REM
