@@ -143,7 +143,7 @@ End Rem
 
 			' Create PARSE task
 			Local task:TTaskDocumentParse = New TTaskDocumentParse( document, Self )
-			task.postv1()
+			task.post()
 		
 '			Local document:TFullTextDocument = New TFullTextDocument( uri, Text, version )
 '			logfile.debug( "Created document" )

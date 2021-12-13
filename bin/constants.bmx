@@ -41,6 +41,9 @@ Const LOG_DEBUG:Int     = 7
     Const EOL:String = "~r~n"
 ?
 
+' How often a progress bar is updated
+Const PROGRESS_FREQUENCY:Int = 1000
+
 Rem 20/10/21, Replaced with "language-server-protocol.bmx" version
 Type CompletionItemKind
 	Const _Text:Int = 1

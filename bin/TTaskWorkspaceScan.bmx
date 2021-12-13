@@ -2,12 +2,9 @@
 '   LANGUAGE SERVER FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-' Add to task queue as UNIQUE/LOW priority
-' pushTaskQueue( task, True )
+'	Performs a file scan of a workspace folder looking for added, removed or changed files.
 
 Type TTaskWorkspaceScan Extends TTask
-	
-	Const PROGRESS_FREQUENCY:Int = 1000
 		
 	Field workspace:TWorkspace
 
@@ -18,9 +15,12 @@ Type TTaskWorkspaceScan Extends TTask
 		Self.workspace = workspace
 		
 		' Request a work-done token
+		If client.has( "workspace|symbol|workDone" )
 		' local workdone:TTask = new TRequestTask( TClient.progress_register:String() )
 		
 		' Need to register a request so we receive a reply
+		End If
+		
 	End Method
 	
 	Method launch()
@@ -58,7 +58,7 @@ Type TTaskWorkspaceScan Extends TTask
 					workspace.cache.addDocument( file )
 					' Create task to rescan document
 					Local task:TTaskDocumentParse = New TTaskDocumentParse( file, workspace )
-					task.postv1()
+					task.post()
 				Else
 					' File has not changed, add it to the workspace:
 					workspace.add( file )				
@@ -73,7 +73,7 @@ Type TTaskWorkspaceScan Extends TTask
 				workspace.cache.addDocument( file )
 				' Create task to scan document
 				Local task:TTaskDocumentParse = New TTaskDocumentParse( file, workspace )
-				task.postv1()
+				task.post()
 			End If
 			
 			' Update progress bar

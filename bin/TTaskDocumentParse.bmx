@@ -2,12 +2,12 @@
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-' TTaskDocumentParse performs the following actions
-' Lexical analysis
-' Parsing to AST
-' Extracting symbols
-' Saving AST to cache
-' Saving Symbols To cache
+' 	TTaskDocumentParse performs the following actions
+' 		Lexical analysis
+' 		Parsing to AST
+' 		Extracting symbols
+' 		Saving AST to cache
+' 		Saving Symbols To cache
 
 Type TTaskDocumentParse Extends TTask
 
@@ -20,9 +20,16 @@ Type TTaskDocumentParse Extends TTask
 		Self.priority = priority
 		Self.document = document
 		Self.workspace = workspace
+		
+		' Request a work-done token
+		'If client.has( WHAT SHOULD THIS BE? "workspace|symbol|workDone" )
+		' local workdone:TTask = new TRequestTask( TClient.progress_register:String() )
+		' Need to register a request so we receive a reply
+		'End If
+		
 	End Method
 
-	Method execute()
+	Method launch()
 		Local start:Int, finish:Int
 		If document.content = "" ; Return
 		
@@ -55,14 +62,6 @@ Type TTaskDocumentParse Extends TTask
 		document.content = ""
 		document.lexer = Null
 		document.ast = Null
-	End Method
-
-	Method createSymbolTable()
-		
-	End Method
-	
-	Method Launch()
-		logfile.critical( "## TTaskDocumentParse Launch() is not implemented" )
 	End Method
 	
 End Type
