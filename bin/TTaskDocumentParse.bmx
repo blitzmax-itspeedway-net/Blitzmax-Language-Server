@@ -17,6 +17,7 @@ Type TTaskDocumentParse Extends TTask
 	Method New( document:TTextDocument, workspace:TWorkspace, priority:Int = QUEUE_PRIORITY_DOCUMENT_PARSE )
 		Super.New( BLOCKING )
 		name = "document{"+document.uri.tostring()+"}"
+		
 		Self.priority = priority
 		Self.document = document
 		Self.workspace = workspace

@@ -11,6 +11,7 @@ Type TTaskWorkspaceScan Extends TTask
 	Method New( workspace:TWorkspace, priority:Int = QUEUE_PRIORITY_WORKSPACE_SCAN )
 		Super.New( BLOCKING )
 		name = "WorkspaceScan{"+workspace.uri.path+"}"
+		
 		Self.priority = priority
 		Self.workspace = workspace
 		
