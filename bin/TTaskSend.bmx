@@ -6,16 +6,26 @@
 
 Type TTaskSend Extends TTask
 
-	Field message:JSON
+	Field message:String
 
-	Method New( message:JSON )
+	Method New( message:String )
 		priority = QUEUE_PRIORITY_HIGH
 		unique = False
 		Self.message = message
 	End Method
 
 	Method launch()
-		client.write( message.Stringify() )
+		
+		'logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
+		If Len(message)>500 
+			logfile.debug( "TTaskSend.Launch()~n"+message[0..500]+"..." )
+		Else
+			logfile.debug( "TTaskSend.Launch()~n"+message )
+		End If
+
+		' Send to IDE
+		If message ; client.write( message )
+		
 	End Method
 
 End Type

@@ -79,6 +79,7 @@ Include "bin/TTaskDiagnostic.bmx"			' Compiles and returns disagnostics informat
 Include "bin/TTaskDocumentParse.bmx"		' Parses a source file
 Include "bin/TTaskWorkspaceScan.bmx"		' Scans workspace looking for source files
 Include "bin/TTaskReceiver.bmx"				' Message Receiver (Listener)
+Include "bin/TTaskSend.bmx"					' Sends a message to the client (Server Request, Client Respose or Notification)
 
 ' Events and Messages
 Include "bin/TEventHandler.bmx"

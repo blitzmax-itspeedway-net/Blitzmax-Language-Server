@@ -64,6 +64,7 @@ Type TLanguageServer Extends TEventHandler
     Method Close() ; End Method
 
 	' Send a message to the client 
+	' It will buffer messages sent before initialisation has completed.
 	Method send( message:JSON )
 		Local response:Int = False
 		' Check we have a valid JSON object, or replace with error
@@ -89,7 +90,7 @@ Type TLanguageServer Extends TEventHandler
 		Select class 
 		Case TMessage._RESPONSE
 			allowed = True
-		Case TMessage._REQUEST
+		Case TMessage._REQUEST Or TMessage._NOTIFICATION
 			' REQUESTS should be inserted into requests queue
 			message.set( "created", MilliSecs() )
 			requests.insert( id, New TMessage( message ) )
@@ -115,7 +116,9 @@ Type TLanguageServer Extends TEventHandler
 		
 		' Send message
 		If allowed	' SEND MESSAGE
-			client.sendMessage( Text )
+			'client.sendMessage( Text )
+			Local msg:TTask = New TTaskSend( Text )
+			msg.post()
 		Else		' ADD TO BUFFER
 			logfile.debug( "# BUFFERING MESSAGE:~n"+Text )
 			sendbuffer :+ [Text]
@@ -125,7 +128,9 @@ Type TLanguageServer Extends TEventHandler
 		If state = STATE_INITIALISED And sendbuffer<>[]
 			logfile.debug( "# EMPTYING BUFFER" )
 			For Local buffered:String = EachIn sendbuffer
-				client.sendMessage( buffered )
+				Local msg:TTask = New TTaskSend( buffered )
+				msg.post()
+				'client.sendMessage( buffered )
 			Next
 			sendbuffer = []			
 			logfile.debug( "# BUFFER EMPTY" )

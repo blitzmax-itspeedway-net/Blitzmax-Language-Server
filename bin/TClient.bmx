@@ -107,29 +107,24 @@ Type TClient Extends TEventHandler	'TMessageQueue
 		Local J:JSON = EmptyResponse( "window/logMessage" )
 		J.set( "params|type",  messagetype  )
 		J.set( "params|message", message )
-		sendMessage( J.stringify() )
+		'sendMessage( J.stringify() )
+		Local msg:TTask = New TTaskSend( J.stringify() )
+		msg.post()
 	End Method
 	
 	' HELPER: Send a message to client by pushing it to the send queue
 	' MESSAGE MUST BE VALID JSON REQUEST/REPLY OR NOTIFICATION
-	Method SendMessage( message:String )
 
-		' Check we have a valid JSON object, or replace with error
-		'If Not message ; message = Response_Error( ERR_INTERNAL_ERROR, "Incomplete Event" ) 
-		
-		' Extract message
-		'Local Text:String = message.stringify()
-		
-		'logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
-		If Len(message)>500 
-			logfile.debug( "TClient.SendMessage()~n"+message[0..500]+"..." )
-		Else
-			logfile.debug( "TClient.SendMessage()~n"+message )
-		End If
-
-		' Send to IDE
-		If message ; write( message )
-	End Method
+	' 21/12/21 - REPLACED BY TTaskSend
+'	Method SendMessage( message:String )
+'		If Len(message)>500 
+'			logfile.debug( "TClient.SendMessage()~n"+message[0..500]+"..." )
+'		Else
+'			logfile.debug( "TClient.SendMessage()~n"+message )
+'		End If
+'		' Send to IDE
+'		If message ; write( message )
+'	End Method
 	
 	' Generate a random work done token for progress bars
 	Method genWorkDoneToken:String()
@@ -154,7 +149,9 @@ Type TClient Extends TEventHandler	'TMessageQueue
 		Local token:String = genWorkDoneToken() 
 		J.set( "id", getNextMsgID() )
 		J.set( "params|token", token )
-		sendMessage( J.stringify() )
+		'sendMessage( J.stringify() )
+		Local msg:TTask = New TTaskSend( J.stringify() )
+		msg.post()
 		Return token
 	End Method
 	
@@ -167,7 +164,9 @@ Type TClient Extends TEventHandler	'TMessageQueue
 		J.set( "params|value|cancellable", cancellable )
 		J.set( "params|value|message", message )
 		J.set( "params|value|percentage", 0 )
-		sendMessage( J.stringify() )
+		'sendMessage( J.stringify() )
+		Local msg:TTask = New TTaskSend( J.stringify() )
+		msg.post()
 	End Method
 
 	Method progress_update( workDoneToken:String, message:String, percentage:Int )
@@ -176,7 +175,9 @@ Type TClient Extends TEventHandler	'TMessageQueue
 		J.set( "params|value|kind", "report" )
 		J.set( "params|value|message", message )
 		J.set( "params|value|percentage", percentage )
-		sendMessage( J.stringify() )
+		'sendMessage( J.stringify() )
+		Local msg:TTask = New TTaskSend( J.stringify() )
+		msg.post()
 	End Method
 	
 	Method progress_end( workDoneToken:String, message:String )
@@ -184,7 +185,9 @@ Type TClient Extends TEventHandler	'TMessageQueue
 		J.set( "params|token", workDoneToken )
 		J.set( "params|value|kind", "end" )
 		J.set( "params|value|message", message )
-		sendMessage( J.stringify() )
+		'sendMessage( J.stringify() )
+		Local msg:TTask = New TTaskSend( J.stringify() )
+		msg.post()
 	End Method
 	
 	' Methods implemented by Child types
