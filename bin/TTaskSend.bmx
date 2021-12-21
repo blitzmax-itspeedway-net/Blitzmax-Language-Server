@@ -18,9 +18,9 @@ Type TTaskSend Extends TTask
 		
 		'logfile.debug( "TMessageQueue.on_SendToClient()~n"+Text )
 		If Len(message)>500 
-			logfile.debug( "TTaskSend.Launch()~n"+message[0..500]+"..." )
+			logfile.debug( "TTaskSend~n"+message[0..500]+"..." )
 		Else
-			logfile.debug( "TTaskSend.Launch()~n"+message )
+			logfile.debug( "TTaskSend~n"+message )
 		End If
 
 		' Send to IDE

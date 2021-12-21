@@ -4,24 +4,22 @@ SuperStrict
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
 '	OBJECT HEIRARCHY
-'	----------------								12/12/21 - Planned Changes
+'	----------------
 '	TEventHandler
-'		TLanguageServer extends TEventHandler		<-
-'			TLSP_Stdio Extends TLSP					<-	DEPRECIATE
-'			TLSP_TCP Extends TLSP					<-	DEPRECIATE
-'		TMessageQueue Extends TEventHandler			<-	DEPRECIATE
-'			TClient Extends TMessageQueue			<-	EXTEND TEventHandler
-'				TClient_StdIO Extends TClient		<-	NEW
-'				TClient_TCP Extends TClient			<-	NEW
+'		TLanguageServer extends TEventHandler
+'			TClient Extends TEventHandler
+'				TClient_StdIO Extends TClient
+'				TClient_TCP Extends TClient
 '		TLogger Extends TEventHandler
 '		TWorkspaces Extends TEventHandler
 '	TTextDocument Implements ITextDocument
 '		TFullTextDocument Extends TTextDocument
-'	TTask											<-	Add support for Blocking/Threaded tasks			DONE
-'		TMessage Extends TTask						<-	Consider replaces with TClientRequest, TServerRequest, TNotification etc
-'		TTaskReceiver Extended TTask				<-	Uses TClient to get messages and creates tasks
-'		TTaskDocumentParse Extends TTask			<-	Update with TTaskQueue support					DONE
-'		TTaskWorkspaceScan Extends TTask			<-	Update with TTaskQueue support					DONE
+'	TTask
+'		TMessage Extends TTask
+'		TTaskReceiver Extended TTask
+'		TTaskDocumentParse Extends TTask
+'		TTaskWorkspaceScan Extends TTask
+'		TTaskSend Extends TTask						' Sends a message to the client
 
 Framework brl.standardio 
 Import brl.collections      ' Used for Tokeniser
@@ -84,6 +82,7 @@ Include "bin/TTaskSend.bmx"					' Sends a message to the client (Server Request,
 ' Events and Messages
 Include "bin/TEventHandler.bmx"
 Include "bin/TMessage.bmx"
+Include "bin/TMessage_ServerRequest.bmx"	' Server Request Messages (To client)
 'Include "bin/TMessageQueue.bmx"			' 15/12/21, Replaced with TTaskQueue
 Include "bin/TClient.bmx"					' Represents the remote IDE
 Include "bin/TClient_StdIO.bmx"				' Client StdIO communication

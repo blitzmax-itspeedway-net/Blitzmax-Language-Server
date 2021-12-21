@@ -2,7 +2,7 @@
 '   BLITZMAX LANGUAGE SERVER
 '   (c) Copyright Si Dunford, July 2021, All Right Reserved
 
-'	STANDARD RESPONSES
+'	SERVER RESPONSE TO CLIENT REQUEST
 
 Function Response_OK:JSON( id:String="null" )
     'Publish( "log", "INFO", "ResponseOK" )
@@ -29,8 +29,13 @@ Function EmptyResponse:JSON( methd:String="" )
     Return response
 End Function
 
+'	SERVER REQUEST TO CLIENT
+
 Function EmptyRequest:JSON( methd:String )
-    Local request:JSON = Response_OK( client.getNextMsgID() )
-    request.set( "method", methd )
-	Return request
+	Local request:JSON = New JSON()
+	request.set( "id", client.getNextMsgID() )
+	request.set( "jsonrpc", JSONRPC )
+	request.set( "method", methd )
+	request.set( "params", "null" )
+    Return request
 End Function

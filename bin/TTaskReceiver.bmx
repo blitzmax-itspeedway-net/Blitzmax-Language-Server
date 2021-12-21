@@ -79,10 +79,22 @@ Type TTaskReceiver Extends TTask
 				
 			Case TMessage._RESPONSE
 
-				' Add message to queue
-				message.priority = QUEUE_PRIORITY_RESPONSE
-				message.post()
+				' Match with a Request
+				Local request:TServerRequest = lsp.matchResponseToRequest( message.id )
 				
+				If request
+					logfile.debug( "RESPONSE MATCHED TO~n"+request.J.prettify() )
+
+					' Update the ServerRequest with Response
+					request.addResponse( J )
+
+					' Post the ServerRequest containing a response to the TaskQueue
+					request.priority = QUEUE_PRIORITY_RESPONSE
+					request.post()
+				Else
+					logfile.debug( "# REPONSE NOT MATCHED TO REQUEST" )
+				End If
+								
 			Case TMessage._NOTIFICATION
 			
 				' Add message to queue

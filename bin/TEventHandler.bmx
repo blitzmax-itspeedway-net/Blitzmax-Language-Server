@@ -62,7 +62,7 @@ Type TEventHandler
 					Select message.class
 					Case TMessage._REQUEST 
 						' REQUESTS must always return a response to the client
-						Local response:JSON = JSON( call.invoke( Self, [message,message] ) )
+						Local response:JSON = JSON( call.invoke( Self, [message] ) )
 						If Not response Or response.isInvalid()
 							response = Response_Error( ERR_INTERNAL_ERROR, "Handler failed to respond" ) 
 						End If
@@ -81,11 +81,11 @@ Type TEventHandler
 
 						' RESPONSE from the client to a request we have sent.
 						' First we have To lookup the request
-						Local request:TMessage = lsp.matchResponseToRequest( message.getID() )
-						call.invoke( Self, [message,request] )
+						'Local request:TMessage = lsp.matchResponseToRequest( message.getID() )
+						call.invoke( Self, [message] )
 					Case TMessage._NOTIFICATION
 						' Simple notification from client
-						call.invoke( Self, [message,message] )
+						call.invoke( Self, [message] )
 					End Select
 				Catch Exception:String
 					logfile.critical( "TEventHandler.distribute(): "+ exception )
