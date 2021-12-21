@@ -164,12 +164,15 @@ Type TLanguageServer Extends TEventHandler
 
 		' Timeout old messages			
 		For Local key:String = EachIn requests.keys()
-			logfile.debug( "- KEY:"+key )
 			Local message:TServerRequest = TServerRequest( requests[key] )
 			If message 
-				If message.timeout(); requests.remove( key )
+				If message.timeout()
+					logfile.debug( "- KEY "+key+" TIMEOUT" )
+					requests.remove( key )
+				End If
 			Else
 				' Invalid message, remove key
+			    logfile.debug( "- INVALID KEY "+key+" REMOVED" )
 				requests.remove( key )
 			End If
 		Next

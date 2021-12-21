@@ -67,7 +67,7 @@ Type TMessage Extends TTask
 	
 	'Field request:Int = False	' Request or notification
 	'Field taskid:int			' Message ID
-	Field created:Int			' Time message created
+	Field created:Long			' Time message created
 
     'Field state:Int = STATE_WAITING		' State of the message
     Field cancelled:Int = False         ' Message cancellation	
@@ -75,7 +75,7 @@ Type TMessage Extends TTask
 	Method New( payload:JSON )
 		' Arguments
 		Self.J = payload
-		Self.created = MilliSecs()
+		Self.created = Long(MilliSecs())
 			
 		' Extract ID and METHOD (if they exist) 
 		If payload.contains( "id" )     ; id = payload.find( "id" ).toString()
@@ -129,13 +129,17 @@ Type TMessage Extends TTask
 	End Method
 
 	Method Timeout:Int()
-		If MilliSecs() < created
-			' Milliseconds overflowed, wait but doesn;t need to be exact!
-			If MilliSecs() > EXPIRATION ; Return True
-		ElseIf created+EXPIRATION > MilliSecs()
-			Return True
+		Local now:Long = Long( MilliSecs() )
+		If now < 0
+			' Milliseconds overflowed, wait but doesn't need to be exact!
+			now :+ 4294967296:Long
 		End If
-		Return False
+		
+		logfile.debug( "> CREATED "+created )
+		logfile.debug( "> EXPIRES "+(created+EXPIRATION) )
+		logfile.debug( "> NOW     "+now )		
+		
+		Return( now > created+EXPIRATION )
 	End Method
 
 End Type
