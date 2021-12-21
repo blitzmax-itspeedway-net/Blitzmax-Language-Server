@@ -945,8 +945,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		Else
 			logfile.debug( "# RESPONSE WAS NOT MATCHED" )
 		End If
-'		Local id:String = message.getid()
-'		lsp.send( Response_OK( id ) )
+
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles

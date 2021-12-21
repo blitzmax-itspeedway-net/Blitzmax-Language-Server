@@ -11,6 +11,7 @@ Type TServerRequest Extends TMessage
 	Method New( payload:JSON )
 		Super.New( payload )
 		Self.name = "ServerRequest{"+methd+"/"+id+"/"+classname()+"}"
+		Self.class = TMessage._RESPONSE
 	End Method
 
 	Method addResponse( response:JSON )

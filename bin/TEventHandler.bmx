@@ -53,7 +53,7 @@ Type TEventHandler
 			Local call:TMethod = this.FindMethod( callable )
 	'DebugStop
 			If call 
-				logfile.debug( "CALLING: "+callable+"()" )
+				logfile.debug( "CALLING: "+callable+"() .. "+message.classname() )
 				'Local response:JSON = JSON( call.invoke( Self, [message] ) )
 				count :+1
 				
