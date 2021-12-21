@@ -44,6 +44,15 @@ Const LOG_DEBUG:Int     = 7
 ' How often a progress bar is updated
 Const PROGRESS_FREQUENCY:Int = 1000
 
+'	Task Queue Priorities
+
+Const QUEUE_PRIORITY_HIGH:Int = 1				
+Const QUEUE_PRIORITY_WORKSPACE_SCAN:Int = 1
+Const QUEUE_PRIORITY_NOTIFICATION:Int = 2		' CLIENT NOTIFICATION	(TO SERVER)
+Const QUEUE_PRIORITY_RESPONSE:Int = 2			' CLIENT RESPONSE 		(FROM SERVER)
+Const QUEUE_PRIORITY_DOCUMENT_PARSE:Int = 3
+Const QUEUE_PRIORITY_REQUEST:Int = 4			' CLIENT REQUEST		(TO SERVER)
+
 Rem 20/10/21, Replaced with "language-server-protocol.bmx" version
 Type CompletionItemKind
 	Const _Text:Int = 1

@@ -66,6 +66,7 @@ Type TEventHandler
 						If Not response Or response.isInvalid()
 							response = Response_Error( ERR_INTERNAL_ERROR, "Handler failed to respond" ) 
 						End If
+						
 						lsp.send( response )
 					Case TMessage._RESPONSE 
 					

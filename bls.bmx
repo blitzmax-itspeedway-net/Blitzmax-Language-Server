@@ -17,11 +17,11 @@ SuperStrict
 '		TWorkspaces Extends TEventHandler
 '	TTextDocument Implements ITextDocument
 '		TFullTextDocument Extends TTextDocument
-'	TTask											<-	Add support for Blocking/Threaded tasks - DONE
+'	TTask											<-	Add support for Blocking/Threaded tasks			DONE
 '		TMessage Extends TTask						<-	Consider replaces with TClientRequest, TServerRequest, TNotification etc
 '		TTaskReceiver Extended TTask				<-	Uses TClient to get messages and creates tasks
-'		TTaskDocumentParse Extends TTask			<-	Update with TTaskQueue support
-'		TTaskWorkspaceScan Extends TTask			<-	Update with TTaskQueue support
+'		TTaskDocumentParse Extends TTask			<-	Update with TTaskQueue support					DONE
+'		TTaskWorkspaceScan Extends TTask			<-	Update with TTaskQueue support					DONE
 
 Framework brl.standardio 
 Import brl.collections      ' Used for Tokeniser
@@ -73,20 +73,21 @@ Include "bin/TURI.bmx"					' URI Support
 Include "bin/responses.bmx"
 
 ' Tasks
-Include "bin/TTask.bmx"
-Include "bin/TTaskQueue.bmx"
-Include "bin/TTaskDiagnostic.bmx"
-Include "bin/TTaskDocumentParse.bmx"
-Include "bin/TTaskWorkspaceScan.bmx"
+Include "bin/TTask.bmx"						' Ancestral Task type
+Include "bin/TTaskQueue.bmx"				' The global task queue
+Include "bin/TTaskDiagnostic.bmx"			' Compiles and returns disagnostics information
+Include "bin/TTaskDocumentParse.bmx"		' Parses a source file
+Include "bin/TTaskWorkspaceScan.bmx"		' Scans workspace looking for source files
+Include "bin/TTaskReceiver.bmx"				' Message Receiver (Listener)
 
 ' Events and Messages
 Include "bin/TEventHandler.bmx"
 Include "bin/TMessage.bmx"
-Include "bin/TMessageQueue.bmx"
-Include "bin/TClient.bmx"			' Represents the remote IDE
-Include "bin/TClient_StdIO.bmx"		' Client StdIO communication
-Include "bin/TClient_TCP.bmx"		' Client TCP communication
-'Include "bin/TTemplate.bmx"    	' Depreciated (Functionality moved into JSON)
+'Include "bin/TMessageQueue.bmx"			' 15/12/21, Replaced with TTaskQueue
+Include "bin/TClient.bmx"					' Represents the remote IDE
+Include "bin/TClient_StdIO.bmx"				' Client StdIO communication
+Include "bin/TClient_TCP.bmx"				' Client TCP communication
+'Include "bin/TTemplate.bmx"    			' Depreciated (Functionality moved into JSON)
 'Include "bin/json.bmx"
 
 'Include "bin/sandbox.bmx"
@@ -165,37 +166,43 @@ logfile.debug( "  APPDIR:     "+AppDir )
 'Print( "AppTitle" )
 
 '	ARGUMENTS AND CONFIGURATION
+DebugStop
 New TArguments()			' Arguments
 logfile.debug( "CONFIG:~n"+config.J.prettify() )
-
-'	CLIENT COMMUNICATION
-Global Client:TClient 			' Client Manager
-
-' 	This will be based on arguments in the future, but for now we only support STDIO
-Config["transport"]="stdio"
-Select Config["transport"]
-Case "tcp"
-	client = New TClient()
-Default
-	client = New TClient()
-End Select
-
-
-'	LANGUAGE SERVER
-
-Global LSP:TLanguageServer									' Language Server
-
-' This will be based on arguments in the future, but for now we only support STDIO
-Select Config["transport"]
-Case "tcp"
-	LSP = New TLSP_TCP()
-Default
-	LSP = New TLSP_StdIO()
-End Select
 
 '	START THE MESSAGE QUEUE
 
 Global TaskQueue:TTaskQueue = New TTaskQueue()			' 12/12/21, Standardised task queue
+
+'	CLIENT COMMUNICATION
+
+Global Client:TClient 			' Client Manager
+Config["transport"]="stdio"		' 	This will be based on arguments in the future, but for now we only support STDIO
+Select Config["transport"]
+Case "tcp"
+	client = New TClient_TCP()
+Default
+	client = New TClient_StdIO()
+End Select
+
+If client
+	client.open()					' Start the client
+Else
+	logfile.critical( "Failed to create client" )
+End If
+
+'	LANGUAGE SERVER
+
+Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
+
+' Depreciated 15/12/21 in favour of TClient extensions.
+' This will be based on arguments in the future, but for now we only support STDIO
+'Select Config["transport"]
+'Case "tcp"
+'	LSP = New TLSP_TCP()
+'Default
+'	LSP = New TLSP_StdIO()
+'End Select
 
 '	DOCUMENTS AND WORKSPACES
 
@@ -257,8 +264,14 @@ logfile.debug( "Starting Language Server..." )
 Try
 	' V0.2, Moved creation into the TLSP file
     'LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )
-    exit_( LSP.run() )
+    'exit_( LSP.run() )
     'Publish( "debug", "Exit Gracefully" )
+
+	' Wait for listener to close
+	client.wait()
+
 Catch exception:String
     logfile.critical( exception )
 End Try
+
+logfile.debug( "Language Server Closing..." )

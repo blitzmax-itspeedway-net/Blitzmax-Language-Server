@@ -6,11 +6,11 @@ Type TTaskQueue
 
 	Const SLEEP_DURATION:Int = 5000		' How long the thread sleeps between messages (ms)
 
-	Field queue:TList
-	Field thread:TThread
-	Field mutex:TMutex
+	Field queue:TList = Null
+	Field thread:TThread = Null
+	Field mutex:TMutex = Null
 	Field quitflag:Int
-	Field sleep:TCondVar
+	Field sleep:TCondVar = null
 	
 	Method New()
 		queue = New TList()
@@ -20,7 +20,6 @@ Type TTaskQueue
 		thread = CreateThread( ThreadFunction, Self )
 	End Method
 	
-	' Add a task to the task queue
 	Method push( task:TTask, unique:Int = False )
 		If Not task ; Return
 		task.unique = unique
@@ -49,6 +48,7 @@ Type TTaskQueue
 			EndIf
 			link = link.prevLink
 		Wend
+DebugStop
 		' Queue is empty, or task goes at top...
 		logfile.debug( "TTaskQueue: Inserting "+task.name+", Priority "+task.priority )
 		queue.addFirst( task )

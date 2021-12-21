@@ -2,7 +2,12 @@
 '   LANGUAGE SERVER FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-Type TClient Extends TMessageQueue
+Type TClient Extends TEventHandler	'TMessageQueue
+
+	Field listener:TTask = Null			' Listener task
+	Field running:TMutex = Null
+	Field quitFlag:Int   = False		' QUIT FLAG (QUITS THE APPLICATION WHEN SET)
+
 	Field documentSettings:JSON = New JSON()
 	Field initialized:Int = False
 	
@@ -12,6 +17,25 @@ Type TClient Extends TMessageQueue
 	Field clientname:String = "Unknown"
 	Field clientver:String = ""
 	Field capabilities:JSON = New JSON()
+	
+	Method New()
+		' 
+		running = CreateMutex()
+		running.lock()
+		listener = New TTaskReceiver( Self )
+		TaskQueue.push( listener, True )
+'DebugLog( "CLIENT OPENING STDIO" )
+'DebugStop
+'		' Open client communication
+'		open()
+'DebugLog( "CLIENT NEW FINISHED" )
+
+	End Method
+
+	' Waits for message queue to finish
+	Method wait()
+		If listener ; listener.wait()
+	End Method
 	
 	'Method New()
 		'listen()
@@ -103,7 +127,8 @@ Type TClient Extends TMessageQueue
 			logfile.debug( "TClient.SendMessage()~n"+message )
 		End If
 
-		If message ; pushSendQueue( message )
+		' Send to IDE
+		If message ; write( message )
 	End Method
 	
 	' Generate a random work done token for progress bars
@@ -162,6 +187,11 @@ Type TClient Extends TMessageQueue
 		sendMessage( J.stringify() )
 	End Method
 	
+	' Methods implemented by Child types
+	Method open:Int() Abstract
+	Method Close() Abstract
+	Method read:String() Abstract
+	Method write( data:String ) Abstract
 	
 End Type
 

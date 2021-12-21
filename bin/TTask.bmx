@@ -26,7 +26,7 @@ End Rem
 Type TTask
 
 	Const BLOCKING:Int = 0
-	Const THREADING:Int = 1
+	Const THREADED:Int = 1
 
 	Field priority:Int = 3		' Used by Priority Queue
 	Field unique:Int = False
@@ -43,21 +43,21 @@ Type TTask
 	End Method
 	
 	' Revision 1
-	Method execute() 
-		logfile.debug( "TTASK.EXECUTE() IS DEPRECIATED - " + name )
-	End Method
+	'Method execute() 
+	'	logfile.debug( "TTASK.EXECUTE() IS DEPRECIATED - " + name )
+	'End Method
 
-	Method postv1()
-		logfile.debug( "TTASK.POSTV1() IS DEPRECIATED - " + name )
-		client.pushTaskQueue( Self )
-	End Method
+	'Method postv1()
+	'	logfile.debug( "TTASK.POSTV1() IS DEPRECIATED - " + name )
+	'	client.pushTaskQueue( Self )
+	'End Method
 
 	' 12 December 21
 	Method run() Final
 		Select operation
 		Case BLOCKING
 			launch()
-		Case THREADING
+		Case THREADED
 			thread = CreateThread( Launcher, Self )
 			DetachThread( thread )
 		End Select
@@ -65,7 +65,7 @@ Type TTask
 
 	' Custom Tasks implement this method
 	Method launch() Abstract
-
+	
 	' Post message to Task Queue
 	Method post( unique:Int = False )
 		taskQueue.push( Self, unique )
@@ -81,6 +81,10 @@ Type TTask
 	' This method recieves responses from client if you send any requests within the task
 	' Used for progress bars and Request/Response tasks
 	Method response( message:TMessage ) ; End Method
+
+	' Optional method to wait until task completes.
+	' Must be implemented in decendent process
+	Method wait() ; End Method
 	
 End Type
 

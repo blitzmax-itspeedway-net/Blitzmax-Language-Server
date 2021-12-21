@@ -33,11 +33,7 @@ REQUEST: documentSymbol (workdone)
 
 EndRem
 
-Const QUEUE_PRIORITY_WORKSPACE_SCAN:Int = 1
-Const QUEUE_PRIORITY_NOTIFICATION:Int = 2
-Const QUEUE_PRIORITY_RESPONSE:Int = 2
-Const QUEUE_PRIORITY_DOCUMENT_PARSE:Int = 3
-Const QUEUE_PRIORITY_REQUEST:Int = 4
+
 
 Type TMessageQueue Extends TEventHandler
     Global requestThread:TThread

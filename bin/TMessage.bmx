@@ -119,12 +119,13 @@ Type TMessage Extends TTask
 	'	lsp.distribute( Self )
 	'End Method
 
-	Method execute()
-		lsp.distribute( Self )
-	End Method
+	'Method execute()
+	'	lsp.distribute( Self )
+	'End Method
 
 	Method Launch()
-		logfile.critical( "## TTaskDocumentParse Launch() is not implemented" )
+		'logfile.critical( "## TTaskDocumentParse Launch() is not implemented" )
+		lsp.distribute( Self )
 	End Method
 
 	Method Timeout:Int()

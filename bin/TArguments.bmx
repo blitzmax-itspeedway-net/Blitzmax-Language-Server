@@ -138,13 +138,14 @@ Type TArguments
 	Method New()
 'DebugStop
 		'   ARGUMENTS
-'		DebugLog( "ARGS: ("+AppArgs.length+")" )
-		'Publish "log", "DBG", "  ARGS: ("+AppArgs.length+")~n"+("#".join(AppArgs))
-		'logfile.debug( "  ARGS:" )'       "+AppArgs.length+"~n"+("#".join(AppArgs)) )
-		'DebugStop
+		DebugLog( "ARGS: ("+AppArgs.length+")" )
+		For Local arg:Int = 0 Until AppArgs.length
+			DebugLog( "  "+arg+") "+AppArgs[arg] )
+		Next
 		
 'DebugStop		
-
+		If AppArgs.length<2 ; return
+		
 		' Parse CLI commands
 		Select Lower(AppArgs[1])
 		Case "--help", "-h", "/?"

@@ -2,8 +2,8 @@
 '   LANGUAGE SERVER EXTENSION FOR BLITZMAX NG
 '   (c) Copyright Si Dunford, July 2021, All Right Reserved
 
-Include "TLSP_Stdio.bmx"
-Include "TLSP_TCP.bmx"
+'Include "TLSP_Stdio.bmx"	'	DEPRECIATED - Moved to TClient_StdIO
+'Include "TLSP_TCP.bmx"		'	DEPRECIATED - Moved to TClient_TCP
 
 Type TLanguageServer Extends TEventHandler
     Global instance:TLanguageServer
@@ -35,7 +35,7 @@ Type TLanguageServer Extends TEventHandler
 	'Field textDocument:TTextDocument_Handler	' Do not initialise here: Depends on lsp.
 
     ' Threads
-    Field QuitMain:Int = True       ' Atomic State - Set by "exit" message
+    Field QuitMain:Int = False       ' Atomic State - Set by "exit" message
 
     Field Receiver:TThread
     Field QuitReceiver:Int = True   ' Atomic State
@@ -58,8 +58,8 @@ Type TLanguageServer Extends TEventHandler
 		requests = New TMap()				' Requests sent to client
 	End Method
 	
-    Method run:Int() Abstract
-    Method getRequest:String() Abstract     ' Waits for a message from client
+    'Method run:Int() Abstract
+    'Method getRequest:String() Abstract     ' Waits for a message from client
 
     Method Close() ; End Method
 
@@ -168,6 +168,7 @@ Type TLanguageServer Extends TEventHandler
 		
     End Function
 
+Rem
 	'V0.1
     ' Thread based message receiver
     Function ReceiverThread:Object( data:Object )
@@ -203,26 +204,7 @@ Type TLanguageServer Extends TEventHandler
                 Continue
             End If
 			'Publish( "debug", "Parse successful" )
-						
-Rem
-Message is sent as a receiveFromClient, but it has an ID from the original message
-so it becomes a REQEST.
-receiveFromClient doesn't return a result and TMessage.send() identifies it as a request and 
-returns a failure back to the client which forces the IDE to close the BLS.
-
-I can either modify message in receiveFromClient (and sendto Client) so that it is a notification
-Or I can process the message here and send it without using "receiveFromClient" (Much cleaner)
-
-ReceiverThread Gets message from connection (StdIn)
-	Parses STRING into JSON and packages it into TMessage 
-	:- calls TMessage("receiveFromClient").send()
-TMEssage.Send() calls TLSP.distribute()
-TEventHandler.Distribute() Extracts Method from Message
-	:- Calls TMEssageQueue.on_ReceiveFromClient()
-TMEssageQueue.on_ReceiveFromClient() validates method and message
-	Repackages into another TMessage and calls Send...
-	
-End Rem
+					
 
 			' J is my JSON (Freshly arrived from IDE)
 
@@ -269,146 +251,18 @@ End Rem
 				Continue
 			End Select
 
-Rem 10/12/21, Redundant now that TMessage classifies itself.			
-			' Check for a method
-			If Not J.contains("method")
-				'client.send( Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ) )
-				logfile.critical( "## No Method specified~n"+J.stringify() )
-				Continue
-			End If
-				
-			' Get Method and Ensure it isn't empty
-			Local methd:String = J.find("method").toString()
-			If methd = "" 
-				'client.send( Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ) )
-				logfile.critical( "## Method cannot be empty~n"+J.stringify() )
-				Continue
-			End If
 
-			' Create a Message object
-			Local message:TMessage = New TMessage( methd, J ) ', params )
-			Local id:String = message.getid()
-			
-            ' Validation
-			Select True
-			Case lsp.state = lsp.STATE_INITIALISED And methd="initialize"
-				logfile.critical( "## Server already initialized~n"+J.stringify() )
-				lsp.send( Response_Error( ERR_INVALID_REQUEST, "Server already initialized", id ) )
-				Continue
-			Case lsp.state <> lsp.STATE_INITIALISED And methd<>"initialize"
-				logfile.critical( "## Server is not initialized~n"+J.stringify() )
-				lsp.send( Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized", id ))
-				Continue
-            End Select
-
-			logfile.debug( "- ID:      "+id )
-			logfile.debug( "- METHOD:  "+methd )
-			'Publish( "debug", "- REQUEST:~n"+J.Prettify() )
-			'Publish( "debug", "- PARAMS:  "+message.params.stringify() )
-			
-			' REQUEST or NOTIFICATION
-			If message.request
-				logfile.debug( "- TYPE:    REQUEST" )
-				' This is a request, add to queue
-				'logfile.debug( "Pushing request '"+methd+"' to queue")
-				message.priority = QUEUE_PRIORITY_REQUEST
-				message.post()
-				'client.pushTaskQueue( message )		
-			Else
-				' The message is a notification, send it now.
-				logfile.debug( "- TYPE:    NOTIFICATION" )
-				'Publish( "debug", "Executing notification "+methd )
-				'New TMessage( methd, message.J, params ).emit()
-				message.priority = QUEUE_PRIORITY_NOTIFICATION
-				message.post()
-				'client.pushTaskQueue( message )	
-				'message.execute()
-			End If
-End Rem
-
-Rem V0.2 depreciated
-            ' Check for a method
-            node = J.find("method")
-            If Not node 
-                Publish( "send", Response_Error( ERR_METHOD_NOT_FOUND, "No method specified" ))
-                Continue
-            End If
-            Local methd:String = node.tostring()
-            'Publish( "log", "DEBG", "RPC METHOD: "+methd )
-            If methd = "" 
-                Publish( "send", Response_Error( ERR_INVALID_REQUEST, "Method cannot be empty" ))
-                Continue
-            End If
-
-            ' Validation
-            If Not LSP.initialized And methd<>"initialize"
-                Publish( "send", Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized" ))
-                Continue
-            End If
-                
-            ' Transpose JNode into Blitzmax Object
-            Local request:TMessage
-            Try
-                Local typestr:String = "TMethod_"+methd
-                typestr = typestr.Replace( "/", "_" )
-                typestr = typestr.Replace( "$", "dollar" ) ' Protocol Implementation Dependent
-                'Publish( "log", "DEBG", "BMX METHOD: "+typestr )
-                ' Transpose RPC
-                request = TMessage( J.transpose( typestr ))
-				' V0.2 - This is no longer a failure as we may have a handler
-                'If Not request
-                '    Publish( "log", "DEBG", "Transpose to '"+typestr+"' failed")
-                '    Publish( "send", Response_Error( ERR_METHOD_NOT_FOUND, "Method is not available" ))
-                '    Continue
-                'Else
-                '    ' Save JNode into message
-                '    request.J = J
-                'End If
-				' V0.2, Save the original J node
-				If request 
-                    request.J = J
-                    Publish( "debug", "Transposed successfully" )
-                End If
-                'If Not request Publish( "debug", "Transpose to '"+typestr+"' failed")
-            Catch exception:String
-                Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))
-            End Try
-
-			' V0.2
-			' If Transpose fails, then all is not lost
-			If Not request
-				Publish( "debug", "Creating V0.2 message object")
-				request = New TMessage( methd, J )
-			End If
-    
-            ' A Request is pushed to the task queue
-            ' A Notification is executed now
-            If request.contains( "id" )
-                ' This is a request, add to queue
-                Publish( "debug", "Pushing request to queue")
-                Publish( "pushtask", request )
-                'lsp.queue.pushTaskQueue( request )
-                Continue
-            Else
-                ' This is a Notification, execute it now and throw away any response
-                Try
-                    Publish( "debug", "Notification "+methd+" starting" )
-                    request.run()
-                    Publish( "debug", "Notification "+methd+" completed" )
-                Catch exception:String
-                    Publish( "send", Response_Error( ERR_INTERNAL_ERROR, exception ))    
-                End Try
-            End If
-EndRem
         Until CompareAndSwap( lsp.QuitReceiver, quit, True )
         'Publish( "debug", "ReceiverThread - Exit" )
     End Function
+End Rem
 
 	' Report an Implementation Incomplete State
 	Method ImplementationIncomplete( message:TMessage )
 		logfile.error( "## IMPLEMENTATION INCOMPLETE: "+message.className()+"{"+message.getid()+"|"+message.methd+"}~n"+message.J.Prettify() )
 	End Method
 
+Rem
 	'V0.1
     ' Thread based message sender
     Function SenderThread:Object( data:Object )
@@ -449,6 +303,7 @@ EndRem
         'Publish( "debug", "SenderThread - Exit" )
         logfile.debug( "SenderThread - Exit" )
     End Function  
+End Rem
 
 	'V0.2
 	' Add a Capability
@@ -497,7 +352,7 @@ EndRem
 		logfile.debug( "TLSP.onExit()" )
 
 		' QUIT MAIN LOOP
-        AtomicSwap( QuitMain, False )
+        AtomicSwap( QuitMain, True )
 
 		'	STOP the global message queue
 		logfile.debug( "- Stopping Message Queue" )
