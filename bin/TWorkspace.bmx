@@ -260,7 +260,9 @@ End Rem
 			' Create ConfigurationItem array
 			Local configurationItem:JSON = New JSON()
 			configurationItem.set( "scopeUri", uri.tostring() )
-			'configurationItem.set( "section","tasks")
+			'configurationItem.set( "scopeUri", "file:///home/si/dev/example/test-message.bmx" )
+			'configurationItem.set( "section","blitzmax")
+			configurationItem.set( "section","blitzmax.base.path")
 			configParams.addlast( configurationItem )
 			
 			'config = New JSON()

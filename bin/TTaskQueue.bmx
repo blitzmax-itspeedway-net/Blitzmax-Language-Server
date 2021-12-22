@@ -10,7 +10,7 @@ Type TTaskQueue
 	Field thread:TThread = Null
 	Field mutex:TMutex = Null
 	Field quitflag:Int
-	Field sleep:TCondVar = null
+	Field sleep:TCondVar = Null
 	
 	Method New()
 		queue = New TList()
@@ -79,9 +79,9 @@ DebugStop
 			If task ; task.run()
 
 			If this.queue.isEmpty()
-				logfile.debug( "TTaskQueue Thread sleeping" )
+				'logfile.debug( "TTaskQueue Thread sleeping" )
 				this.sleep.timedWait( wait, SLEEP_DURATION ) 
-				logfile.debug( "TTaskQueue Thread awake" )
+				'logfile.debug( "TTaskQueue Thread awake" )
 			End If
 			
 		Until CompareAndSwap( this.quitflag, running, False ) 

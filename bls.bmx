@@ -136,8 +136,8 @@ Incbin "arguments.json"
 
 '	COMPATABILITY
 
-Const JSON_MINIMUM_VERSION:Float = 2.2		' Need support for search()
-Const JSON_MINIMUM_BUILD:Int = 2
+Const JSON_MINIMUM_VERSION:Float = 2.3		' 2.2, Need support for search(), 2.3 improved prettify()
+Const JSON_MINIMUM_BUILD:Int = 0
 
 ' USING PRINT SCREWS UP STDIO SO DONT USE IT!
 Function Print( Message:String ) ; End Function

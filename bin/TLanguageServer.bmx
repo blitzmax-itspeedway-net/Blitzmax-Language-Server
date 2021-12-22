@@ -946,6 +946,13 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 			logfile.debug( "# RESPONSE WAS NOT MATCHED" )
 		End If
 
+		' DEBUG
+		Local REQ:String = request.J.prettify()
+		Local RES:String = request.ClientResponse.prettify()
+
+		client.logmessage( "----- REQUEST -----~n"+REQ+"~n----- RESPONSE -----~n"+RES, LOG_DEBUG)
+
+
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWatchedFiles
