@@ -22,9 +22,12 @@ SuperStrict
 '		TTaskSend Extends TTask						' Sends a message to the client
 
 Framework brl.standardio 
+
 Import brl.collections      ' Used for Tokeniser
 'Import brl.linkedlist
+'Import brl.filesystem
 Import brl.map              ' Used as JSON dictionary
+Import brl.maxutil			' Used for ModulePath()
 Import brl.reflection		' USed by JSON.transpose
 Import brl.retro
 Import brl.stringbuilder
@@ -32,14 +35,15 @@ Import brl.system
 Import brl.threads
 Import brl.threadpool
 Import brl.randomdefault	' Used by genWorkDoneToken()
+
 Import bah.database
 Import bah.dbsqlite
-Import Crypto.MD5Digest		' Used by MD5 checksums in TWorkspace
-Import pub.freeprocess
-Import Text.RegEx
 
-'debugstop
-'   INCLUDE APPLICATION COMPONENTS
+Import Crypto.MD5Digest		' Used by MD5 checksums in TWorkspace
+
+Import pub.freeprocess
+
+Import Text.RegEx
 
 Import bmx.json
 'import bmx.blitzmaxparser
@@ -70,11 +74,14 @@ Include "bin/TLanguageServer.bmx"
 Include "bin/TURI.bmx"					' URI Support
 Include "bin/responses.bmx"
 
+Include "bin/functions.bmx"
+
 ' Tasks
 Include "bin/TTask.bmx"						' Ancestral Task type
 Include "bin/TTaskQueue.bmx"				' The global task queue
 Include "bin/TTaskDiagnostic.bmx"			' Compiles and returns disagnostics information
 Include "bin/TTaskDocumentParse.bmx"		' Parses a source file
+Include "bin/TTaskModuleScan.bmx"			' Scans modules
 Include "bin/TTaskWorkspaceScan.bmx"		' Scans workspace looking for source files
 Include "bin/TTaskReceiver.bmx"				' Message Receiver (Listener)
 Include "bin/TTaskSend.bmx"					' Sends a message to the client (Server Request, Client Respose or Notification)
@@ -91,6 +98,9 @@ Include "bin/TClient_TCP.bmx"				' Client TCP communication
 'Include "bin/json.bmx"
 
 'Include "bin/sandbox.bmx"
+
+Include "bin/TCacheDB.bmx"	
+Include "bin/TModuleCache.bmx"				' Manages the module cache database
 
 ' Text Document Manager
 Include "bin/TSymbolTable.bmx"	
@@ -112,6 +122,8 @@ Include "bin/TGift.bmx"				' Gift brought by a Visitor ;)
 Include "sandbox/bmx.parser/TParser.bmx"
 Include "sandbox/bmx.parser/TASTNode.bmx"
 Include "sandbox/bmx.parser/TASTBinary.bmx"
+Include "sandbox/bmx.parser/TASTUnary.bmx"
+Include "sandbox/bmx.parser/TASTGroup.bmx"
 Include "sandbox/bmx.parser/TASTCompound.bmx"
 Include "sandbox/bmx.parser/TVisitor.bmx"
 Include "sandbox/bmx.parser/TParseValidator.bmx"
@@ -144,7 +156,7 @@ Function Print( Message:String ) ; End Function
 
 'Local td:TDiagnostic = New TDiagnostic()
 
-'DebugStop
+DebugStop
 '   GLOBALS
 Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
 Global CONFIG:TConfig = New TConfig					' Configuration manager
@@ -156,17 +168,18 @@ Global Logfile:TLogger = New TLogger()				' Log File Manager
 ' @bmk include bin/version.bmk
 ' @bmk incrementVersion 
 Include "bin/version.bmx"
+Global BLS_VERSION:String = version+"."+build
 
 logfile.debug( "------------------------------------------------------------" )
 logfile.info( AppTitle )
-logfile.info( "  VERSION:    V"+version+"."+build )
+logfile.info( "  VERSION:    V"+BLS_VERSION )
 logfile.info( "  JSON:       V"+JSON.Version() )
 logfile.debug( "  CURRENTDIR: "+CurrentDir$() )
 logfile.debug( "  APPDIR:     "+AppDir )
 'Print( "AppTitle" )
 
 '	ARGUMENTS AND CONFIGURATION
-DebugStop
+'DebugStop
 New TArguments()			' Arguments
 logfile.debug( "CONFIG:~n"+config.J.prettify() )
 
@@ -194,6 +207,7 @@ End If
 '	LANGUAGE SERVER
 
 Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
+DebugStop
 
 ' Depreciated 15/12/21 in favour of TClient extensions.
 ' This will be based on arguments in the future, but for now we only support STDIO
@@ -208,6 +222,12 @@ Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 
 'Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager, Depreciated (See Workspace)
 Global Workspaces:TWorkspaces = New TWorkspaces()
+
+'	CREATE MODULE SCAN TASK
+Global modules:TModuleCache = New TModuleCache()
+'DebugStop
+Local task:TTaskModuleScan = New TTaskModuleScan( modules )
+task.post()
 
 Rem 31/8/21, Depreciated by new message queue
 '   Worker Thread
@@ -232,29 +252,6 @@ Type TRunnableTask Extends TRunnable
     End Method
 End Type
 End Rem
-
-' Function to identify membership of an array
-Function in:Int( needle:Int, haystack:Int[] )
-	For Local i:Int = 0 Until haystack.length
-		If haystack[i]=needle ; Return True
-	Next
-	Return False
-End Function
-
-Function in:Int( needle:String, haystack:String[] )
-	For Local i:Int = 0 Until haystack.length
-		If haystack[i]=needle ; Return True
-	Next
-	Return False
-End Function
-
-' Function to identify membership of an INT array
-'Function notin:Int( needle:Int, haystack:Int[] )
-'	For Local i:Int = 0 Until haystack.length
-'		If haystack[i]=needle ; Return False
-'	Next
-'	Return True
-'End Function
 
 '   Run the Application
 logfile.debug( "Starting Language Server..." )

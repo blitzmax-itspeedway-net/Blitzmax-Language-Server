@@ -9,6 +9,8 @@
 .bls-cache/
 notes/
 old/
+message.samples/
+testing/
 
 # Exclude files
 *.bak

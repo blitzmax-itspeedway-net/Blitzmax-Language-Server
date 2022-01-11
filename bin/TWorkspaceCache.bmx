@@ -7,11 +7,6 @@
 
 Rem DB SCHEMA
 
-ATTR
-----
-key				VARCHAR(10)		PRIMARY KEY
-value			VARCHAR(10)
-
 DOCUMENTS
 ---------
 uri				VARCHAR(255)	PRIMARY KEY
@@ -25,97 +20,32 @@ id 				INTEGER 		PRIMARY KEY AUTOINCREMENT
 uri 			VARCHAR(255)
 name 			VARCHAR(255)
 kind			INTEGER			DEFAULT 0
-line_start		INTEGER			DEFAULT 0
-line_end		INTEGER			DEFAULT 0
-containerName	VARCHAR(255)
+start_line		INTEGER			NOT NULL DEFAULT 0
+start_char		INTEGER			NOT NULL DEFAULT 0
+end_line		INTEGER			NOT NULL DEFAULT 0
+end_char		INTEGER			NOT NULL DEFAULT 0
 
 EndRem
 
-Type TWorkspaceCache
+Type TWorkspaceCache Extends TCacheDB
 
 	Private
 	
-	Const CACHEPATH:String = ".bls-cache"
-	Const CACHEFILE:String = "workspace.cache"
-	Const CACHEVERSION:Int = 2
-	
-	Field db:TDBConnection
-	Field dbpath:String
-	Field lock:TMutex
+	Const CACHE_PATH:String = ".bls-cache"
+	Const CACHE_FILE:String = "workspace.cache"
+	Const CACHE_VERSION:Int = 2
 	
 	Public 
 	
 	Method New( rootpath:String )
-		Local sql:String
-
-		lock = CreateMutex()
-		LockMutex( lock )
-
-		'	Create the cache folder
-		
-		Local cachedir:String = rootpath + "/" + CACHEPATH
-		' Create folders and cache file
-		Select FileType( cachedir  )
-		Case FILETYPE_DIR
-			' This is what we want...
-			Print( "CACHE FOLDER ALREADY EXISTS" )
-		Case FILETYPE_FILE
-			' This is an unrecoverable situation.
-			' The folder cannot be created if a file exists!
-			Print( "CACHE FOLDER IS A FILE!" )
-			UnlockMutex( lock )
-			Return
-		Default
-			Print( "CREATING CACHE FOLDER" )
-			CreateDir( cachedir, True )
-		End Select
-
-		'	Open Database
-		
-		dbpath = cachedir + "/" + CACHEFILE
-		db = LoadDatabase( "SQLITE", dbpath )
-		If Not db 
-			Print "Failed to load database"
-			UnlockMutex( lock )
-			Return
-		Else
-			Print "DATABASE:~n- Exists"
-		End If
-		If Not db.isOpen() 
-			UnlockMutex( lock )
-			Return
-		End If
-		Print "- Is Open"
-		
-		'	Build or Update tables
-
-		Local table:TDBTable = db.getTableInfo("attr", False)
-		If table.columns
-			Print "- Checking for updates"
-			update()
-		Else
-			Print "- Creating tables"
-			Self.buildDatabase()
-			'build()
-		End If
-		
-		UnlockMutex( lock )
+		Super.New( rootpath, CACHE_PATH, CACHE_FILE, CACHE_VERSION )
+		initialise()
 	End Method
 
 	Private
 	
-	' Upgrade cache or delete records so we start again.
-	Method update()
-		' Get cache version and update
-		Local query:TDatabaseQuery = db.executeQuery("SELECT value FROM attr WHERE key='version';")			
-		Local record:TQueryRecord = query.rowRecord()
-		Local version:Int = record.getint(1)
-		If version >= CACHEVERSION ; Return ' No update necessary
-		'
-		If version <2 ; update_from_v1()	' Version 1 had a mistake in the column names
-
-		' Update the version attribute
-		exec( "UPDATE attr SET value="+CACHEVERSION+";" ) 
+	Method upgrade( currentVersion:Int )
+		If currentVersion<2 ; update_from_v1()	' Version 1 had a mistake in the column names
 	End Method
 	
 	' Update from cache V1
@@ -123,19 +53,12 @@ Type TWorkspaceCache
 		' Version 1 had a mistake in the column names, so we need to rebuild this table
 		' Not ideal, but version 1 didn't use it, so it won't make any difference.
 		exec( "DROP TABLE symbols;" )
-		buildDatabase()
+		'buildDB()
 	End Method
 	
 	' Build the database
-	Method buildDatabase()
+	Method buildDB()
 
-		'	attr table
-		
-		exec( "CREATE TABLE IF NOT EXISTS attr(" +..
-				"key VARCHAR(10) NOT NULL PRIMARY KEY, " +..
-				"value VARCHAR(10) NOT NULL DEFAULT ''" +..
-				");" )
-		
 		'	text documents
 
 		exec( "CREATE TABLE IF NOT EXISTS documents(" +..
@@ -158,14 +81,6 @@ Type TWorkspaceCache
 				"end_char INTEGER NOT NULL DEFAULT 0 " +..
 				");" )
 		
-		' 	Insert initial data
-		
-		exec( "INSERT INTO attr VALUES('version',"+CACHEVERSION+");" )
-		
-	End Method
-	
-	Method exec( sql:String )
-		db.executeQuery( sql )		
 	End Method
 
 	Public
@@ -255,6 +170,7 @@ Type TWorkspaceCache
 	End Method
 	
 	' Get a WorkspaceSymbol[] JSON array from the cache
+	' Using a name criteria to search with
 	Method getSymbols:JSON[]( criteria:String )
 		Local SQL:String = ..
 			"SELECT uri,name,kind,start_line,start_char,end_line,end_char " +..
@@ -264,7 +180,7 @@ Type TWorkspaceCache
 		Else
 			SQL :+ " WHERE name LIKE '%"+criteria+"%';"
 		End If
-		
+
 		LockMutex( lock )
 		Local query:TDatabaseQuery = db.executeQuery( SQL )
 		UnlockMutex( lock )
@@ -285,6 +201,53 @@ Type TWorkspaceCache
 			'logfile.debug( symbol.stringify() )
 		Wend
 		Return data
+		
+	End Method
+	
+	' Retrieve a symbol from a specific location
+	' textDocument/hover results
+	Method getSymbolAt:JSON( position:JSON )
+		Local SQL:String = ..
+			"SELECT uri,name,kind,start_line,start_char,end_line,end_char " +..
+			"FROM symbols"
+		Try
+			If position And position.isvalid()
+				Local line:Int = position.find("line").toInt()+1	' Account for zero offset
+				Local char:Int = position.find("character").toInt()	
+				SQL :+ " WHERE start_line<="+line +..
+					     " AND end_line>="+line +..
+					     " AND start_char<="+char +..
+					     " AND end_char>="+char
+			End If
+		Catch e:String
+			' ignore it for now
+		End Try
+		
+		SQL :+ ";"
+		
+logfile.debug( SQL )
+
+		LockMutex( lock )
+		Local query:TDatabaseQuery = db.executeQuery( SQL )
+		UnlockMutex( lock )
+		
+		Local data:JSON[] = []
+		' Get FIRST row
+		query.nextRow()
+		Local record:TQueryRecord = query.rowRecord()
+		Local kind:Int = record.getIntbyName( "kind" )
+		Local kindText:String 
+		If kind < Len( SymbolKindText ) kindText = SymbolKindText[kind]
+		Local value:String = "```"+kindText+" "+record.getStringByName( "name" )+"```" 
+		Local result:JSON = New JSON()
+		result.set( "contents|kind", "markdown" )
+		result.set( "contents|value", value )
+		result.set( "range|start|line", record.getIntbyName( "start_line" ) )
+		result.set( "range|start|character", record.getIntbyName( "start_char" ) )
+		result.set( "range|end|line", record.getIntbyName( "end_line" ) )
+		result.set( "range|end|character", record.getIntbyName( "end_char" ) )
+		Return result
+		
 	End Method
 	
 End Type

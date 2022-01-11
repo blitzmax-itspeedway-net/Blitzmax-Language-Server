@@ -13,7 +13,7 @@ Type TTaskReceiver Extends TTask
 	Method New( parent:TClient )
 		Super.New( THREADED )
 		logfile.debug( "TTaskReceiver.new()" )
-		name        = "Receiver"	
+		name        = "Receiver{}"	
 		priority    = QUEUE_PRIORITY_HIGH	
 		sleeper     = CreateMutex()	
 		sleep 		= CreateCondVar()
@@ -79,6 +79,8 @@ Type TTaskReceiver Extends TTask
 				
 			Case TMessage._RESPONSE
 
+				' The Client has sent a Response to a server request.
+
 				' Match with a Request
 				Local request:TServerRequest = lsp.matchResponseToRequest( message.id )
 				
@@ -86,11 +88,19 @@ Type TTaskReceiver Extends TTask
 					logfile.debug( "RESPONSE MATCHED TO~n"+request.J.prettify() )
 
 					' Update the ServerRequest with Response
-					request.addResponse( J )
+					'message.addResponse( J )
 
-					' Post the ServerRequest containing a response to the TaskQueue
-					request.priority = QUEUE_PRIORITY_RESPONSE
-					request.post()
+					' Post the response to the TaskQueue
+					message.priority = QUEUE_PRIORITY_RESPONSE
+					logfile.debug( "RESPONSE" )
+					logfile.debug( "  METHOD: "+ methd )
+					If message.params
+						logfile.debug( "  PARAMS: "+ message.params.stringify() )
+					Else
+						logfile.debug( "  PARAMS: NULL" )
+					End If
+					logfile.debug( "  J:~n"+message.J.prettify() )
+					'message.post()
 				Else
 					logfile.debug( "# REPONSE NOT MATCHED TO REQUEST" )
 				End If

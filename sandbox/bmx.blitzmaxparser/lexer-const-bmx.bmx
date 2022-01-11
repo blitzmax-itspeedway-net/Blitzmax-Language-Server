@@ -12,7 +12,7 @@
 Const TK_MULTILINE:Int		= 512	'	..
 Const TK_NOT_EQUAL:Int		= 513	'	<>
 Const TK_LT_OR_EQUAL:Int	= 514	'	<=
-Const TK_GR_OR_EQUAL:Int	= 515	'	>=
+Const TK_GT_OR_EQUAL:Int	= 515	'	>=
 Const TK_ASSIGN_PLUS:Int	= 516	'	:+	
 Const TK_ASSIGN_MINUS:Int	= 517	'	:-
 Const TK_ASSIGN_MUL:Int		= 518	'	:*

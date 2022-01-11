@@ -1,26 +1,29 @@
 SuperStrict
 
 Import bmx.json
-'Import bmx.lexer
+
+Include "../bin/language-server-protocol.bmx"
+'Include "../bin/constants.bmx"
+Include "../bin/TGift.bmx"				' Gift brought by a Visitor ;)
+Include "../bin/TURI.bmx"					' URI Support
 
 ' SANDBOX PARSER
-Include "bmx.parser/TParser.bmx"
-Include "bmx.parser/TASTNode.bmx"
-Include "bmx.parser/TASTBinary.bmx"
-Include "bmx.parser/TASTCompound.bmx"
-Include "bmx.parser/TVisitor.bmx"
-Include "bmx.parser/TParseValidator.bmx"
-Include "bmx.parser/TASTErrorMessage.bmx"
+Include "../sandbox/bmx.parser/TParser.bmx"
+Include "../sandbox/bmx.parser/TASTNode.bmx"
+Include "../sandbox/bmx.parser/TASTBinary.bmx"
+Include "../sandbox/bmx.parser/TASTUnary.bmx"
+Include "../sandbox/bmx.parser/TASTGroup.bmx"
+Include "../sandbox/bmx.parser/TASTCompound.bmx"
+Include "../sandbox/bmx.parser/TVisitor.bmx"
+Include "../sandbox/bmx.parser/TParseValidator.bmx"
+Include "../sandbox/bmx.parser/TASTErrorMessage.bmx"
 
 ' SANDBOX BLITZMAX LEXER/PARSER
 ' Included here until stable release pushed back into module
-Include "bmx.blitzmaxparser/lexer-const-bmx.bmx"
-Include "bmx.blitzmaxparser/TBlitzMaxAST.bmx"
-Include "bmx.blitzmaxparser/TBlitzMaxLexer.bmx"
-Include "bmx.blitzmaxparser/TBlitzMaxParser.bmx"
-
-'	SUPPORTING ROLES
-Include "../bin/language-server-protocol.bmx"
+Include "../sandbox/bmx.blitzmaxparser/lexer-const-bmx.bmx"
+Include "../sandbox/bmx.blitzmaxparser/TBlitzMaxAST.bmx"
+Include "../sandbox/bmx.blitzmaxparser/TBlitzMaxLexer.bmx"
+Include "../sandbox/bmx.blitzmaxparser/TBlitzMaxParser.bmx"
 
 Function LoadFile:String(filename:String)
 	Local file:TStream = ReadStream( filename )
@@ -42,6 +45,7 @@ start  = MilliSecs()
 lexer.run()
 finish = MilliSecs()
 
+debugstop
 Print( "LEXER.TIME: "+(finish-start)+"ms" )
 Print( lexer.reveal() )
 

@@ -21,7 +21,7 @@ Type TLanguageServer Extends TEventHandler
 	'Field initialised:Int			= False   	' Set by "initialized" message
     'Field shutdown:Int				= False		' Set by "shutdown" message
 	Field trace:String				= "off"		' Set by $/setTrace or OnTraceNotification
-	Field sendbuffer:String[]		= []
+	Field sendbuffer:TTask[]		= []
 	
 	Field requests:TMap							' Requests that have been sent to client
 	
@@ -115,20 +115,19 @@ Type TLanguageServer Extends TEventHandler
 		logfile.debug( "# ALLOWED TO SEND: "+["FALSE","TRUE"][allowed]+" ("+allowed+")" )
 		
 		' Send message
+		Local msg:TTask = New TTaskSend( Text )
 		If allowed	' SEND MESSAGE
-			'client.sendMessage( Text )
-			Local msg:TTask = New TTaskSend( Text )
 			msg.post()
 		Else		' ADD TO BUFFER
 			logfile.debug( "# BUFFERING MESSAGE:~n"+Text )
-			sendbuffer :+ [Text]
+			sendbuffer :+ [msg]
 		End If
 		
 		' Send buffered messages?
 		If state = STATE_INITIALISED And sendbuffer<>[]
 			logfile.debug( "# EMPTYING BUFFER" )
-			For Local buffered:String = EachIn sendbuffer
-				Local msg:TTask = New TTaskSend( buffered )
+			For msg = EachIn sendbuffer
+				'Local msg:TTask = New TTaskSend( buffered )
 				msg.post()
 				'client.sendMessage( buffered )
 			Next
@@ -466,10 +465,16 @@ EndRem
 		'serverCapabilities.set( "completionProvider|resolveProvider", "true" )
 		'serverCapabilities.set( "completionProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "definitionProvider", "true" )
-		'serverCapabilities.set( "hoverProvider", "true" )
-		'serverCapabilities.set( "hoverProvider|workDoneProgress", "true" )
-		'serverCapabilities.set( "signatureHelpProvider", [] )
-		'serverCapabilities.set( "signatureHelpProvider|workDoneProgress", "true" )
+		If client.contains( "workspace|symbol" ) And config.has( "experimental|hover" )
+			logfile.debug( "# ENABLING: hoverProvider" )
+			serverCapabilities.set( "hoverProvider", "true" )
+			'serverCapabilities.set( "hoverProvider|workDoneProgress", "true" )
+		End If
+		'If client.contains( "workspace|symbol" ) And config.has( "experimental|hover" )
+		'	logfile.debug( "# ENABLING: signatureHelpProvider" )
+			'serverCapabilities.set( "signatureHelpProvider", [] )
+			'serverCapabilities.set( "signatureHelpProvider|workDoneProgress", "true" )
+		'End If
 		'serverCapabilities.set( "declarationProvider", [] )
 		'serverCapabilities.set( "definitionProvider", [] )
 		'serverCapabilities.set( "typeDefinitionProvider", [] )
@@ -770,18 +775,14 @@ End Rem
 	'Method onCompletionResolve:JSON( message:TMessage )	;	Return bls_textDocument_completion( message )	;	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_hover
-'	Method onHover:TMessage( message:TMessage )							' REQUEST
-'		ImplementationIncomplete( message )
-'		Local id:String = message.getid()
-'		logfile.debug( "TLSP.onHover()" )
-'		If Not message Or Not message.J
-'			lsp.send( Response_Error( ERR_INTERNAL_ERROR, "Null value" ) )
-'			Return Null
-'		End If
-'		logfile.info( "~n"+message.j.Prettify() )
-'		' We have NOT dealt with it, so return message
-'		lsp.send( Response_OK( id ) )
-'	End Method
+'	Method onHover:TMessage( message:TMessage )							
+	' REQUEST: textDocument/hover
+	Method on_textDocument_hover:JSON( message:TMessage )
+		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
+
+		ImplementationIncomplete( message )
+		Return bls_textDocument_hover( message )
+	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_definition
 	' REQUEST: textDocument/definition

@@ -22,6 +22,17 @@ PROGRAM
 		IMPORT brl.retro
 	INCLUDE=abc.bmx
 	
+EXPRESSION SYNTAX:
+
+	EXPRESSION	:= EQUALITY
+	EQUALITY	:= COMPARISON ( ( "!=" | "==" ) COMPARISON )*
+	COMPARISON	:= TERM ( ( ">" | ">=" | "<" | "<=" ) TERM )*
+	TERM		:= FACTOR ( ( "-" | "+" ) FACTOR )*
+	FACTOR		:= UNARY ( ( "/" | "*" ) UNARY )*
+	UNARY		:= ( "NOT" | "-" ) UNARY | PRIMARY
+	PRIMARY		:= NUMBER | STRING | BOOLEAN | "nul" | "(" EXPRESSION ")"
+	BOOLEAN		:= "True" | "False"
+	
 End Rem
 
 Rem THINGS TO DO
@@ -31,23 +42,24 @@ End Rem
 
 Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, TK_IMPORT, TK_MODULEINFO ]
 
-Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_CONST, TK_FOR, TK_REPEAT, TK_WHILE ]
+Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_CONST, TK_FOR, TK_REPEAT, TK_WHILE, TK_IF ]
 
 Global SYM_PROGRAM_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_ENUM, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE, TK_INTERFACE, TK_STRUCT ]+SYM_BLOCK_KEYWORDS
 Global SYM_MODULE_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
 
-Global SYM_TYPE_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
+Global SYM_TYPE_BODY:Int[] = [ TK_FIELD, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
 
-Global SYM_FUNCTION_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
-Global SYM_METHOD_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_LOCAL, TK_GLOBAL, TK_ALPHA, TK_FUNCTION ]+SYM_BLOCK_KEYWORDS
+Global SYM_FUNCTION_BODY:Int[] = [ TK_LOCAL, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_ALPHA, TK_FUNCTION, TK_RETURN ]+SYM_BLOCK_KEYWORDS
+Global SYM_METHOD_BODY:Int[] = [ TK_LOCAL, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_ALPHA, TK_FUNCTION, TK_RETURN ]+SYM_BLOCK_KEYWORDS
 
 Global SYM_ENUM_BODY:Int[] = [ TK_INCLUDE ]
-Global SYM_INTERFACE_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL, TK_METHOD ]
-Global SYM_STRUCT_BODY:Int[] = [ TK_INCLUDE, TK_FIELD, TK_GLOBAL ]
+Global SYM_INTERFACE_BODY:Int[] = [ TK_FIELD, TK_GLOBAL, TK_INCLUDE, TK_METHOD ]
+Global SYM_STRUCT_BODY:Int[] = [ TK_FIELD, TK_GLOBAL, TK_INCLUDE ]
 
 Global SYM_FOR_BODY:Int[] = [ TK_INCLUDE ]+SYM_BLOCK_KEYWORDS
 Global SYM_REPEAT_BODY:Int[] = [ TK_INCLUDE ]+SYM_BLOCK_KEYWORDS
 Global SYM_WHILE_BODY:Int[] = [ TK_INCLUDE ]+SYM_BLOCK_KEYWORDS
+Global SYM_IF_BODY:Int[] = [ TK_INCLUDE ]+SYM_BLOCK_KEYWORDS
 
 Global SYM_DATATYPES:Int[] = [ TK_BYTE, TK_DOUBLE, TK_FLOAT, TK_INT, TK_LONG, TK_SHORT, TK_STRING ]
 
@@ -292,15 +304,23 @@ EndRem
 				ast.add( Parse_Import() )
 			Forever
 		End If
+		
 		' PARSE BODY
 		Repeat	
 
 			Try
-				' Process EOL/Comments and Return at EOF
-				If Not token Or parseCEOL( ast ) Return ast
-'DebugStop				
-				If token.in( options )
+				' Failsafe!
+				If Not token Or token.id=TK_EOF ; Return ast
 				
+				' Process EOL/Comments and Return at EOF
+				'If Not token Or parseCEOL( ast ) Return ast
+'DebugStop				
+				If closing And token.in(closing)
+					' WE HAVE HIT A CLOSING TOKEN
+					Return ast
+				ElseIf token.in( [TK_EOL,TK_Comment,TK_Rem] )
+					If parseCEOL( ast ) Return ast
+				ElseIf token.in( options )
 					' Parse this token
 					Select token.id			
 					Case TK_Alpha		' Expression
@@ -318,11 +338,14 @@ EndRem
 					Case TK_Field
 						ast.add( Parse_Field() )
 					Case TK_For
+'DebugStop
 						ast.add( Parse_For() )
 					Case TK_Function
 						ast.add( Parse_Function() )
 					Case TK_Global
 						ast.add( Parse_Global() )
+					Case TK_If
+						ast.add( Parse_If() )
 					Case TK_Import
 						ast.add( Parse_Import() )
 					Case TK_Include
@@ -335,6 +358,8 @@ EndRem
 						ast.add( Parse_Method() )
 					Case TK_Repeat
 						ast.add( Parse_Repeat() )
+					Case TK_Return
+						ast.add( Parse_Return() )
 					Case TK_Struct
 						ast.add( Parse_Struct() )
 					Case TK_Type
@@ -362,10 +387,6 @@ EndRem
 						ast.add( error )
 						
 					End Select
-		
-				ElseIf closing And token.in(closing)
-					' WE HAVE HIT THE CLOSING TOKEN
-					Return ast
 				
 				Else	' TOKEN IS NOT IN THE OPTION LIST!
 'DebugStop
@@ -447,40 +468,143 @@ End Rem
 			End Select
 		Forever
 	End Method
-	
-	Method ParseExpression:TASTNode()
-'DebugStop
-        Local ast:TASTNode = ParseTerm()
 
-		While token.in([ TK_PLUS, TK_hyphen ])
-			Local operation:TToken = eat( [TK_PLUS,TK_hyphen] )
-			ast = New TASTBinary( ast, operation, ParseTerm() )
+	Method ParseComparison:TASTNode()
+		Local ast:TASTNode = ParseTerm()
+		While token.in( [TK_greaterthan,TK_lessthan,TK_GT_OR_EQUAL,TK_LT_OR_EQUAL] )
+			Local operation:TToken = eat( [TK_greaterthan,TK_lessthan,TK_GT_OR_EQUAL,TK_LT_OR_EQUAL] )
+			ast = New TASTBinary( ast, operation, ParseTerm() )				
 		Wend
-			
-        Return ast
-Rem
-        """
-        expr   : term ((PLUS | MINUS) term)*
-        term   : factor ((MUL | DIV) factor)*
-        factor : INTEGER | LPAREN expr RPAREN
-        """
-        node = self.term()
+		Return ast
+	End Method
 
-        while self.current_token.type in (PLUS, MINUS):
-            token = self.current_token
-            if token.type == PLUS:
-                self.eat(PLUS)
-            elif token.type == MINUS:
-                self.eat(MINUS)
+	' A condition is simply an Expression, so call that instead
+	Method ParseCondition:TASTNode()
+		Return ParseEquality()
+	
+		' A Condition is just an expression...
+		' A condition can be unary or binary in operation.	
+		' This is an implementation of Resursive Descent	
 
-            node = BinOp(left=node, op=token, right=self.term())
+'		Function comparison:TASTNode()
+'			Local expr:TASTNode = term()
+'			advance()
+'			
+'			While token.in( [TK_GT,TK_LT,TK_GTE,TK_LTE] )
+'				Local op:TToken = token
+'				advance()
+'				Local rnode:TASTNode = term()
+'				expr = New TASTBinary( expr, op, rnode )				
+'			Wend
+'			
+'			Return expr
+'		End Function
 
-        return node
-End Rem
+'		Function equality:TASTNode()
+'			Local expr:TASTNode = comparison()
+'			advance()
+'			
+'			While token.in( [TK_Equal,TK_NotEqual] )
+'				Local op:TToken = token
+'				advance()
+'				Local rnode:TASTNode = comparison()
+'				expr = New TASTBinary( expr, op, rnode )
+'			Wend 
+'			
+'			Return expr
+'		End Function
+		
+'		Function expression:TASTNode() 
+'			Return equality()
+'		End Function
+
+'		Function unary:TASTNode() 
+'			If token.in( [TK_Not,TK_Hyphen] )
+'				Local op:TToken = token
+'				advance()
+'				Local node:TASTNode = unary()
+'				Return New TASTUnary( op, node )
+'			End If
+'			Return primary()
+'		End Function
+
+'		Function primary:TASTNode()
+'			Select token
+'			Case TK_True, TK_False, TK_Null
+'				Return New TASTNode( token )
+'			Case TK_Number,TK_Alpha
+'				Return New TASTNode( token )
+'			Case TK_LPAREN
+'				Local expr:TASTNode = expression()
+'				Local rparen:TToken = eat( TK_RParen )
+'				Return New TASTGroup( expr )
+'			End Select
+'			Return Null
+'		End Function
+		
+		' Order of precedence - Addition and Subtraction FIRST
+'		Function term:TASTNode()
+'			Local expr:TASTNode = factor()
+'			advance()
+'			
+'			While token.in( [TK_Plus,TK_Minus] )
+'				Local op:TToken = token
+'				advance()
+'				Local rnode:TASTNode = factor()
+'				expr = New TASTBinary( expr, op, rnode )
+'			Wend 
+'			
+'			Return expr			
+'		End Function
+
+		' Order of precedence - Multiplication and Division LAST
+'		Function factor:TASTNode()
+'			Local expr:TASTNode = unary()
+'			advance()
+'			
+'			While token.in( [TK_Solidus,TK_Asterisk] )
+'				Local op:TToken = token
+'				advance()
+'				Local rnode:TASTNode = unary()
+'				expr = New TASTBinary( expr, op, rnode )
+'			Wend 
+'			
+'			Return expr			
+'		End Function
+
 	End Method
 	
+	' EQUALITY := COMPARISON ( ( "=" | "<>" ) comparison )*
+	Method ParseEquality:TASTNode()
+		Local ast:TASTNode = ParseComparison()
+		While token.in( [TK_equals,TK_NOT_EQUAL] )
+			Local operation:TToken = eat( [TK_equals,TK_NOT_EQUAL] )
+			ast = New TASTBinary( ast, operation, ParseComparison() )
+		Wend 
+		Return ast
+	End Method
+		
+	' An expression is now simply an equality rule, so call that instead
+	Method ParseExpression:TASTNode()
+		Return ParseEquality()
+	End Method
+
+	' Order of precedence - Multiplication and Division LAST
 	Method ParseFactor:TASTNode()
+		Local ast:TASTNode = ParseUnary()
+		While token.in( [TK_Asterisk, TK_Solidus] )					' MULTIPLY, DIVIDE
+			Local operation:TToken = eat( [TK_Asterisk, TK_Solidus] )
+			ast = New TASTBinary( ast, operation, ParseUnary() )
+		Wend
+		Return ast	
+	End Method 
+
+	Method ParsePrimary:TASTNode()
 		Select token.id
+		Case TK_True, TK_False, TK_Null
+			Local ast:TASTVariable = New TASTVariable( token )
+			advance()
+			Return ast
 		Case TK_Number
 			Local ast:TASTNumber = New TASTNumber( token )
 			advance()
@@ -489,13 +613,40 @@ End Rem
 			Local ast:TASTVariable = New TASTVariable( token )
 			advance()
 			Return ast
-		Case TK_LParen
-'DebugStop
-			advance()
+		Case TK_LPAREN
+			Local lparen:TToken = eat( TK_LParen )
 			Local ast:TASTNode = ParseExpression()
 			Local rparen:TToken = eat( TK_RParen )
-			Return ast
-		EndSelect
+			Return New TASTGroup( ast )
+		End Select
+		Return Null
+	End Method
+		
+	' Order of precedence - Multiplication and Division LAST
+	Method ParseTerm:TASTNode()
+		Local ast:TASTNode = ParseFactor()
+		While token.in( [TK_Plus,TK_Hyphen] )					' ADDITION, SUBTRACTION
+			Local operation:TToken = eat( [TK_Plus,TK_Hyphen] )
+			ast = New TASTBinary( ast, operation, ParseFactor() )
+		Wend
+		Return ast	
+		
+'		Select token.id
+'		Case TK_Number
+'			Local ast:TASTNumber = New TASTNumber( token )
+'			advance()
+'			Return ast
+'		Case TK_Alpha
+'			Local ast:TASTVariable = New TASTVariable( token )
+'			advance()
+'			Return ast
+'		Case TK_LParen
+'DebugStop
+'			advance()
+'			Local ast:TASTNode = ParseExpression()
+'			Local rparen:TToken = eat( TK_RParen )
+'			Return ast
+'		EndSelect
 Rem
        """factor : INTEGER | LPAREN expr RPAREN"""
         token = self.current_token
@@ -507,33 +658,21 @@ Rem
             node = self.expr()
             self.eat(RPAREN)
             return node
-EndRem			
+EndRem		
+
+	
 	End Method
-	
-	Method ParseTerm:TASTNode()
-		Local ast:TASTNode = ParseFactor()
-		While token.in( [TK_asterisk, TK_solidus] )					' MULTIPLY, DIVIDE
-			Local operation:TToken = eat( [TK_asterisk, TK_solidus] )
-			ast = New TASTBinary( ast, operation, ParseFactor() )
-		Wend
-		Return ast
-Rem
-        """term : factor ((MUL | DIV) factor)*"""
-        node = self.factor()
+			
+	' Unary operation
+	Method ParseUnary:TASTNode() 
+		If token.in( [TK_Not,TK_Hyphen] )
+			Local operation:TToken = eat( [TK_Not,TK_Hyphen] )
+			Return New TASTUnary( operation, ParseUnary() )
+		End If
+		Return ParsePrimary()
+	End Method
 
-        while self.current_token.type in (MUL, DIV):
-            token = self.current_token
-            if token.type == MUL:
-                self.eat(MUL)
-            elif token.type == DIV:
-                self.eat(DIV)
 
-            node = BinOp(left=node, op=token, right=self.factor())
-
-        return node
-End Rem
-	End Method 
-	
 	' Parses the application header into an EXISTING ast compound node
 	
 Rem	Method parseHeader:TASTCompound( ast:TASTCompound )	
@@ -798,7 +937,11 @@ EndRem
 		End If
 		Return ast
 	End Method
-	
+
+	Method Parse_ElseIf:TASTNode()
+		Return Parse_If_Block( New TAST_ElseIf( token ) )
+	End Method
+		
 	Method Parse_End:TASTNode()
 		Local ast:TASTKeyword = New TASTKeyword( token )
 		advance()
@@ -950,7 +1093,69 @@ End Rem
 		End If
 		Return ast
 	End Method
+
+	Method Parse_If:TASTNode()
+		Return Parse_If_Block( New TAST_If( token ) )
+	End Method
+	
+	' Processes IF and ELSEIF, but requires the correct Node to work on.
+	Method Parse_If_Block:TASTNode( ast:TAST_If )
+		Local class:Int = 0		' Identify single line or multiline IF statements
 		
+'DebugLog( String(token.line)[..4]+"IF..." )
+'DebugStop
+		'	"IF" ["("] expression [")"] [";"|"THEN"] statement
+		'	"IF" ["("] expression [")"] [";"|"THEN"] CRLF statement ["ELSE" <IFTHEN>] "END"["IF"]
+		
+		advance()
+		
+		' Parse the condition
+		ast.condition = ParseCondition()
+		
+'Local debug:TToken = token
+'DebugStop
+
+		' Eat optional Semicolon or THEN statements
+		Local optionalthen:TToken = eatOptional( [TK_Then,TK_Semicolon], False )	' Returns NULL if missing
+
+		' Identify comments and EOL
+		If token.in( [TK_EOL,TK_EOF,TK_COMMENT] )
+			class = 2	' Multi line
+'DebugLog( "- MULTI LINE IF" )
+			If ParseCEOL( ast ) ; Return ast
+			parseSequence( ast, SYM_IF_BODY+[TK_ALPHA], [TK_EndIf,TK_Else,TK_Elseif] )
+		Else
+			class = 1	' Single line
+'DebugLog( "- SINGLE LINE IF" )
+'DebugStop
+			parseSequence( ast, SYM_IF_BODY+[TK_ALPHA], [TK_EndIf,TK_Else,TK_Elseif,TK_EOL] )
+		End If
+
+'DebugStop
+		' Parse the IF body
+		
+		Select token.id
+		Case TK_EndIf
+			eat( TK_Endif )
+		Case TK_Else
+'DebugStop
+			Local otherwise:TToken = eat( TK_Else )
+			ast.otherwise = parseSequence( "ELSE", SYM_IF_BODY+[TK_ALPHA], [TK_Endif] )
+			ast.otherwise.consume( otherwise )
+			eat( TK_Endif )
+		Case TK_Elseif
+'DebugStop
+			'eat( TK_ElseIf )	' Don't need this, it is consumed in Parse_ElseIf()
+			ast.otherwise = Parse_ElseIf()
+		EndSelect
+		
+'debug=token
+'DebugStop
+
+		Return ast
+
+	End Method
+	
 	'	Create an AST Node for Import containing all imported modules as children
 	'	import = import ALPHA PERIOD ALPHA [COMMENT] EOL
 	Method Parse_Import:TASTNode()
@@ -1115,6 +1320,16 @@ EndRem
 		
 		' End of block
 		ast.ending = eat( [TK_Until,TK_Forever] )
+		Return ast
+	End Method
+
+	Method Parse_Return:TASTNode()
+		'Print( "Parse_Return() is not implemented" )
+'DebugStop
+		Local ast:TAST_Return = New TAST_Return( token )
+		advance()
+		
+		ast.expr = ParseExpression()
 		Return ast
 	End Method
 	

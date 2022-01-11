@@ -120,4 +120,5 @@ Type TTaskWorkspaceScan Extends TTask
 		Forever
 		CloseDir dir
 	End Function
+	
 End Type

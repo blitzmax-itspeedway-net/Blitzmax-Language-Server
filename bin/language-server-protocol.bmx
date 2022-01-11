@@ -69,6 +69,14 @@ Enum SymbolKind
 	_Operator		= 25
 	_TypeParameter	= 26
 EndEnum
+global SymbolKindText:String[] = [ ..
+	"Unknown","File","Module","Namespace","Package",	..
+	"Class","Method","Property","Field","Constructor",	..
+	"Enum","Interface","Function","Variable","Constant",	..
+	"String","Number","Boolean","Array","Object",	..
+	"Key","Null","EnumMember","Struct","Event",	..
+	"Operator","TypeParameter"]	
+
 
 Enum TextDocumentSyncKind ; NONE = 0 ; FULL = 1 ; INCREMENTAL = 2 ; EndEnum
 

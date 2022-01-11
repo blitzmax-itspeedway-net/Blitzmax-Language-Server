@@ -48,7 +48,7 @@ Type TTaskQueue
 			EndIf
 			link = link.prevLink
 		Wend
-DebugStop
+'DebugStop
 		' Queue is empty, or task goes at top...
 		logfile.debug( "TTaskQueue: Inserting "+task.name+", Priority "+task.priority )
 		queue.addFirst( task )
@@ -63,6 +63,12 @@ DebugStop
 		WaitThread( thread )	' wait until thread finished
 	End Method
 	
+	' This is the task queue thread
+	' The thread goes to sleep when the queue is empty and when it awakes
+	' it pops a task and runs it.
+	' When the task completes, the thread goes back to sleep.
+	' NOTE: If the task is threaded, it will launch that thread and will not wait.
+	
 	Function ThreadFunction:Object( data:Object )
 		Local this:TTaskQueue = TTaskQueue( data )
 		If Not this ; Return Null
@@ -76,7 +82,11 @@ DebugStop
 			LockMutex( this.mutex )
 			Local task:TTask = TTask( this.queue.removeFirst() )
 			UnlockMutex( this.mutex )
-			If task ; task.run()
+			If task
+				logfile.debug( "TTaskqueue: Running   "+task.name+" ("+( ["BLOCKING","THREADED"][task.operation] )+")" )
+				task.run()
+				logfile.debug( "TTaskqueue: Finished  "+task.name )
+			End If
 
 			If this.queue.isEmpty()
 				'logfile.debug( "TTaskQueue Thread sleeping" )

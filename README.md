@@ -1,6 +1,6 @@
 # BlitzMax Language Server (for Blitzmax NG)
 (c) Copyright Si Dunford, June 2021, All Rights Reserved
-VERSION 0.02 Alpha
+VERSION 0.4 Alpha
 
 ## CURRENT STATE:
 
@@ -8,8 +8,8 @@ VERSION 0.02 Alpha
     Some features may be non-operational or contain bugs
 
 ## CHANGE LOG:
-16 JUN 2021  0.00PA  Creation of Github Repository & Basic application structure
-07 JUL 2021  0.01A   Application shell is operational
+
+* [[Change Log]]
 
 ## DOCUMENTATION
 

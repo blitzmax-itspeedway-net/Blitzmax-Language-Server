@@ -12,6 +12,9 @@ Type TTaskSend Extends TTask
 		priority = QUEUE_PRIORITY_HIGH
 		unique = False
 		Self.message = message
+		Local temp:String = message
+		If Len(temp)>30 ; temp = temp[..30]
+		name = "Send{"+temp+"}"
 	End Method
 
 	Method launch()

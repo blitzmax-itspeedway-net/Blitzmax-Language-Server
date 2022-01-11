@@ -28,7 +28,7 @@ End Rem
 Type TSymbolTable
 
 	Field data:TList
-'	Field fileuri:String 
+	Field filepath:String 		' The file containing this symbol
 '	Field valid:Int = False
 	'Field db:TDBConnection
 	
@@ -47,7 +47,7 @@ Type TSymbolTable
 	' Extract symbols from AST for given uri
 	Method New( ast:TAstNode )
 	
-		DebugStop
+		'DebugStop
 		Local options:Int = 0
 		Local visitor:TSymbolTableVistor = New TSymbolTableVistor( ast, options )
 		data = visitor.run( "" )
@@ -293,6 +293,7 @@ Type TSymbolTableRow
 		"Constructor", "Enum", "Interface", "Function", "Variable", "Constant", "String", "Number", "Boolean", ..
 		"Array", "Object", "Key", "Null", "EnumMember", "Struct", "Event", "Operator", "TypeParameter" ]
 
+	Field filepath:String
 	Field scope:String
 	Field name:String
 	Field kind:Int

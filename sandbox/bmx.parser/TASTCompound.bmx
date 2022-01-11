@@ -6,7 +6,7 @@
 '	V1.0	07 AUG 21	Initial version
 
 ' A Compound AST Node with multiple children
-Type TASTCompound Extends TASTNode
+Type TASTCompound Extends TASTNode	' No metadata by design.
 	Field children:TList
 
 	Method New( classname:String )
@@ -18,7 +18,7 @@ Type TASTCompound Extends TASTNode
 		consume( token )
 		children = New TList()
 	End Method
-		
+	
 	' Walk the tree to find left-most leaf
 	Method walkfirst:TASTNode()
 		If children.isempty() Return Self

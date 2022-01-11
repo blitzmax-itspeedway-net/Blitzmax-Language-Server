@@ -1,2 +1,2 @@
-Global version:String="0.3"
-Global build:String="315"
+Global version:String="0.4"
+Global build:String="23"

@@ -135,6 +135,11 @@ Type TAST_Comment Extends TASTNode { class="COMMENT" }
 '	Method validate() ; valid = True ; error = [] ; End Method
 End Type
 
+' IF has a condition, body (children) and an ELSE (otherwise)
+' The Else (otherwise), could be another IF node
+Type TAST_ElseIf Extends TAST_If { class="ELSEIF" }
+End Type
+
 Type TAST_Enum Extends TASTCompound { class="ENUM" }
 	Field name:TToken
 	Field ending:TToken
@@ -219,12 +224,58 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 
 End Type
 
-Type TAST_IFTHEN Extends TASTNode { class="IFTHEN" }
-	Field condition:TAST_Condition
+' IF has a condition, body (children) and an ELSE (otherwise)
+' The Else (otherwise), could be another IF node
+Type TAST_If Extends TASTCompound { class="IF" }
+	Field condition:TASTNode
+	Field otherwise:TASTNode	' ELSE (TAST_Compound) / ELSEIF (TAST_If)
+	Field ending:TToken	
+	
+	' Used for debugging tree structure
+	'Method showLeafText:String()
+	'	Return "(CONDITION)"
+	'End Method
 
 	' Used for debugging tree structure
-	Method showLeafText:String()
-		Return "UNDEFINED"
+	Method reveal:String( indent:String = "" )
+'DebugStop
+		Local block:String = ["!","."][errors.length>0]
+		block :+ " " + pos()[..9] + " " + indent.length + indent+getname() + "~n"
+		'block :+ " " + Trim(showLeafText()) + "~n"
+		'If value<>"" block :+ " "+Replace(value,"~n","\n")
+		'block :+ "~n"
+		If condition
+			block :+ condition.reveal( indent+" " )
+		End If
+		block :+ "  " + pos()[..9] + " " + indent.length + indent+"THEN~n"
+		For Local child:TASTNode = EachIn children
+'Print( child.classname +":"+child.tokenid+"="+child.value )
+'If child.tokenid=645 DebugStop
+			block :+ child.reveal( indent+" " )
+		Next
+		If otherwise
+'DebugStop
+			block :+ otherwise.reveal( indent )
+		End If
+		Return block
+	End Method
+		
+	' Walk the tree to find left-most leaf
+	Method walkfirst:TASTNode()
+		If condition Return condition.walkFirst()
+		Return Self
+	End Method
+	
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object, options:Int ), data:Object, options:Int = 0 )
+		If data ; data = eval( Self, data, options )
+		If data And condition ; data = condition.inorder( eval, data, options )
+		If children
+			For Local child:TASTNode = EachIn children
+				If data ; data = child.inorder( eval, data, options )
+			Next
+		End If
+		If data And otherwise ; data = otherwise.inorder( eval, data, options )
+		Return data
 	End Method
 	
 End Type
@@ -303,6 +354,11 @@ End Type
 
 Type TAST_Repeat Extends TASTCompound { class="REPEAT" }
 	Field ending:TToken	
+End Type
+
+Type TAST_Return Extends TASTNode { class="RETURN" }
+	Field expr:TASTNode
+	'Method validate() ; valid = True ; error = [] ; End Method
 End Type
 
 Type TAST_StrictMode Extends TASTNode { class="STRICTMODE" }
