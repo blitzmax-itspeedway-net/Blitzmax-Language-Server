@@ -202,6 +202,9 @@ Type TParser
 	' Entry point for program parser
 	Method parse_program:TASTNode() ; End Method
 	
+	Method peek:TASTNode()
+	End Method
+	
 	Rem
 	Method parse_rule:TASTNode( rulename:String, indent:String="" )
 		Local result:TASTnode[] '= New TParseResult()

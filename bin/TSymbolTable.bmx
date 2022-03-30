@@ -27,7 +27,8 @@ End Rem
 
 Type TSymbolTable
 
-	Field data:TList
+	'Field signatures:TList
+	Field symbols:TList
 	Field filepath:String 		' The file containing this symbol
 '	Field valid:Int = False
 	'Field db:TDBConnection
@@ -46,20 +47,24 @@ Type TSymbolTable
 
 	' Extract symbols from AST for given uri
 	Method New( ast:TAstNode )
+		symbols = New TList()
+		'signatures = New TList()
 	
 		'DebugStop
 		Local options:Int = 0
 		Local visitor:TSymbolTableVistor = New TSymbolTableVistor( ast, options )
-		data = visitor.run( "" )
+		visitor.run( "", symbols  )
 	
 	End Method
-
+	
 	Method reveal:String()
-DebugStop
-		Local results:String = "SCOPE"[..16] + "NAME"[..16] + "KIND"[..16] + "LOCATION"[..16] + "URI~n"
-		For Local row:TSymbolTableRow = EachIn data
+'DebugStop
+		Local results:String = "SYMBOLS:~n"
+		results :+ "SCOPE"[..16] + "KIND"[..16] + "NAME"[..16] + "LOCATION"[..16] + "URI"[..20] + "DEFINITION~n"
+		For Local row:TSymbolTableRow = EachIn symbols
 			results :+ row.reveal()+"~n"
 		Next
+		
 		Return results
 	End Method
 
@@ -72,23 +77,28 @@ Type TSymbolTableVistor Extends TVisitor
 	Field ast:TASTNode
 	Field options:Int
 	Field symTable:TList
+	'Field signatures:TList
 	Field count:Int = 0
 	Field uri:String		' File we are visiting
+	
+	'Field signature:TSymbolTableRow	' Current Signature being built
 		
 	Method New( ast:TASTNode, options:Int )
 		Self.ast = ast
-		Self.filter = ["assignment","enum","fornext","function","interface","method","program","repeat","struct","type","vardecl","whilewend"]
+		Self.filter = ["assignment","enum","fornext","function","Interface","method","module","program","repeat","struct","type","vardecl","whilewend"]
 		DebugLog( "## VISITOR OPTIONS: "+options )
 		Self.options = options
 	End Method
 
-	Method run:TList( uri:String )
+	Method run( uri:String, symbols:TList )
 		Self.uri = uri
+		'Self.signatures = signatures
+		'symTable = New TList()
+		Self.symTable = symbols
 		'Local J:JSON = New JSON( JSON_ARRAY )	' DocumentSymbol[]
-		symTable = New TList()
+'DebugStop
 		visit( ast, ".", "symtable" )
-		'DebugLog( "SYMTABLE:~n"+J.prettify() )
-		Return symTable
+		'visit( ast, ".", "signature" )
 	End Method
 
 	Method counter:String()
@@ -183,13 +193,36 @@ DebugLog( "FORNEXT is not fully implemented" )
 	Method symtable_FUNCTION()( arg:TGift )
 		Local node:TAST_Function = TAST_Function( arg.node )
 		If node And node.name 
+			' SYMBOL
 			Local scope:String = String( arg.data )
 			Local location:TLocation = New TLocation( uri, node.name )
-			symTable.addlast( New TSymbolTableRow( node.name.value, SymbolKind._Function.ordinal(), location, scope ) )
+			Local signature:TSymbolTableRow = New TSymbolTableRow( node.name.value, SymbolKind._Function.ordinal(), location, scope )
+
+			' SIGNATURE
+		
+			' Create signature
+			signature.definition = "Function "+node.name.value
+			If node.colon And node.returntype
+				signature.definition :+ ":" + node.returntype.value
+			'Else
+			'	signature.definition :+ ":VOID"
+			End If
+
+			' Add arguments
+			signature.definition :+ fn_args( node.arguments, 2 )
+			signature.definition  = signature.definition [..(Len(signature.definition )-1)]	' Strip final comma
+
+			' Add description
+			'signature.description = 
+
+			' Add to list
+			symTable.addlast( signature )
+			
+			' Children
 			visitChildren( arg.node, scope+node.name.value+"." , arg.prefix )
 		End If
 	End Method
-
+	
 	Method symtable_INTERFACE()( arg:TGift )
 		Local node:TAST_Interface = TAST_Interface( arg.node )
 		If node And node.name 
@@ -201,15 +234,43 @@ DebugLog( "FORNEXT is not fully implemented" )
 	End Method
 
 	Method symtable_METHOD()( arg:TGift )
+DebugStop
 		Local node:TAST_Method = TAST_Method( arg.node )
 		If node And node.name 
 			Local scope:String = String( arg.data )
 			Local location:TLocation = New TLocation( uri, node.name )
-			symTable.addlast( New TSymbolTableRow( node.name.value, SymbolKind._Method.ordinal(), location, scope ) )
+			Local signature:TSymbolTableRow = New TSymbolTableRow( node.name.value, SymbolKind._Method.ordinal(), location, scope )
+
+			' SIGNATURE
+	
+			' Create signature
+			signature.definition = "Method "+node.name.value
+			If node.colon And node.returntype
+				signature.definition :+ ":" + node.returntype.value
+			'Else
+			'	signature.definition :+ ":VOID"
+			End If
+			
+			' Add arguments
+			signature.definition :+ fn_args( node.arguments, 2 )
+			signature.definition  = signature.definition [..(Len(signature.definition )-1)]	' Strip final comma
+			
+			' Add description
+			'signature.description = 
+
+			' Add to list
+			symTable.addlast( signature )
+			
+			' Children
 			visitChildren( arg.node, scope+node.name.value+"." , arg.prefix )
 		End If
 	End Method
 
+	' This is the entry point of a module
+	Method symtable_MODULE( arg:TGift )
+		visitChildren( arg.node, arg.data, arg.prefix )
+	End Method
+	
 	' This is the entry point of our appliciation
 	Method symtable_PROGRAM( arg:TGift )
 		visitChildren( arg.node, arg.data, arg.prefix )
@@ -284,6 +345,53 @@ DebugLog( "INVALID VARDECL TYPE" )
 		visitChildren( arg.node, arg.data, arg.prefix )
 	End Method
 	
+	' This is the entry point of our appliciation
+'	Method signature_PROGRAM( arg:TGift )
+'		visitChildren( arg.node, arg.data, arg.prefix )
+'	End Method
+
+	' Extract function/methdo arguments to create signature
+	Method fn_args:String( args:TASTCompound, depth:Int )
+		If depth <= 0 ; Return "(unknown),"
+		Local result:String = ""
+		If args
+			result :+ "("
+			For Local arg:TASTNode = EachIn args.children
+			
+				' Identify argument type
+				Local typeid:TTypeId = TTypeId.ForObject( arg )
+'DebugStop
+				Select typeid.name
+				Case "TAST_Function"	' FUnction variable
+					Local func:TAST_Function = TAST_Function( arg )
+'DebugStop
+					result :+ " "+func.name.value
+'DebugStop
+					If func.colon And func.returntype
+						result :+ ":" + func.returntype.value
+					End If
+					'result :+ "(" 
+'DebugStop
+					'If func.arguments ; 
+					result :+ fn_args( func.arguments, depth-1 )
+					'result :+ " )," 
+				Case "TASTBinary"
+					Local argument:TASTBinary = TASTBinary( arg )
+					result :+ " "+argument.lnode.value + ":" + argument.rnode.value+","
+				Default
+'DebugStop
+					result :+ "[unknown],"
+				End Select
+			Next
+			result = result[..(Len(result)-1)]	' Strip final comma
+			
+			result :+ " ),"
+		Else
+			result :+ "(),"
+		End If
+		Return result
+	End Method
+
 End Type
 
 
@@ -298,6 +406,49 @@ Type TSymbolTableRow
 	Field name:String
 	Field kind:Int
 	Field location:TLocation
+	
+'	Field line:Int, pos:Int		' Where this is within the source file
+'	Field name:String			' Name of type, function, variable etc
+'	'Field symtype:String		' function, method, type, int, string, double etc.
+'	Field scope:String			' extern, function:name, method:name, global
+'	Field class:String			' function, method, type, field, local, global, include 
+	Field description:String	' Taken directly from pre-defintion comment or line comment
+	Field definition:String		' The definition taken from the source code
+'	'
+
+	Method New( name:String, kind:Int, location:TLocation, scope:String )
+		Self.name = name
+		Self.kind = kind
+		Self.location = location
+		Self.scope = scope
+	End Method
+
+	Method reveal:String()
+		Local uri:String = ""
+		Local loc:String = "[]"
+		If location 
+			uri = location.uri
+			loc = location.reveal()
+		End If
+		Return scope[..16] + (kind+"="+SYMBOLS[kind])[..16] + name[..16] + loc[..16] + uri[..20] + definition
+	End Method
+	
+End Type
+
+Rem
+Type TSignatureTableRow
+
+	Global SYMBOLS:String[] = ["","File", "Module", "Namespace", "Package", "Class", "Method", "Property", "Field", ..
+		"Constructor", "Enum", "Interface", "Function", "Variable", "Constant", "String", "Number", "Boolean", ..
+		"Array", "Object", "Key", "Null", "EnumMember", "Struct", "Event", "Operator", "TypeParameter" ]
+
+	Field filepath:String
+	Field scope:String
+	Field name:String
+	Field kind:Int
+	Field location:TLocation
+	
+	Field definition:String		
 	
 '	Field line:Int, pos:Int		' Where this is within the source file
 '	Field name:String			' Name of type, function, variable etc
@@ -322,13 +473,8 @@ Type TSymbolTableRow
 			uri = location.uri
 			loc = location.reveal()
 		End If
-		Return scope[..16] + (kind+"="+SYMBOLS[kind])[..16] + name[..16] + loc[..16] + uri
+		Return scope[..16] + (kind+"="+SYMBOLS[kind])[..16] + name[..16] + loc[..16] + definition
 	End Method
 	
 End Type
-
-Rem
-
-
-
 End Rem

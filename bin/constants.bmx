@@ -35,6 +35,11 @@ Const LOG_NOTICE:Int    = 5
 Const LOG_INFO:Int      = 6
 Const LOG_DEBUG:Int     = 7
 
+' MARKDOWN LANGUAGE
+' 30 March 2022, "blitzmax is nto a supported VSCode Markdown language
+'	https://code.visualstudio.com/docs/languages/identifiers
+Const MARKDOWN_LANGUAGE:string = "blitzmax"
+
 ?win32
     Const EOL:String = "~n"
 ?Not win32

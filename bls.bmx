@@ -128,6 +128,7 @@ Include "sandbox/bmx.parser/TASTCompound.bmx"
 Include "sandbox/bmx.parser/TVisitor.bmx"
 Include "sandbox/bmx.parser/TParseValidator.bmx"
 Include "sandbox/bmx.parser/TASTErrorMessage.bmx"
+Include "sandbox/bmx.parser/TASTWalker.bmx"
 
 ' SANDBOX BLITZMAX LEXER/PARSER
 ' Included here until stable release pushed back into module
@@ -168,11 +169,11 @@ Global Logfile:TLogger = New TLogger()				' Log File Manager
 ' @bmk include bin/version.bmk
 ' @bmk incrementVersion 
 Include "bin/version.bmx"
-Global BLS_VERSION:String = version+"."+build
+'Global BLS_VERSION:String = version+"."+build
 
 logfile.debug( "------------------------------------------------------------" )
 logfile.info( AppTitle )
-logfile.info( "  VERSION:    V"+BLS_VERSION )
+logfile.info( "  VERSION:    V"+appvermax+"."+appvermin+" build "+appbuild )
 logfile.info( "  JSON:       V"+JSON.Version() )
 logfile.debug( "  CURRENTDIR: "+CurrentDir$() )
 logfile.debug( "  APPDIR:     "+AppDir )
@@ -205,9 +206,9 @@ Else
 End If
 
 '	LANGUAGE SERVER
-
-Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 DebugStop
+Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
+'DebugStop
 
 ' Depreciated 15/12/21 in favour of TClient extensions.
 ' This will be based on arguments in the future, but for now we only support STDIO
@@ -224,6 +225,7 @@ DebugStop
 Global Workspaces:TWorkspaces = New TWorkspaces()
 
 '	CREATE MODULE SCAN TASK
+DebugStop
 Global modules:TModuleCache = New TModuleCache()
 'DebugStop
 Local task:TTaskModuleScan = New TTaskModuleScan( modules )

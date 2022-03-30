@@ -470,11 +470,12 @@ EndRem
 			serverCapabilities.set( "hoverProvider", "true" )
 			'serverCapabilities.set( "hoverProvider|workDoneProgress", "true" )
 		End If
-		'If client.contains( "workspace|symbol" ) And config.has( "experimental|hover" )
-		'	logfile.debug( "# ENABLING: signatureHelpProvider" )
-			'serverCapabilities.set( "signatureHelpProvider", [] )
+		If client.contains( "textDocument|signatureHelp" ) And config.has( "experimental|sighelp" )
+			logfile.debug( "# ENABLING: signatureHelpProvider" )
+			serverCapabilities.set( "signatureHelpProvider|triggerCharacters", "(" )
+			serverCapabilities.set( "signatureHelpProvider|retriggerCharacters", ",:" )
 			'serverCapabilities.set( "signatureHelpProvider|workDoneProgress", "true" )
-		'End If
+		End If
 		'serverCapabilities.set( "declarationProvider", [] )
 		'serverCapabilities.set( "definitionProvider", [] )
 		'serverCapabilities.set( "typeDefinitionProvider", [] )
@@ -543,7 +544,7 @@ EndRem
 
         'InitializeResult.set( "result|capabilities", lsp.capabilities )
         InitializeResult.set( "result|capabilities", serverCapabilities )
-        InitializeResult.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+version+"."+build+"~q"]] )
+        InitializeResult.set( "result|serverinfo", [["name","~q"+AppTitle+"~q"],["version","~q"+appvermax+"."+appvermin+" build "+appbuild+"~q"]] )
 
 		'Publish( "log", "DEBG", "CAPABLITIES: "+serverCapabilities.Prettify() )
 
@@ -795,6 +796,13 @@ End Rem
 		Return bls_textDocument_documentSymbol( message )
 	End Method
 
+	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_signatureHelp
+	' REQUEST: textDocument/signatureHelp
+	Method on_textDocument_signatureHelp:JSON( message:TMessage )
+		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
+		Return bls_textDocument_signatureHelp( message )
+	End Method
+	
 	'	##### WORKSPACE MESSAGES #####
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_workspaceFolders

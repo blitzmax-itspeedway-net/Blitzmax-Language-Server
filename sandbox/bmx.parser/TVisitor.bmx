@@ -68,17 +68,16 @@ End Rem
 		
 		' Use Reflection to call the visitor method (or an error)
 		Local nodeid:TTypeId = TTypeId.ForObject( node )
-'DebugStop	
 		' The visitor function is defined in metadata
 		Local class:String = nodeid.metadata( "class" )
 		If class = "" 
 			If node.classname = "" ; Return
 			class = node.classname
 		End If
-'DebugStop
+'DebugStop	
 		' Filter nodes
 		If filter.length>0 And Not in( Lower(class), filter ) 
-DebugLog( "Filtered '"+class+"'")
+'DebugLog( "Filtered '"+class+"'")
 			Return
 		End If
 
@@ -86,6 +85,7 @@ DebugLog( "Filtered '"+class+"'")
 		Local this:TTypeId = TTypeId.ForObject( Self )
 		Local methd:TMethod = this.FindMethod( prefix+"_"+class )
 		If methd
+			'DebugLog( "Visiting "+prefix+"_"+class+"()" )
 			methd.invoke( Self, [New TGift(node,mother,prefix)] )
 		Else		
 			DebugLog( "Visitor "+prefix+"_"+class+"() is not defined" )

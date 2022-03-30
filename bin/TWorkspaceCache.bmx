@@ -24,6 +24,8 @@ start_line		INTEGER			NOT NULL DEFAULT 0
 start_char		INTEGER			NOT NULL DEFAULT 0
 end_line		INTEGER			NOT NULL DEFAULT 0
 end_char		INTEGER			NOT NULL DEFAULT 0
+definition		VARCHAR(255)	
+description		VARCHAR(255)
 
 EndRem
 
@@ -33,27 +35,35 @@ Type TWorkspaceCache Extends TCacheDB
 	
 	Const CACHE_PATH:String = ".bls-cache"
 	Const CACHE_FILE:String = "workspace.cache"
-	Const CACHE_VERSION:Int = 2
 	
 	Public 
 	
 	Method New( rootpath:String )
-		Super.New( rootpath, CACHE_PATH, CACHE_FILE, CACHE_VERSION )
+		Super.New( rootpath, CACHE_PATH, CACHE_FILE )
 		initialise()
 	End Method
 
 	Private
 	
-	Method upgrade( currentVersion:Int )
-		If currentVersion<2 ; update_from_v1()	' Version 1 had a mistake in the column names
+	Method upgrade( currentVerMax:Int, currentVerMin:Int )
+		logfile.debug( "workspace.cache.upgrade:" )
+		If  (currentVerMax=0 And currentVerMin<5) 		' Added definition field
+			logfile.debug( "- Upgrading Tables" )
+			exec( "DROP TABLE symbols;" )
+		Else
+			logfile.debug( "- Not required" )		
+		End If
 	End Method
-	
-	' Update from cache V1
-	Method update_from_v1()
-		' Version 1 had a mistake in the column names, so we need to rebuild this table
-		' Not ideal, but version 1 didn't use it, so it won't make any difference.
-		exec( "DROP TABLE symbols;" )
-		'buildDB()
+
+	Method patch( currentVerMax:Int, currentVerMin:Int, currentBuild:Int )
+		logfile.debug( "workspace.cache.patch:" )
+		If  (currentVerMax=0 And currentVerMin<5)		' Added definition field
+			logfile.debug( "- Patching Tables" )
+			exec( "DROP TABLE symbols;" )
+			exec( "DELETE FROM attr WHERE key='version' or key='blsversion';" ) ' Clean up old data
+		Else
+			logfile.debug( "- Not required" )		
+		End If
 	End Method
 	
 	' Build the database
@@ -78,7 +88,9 @@ Type TWorkspaceCache Extends TCacheDB
 				"start_line INTEGER NOT NULL DEFAULT 0, " +..
 				"start_char INTEGER NOT NULL DEFAULT 0, " +..
 				"end_line INTEGER NOT NULL DEFAULT 0, " +..
-				"end_char INTEGER NOT NULL DEFAULT 0 " +..
+				"end_char INTEGER NOT NULL DEFAULT 0, " +..
+				"definition VARCHAR(255) NOT NULL DEFAULT ''," +..
+				"description VARCHAR(255) NOT NULL DEFAULT ''" +..
 				");" )
 		
 	End Method
@@ -153,9 +165,9 @@ Type TWorkspaceCache Extends TCacheDB
 		' Remove old symbols
 		exec( "DELETE FROM symbols WHERE uri='"+fileuri+"';" )
 		
-		For Local symbol:TSymbolTableRow = EachIn symbols.data
+		For Local symbol:TSymbolTableRow = EachIn symbols.symbols
 			If Not symbol.location Or Not symbol.location.range Or Not symbol.location.range.start Or Not symbol.location.range.ends ; Continue
-			sql = "INSERT INTO symbols( uri,name,kind,start_line,start_char,end_line,end_char) "+ ..
+			sql = "INSERT INTO symbols( uri,name,kind,start_line,start_char,end_line,end_char,definition,description) "+ ..
 				  "VALUES(" +..
 					"'"+fileuri+"'," +..
 					"'"+symbol.name+"'," +..
@@ -163,7 +175,9 @@ Type TWorkspaceCache Extends TCacheDB
 					symbol.location.range.start.line+"," +..
 					symbol.location.range.start.character+"," +..
 					symbol.location.range.ends.line+"," +..
-					symbol.location.range.ends.character+");"
+					symbol.location.range.ends.character+"," +..
+					"'"+symbol.definition+"'," +..
+					"'"+symbol.description+"');"
 			exec( sql )
 		Next
 		UnlockMutex( lock )
@@ -173,7 +187,7 @@ Type TWorkspaceCache Extends TCacheDB
 	' Using a name criteria to search with
 	Method getSymbols:JSON[]( criteria:String )
 		Local SQL:String = ..
-			"SELECT uri,name,kind,start_line,start_char,end_line,end_char " +..
+			"SELECT uri,name,kind,start_line,start_char,end_line,end_char,definition,description " +..
 			"FROM symbols"
 		If criteria = ""
 			SQL :+ ";"
@@ -197,6 +211,8 @@ Type TWorkspaceCache Extends TCacheDB
 			symbol.set( "location|range|start|character", record.getIntbyName( "start_char" ) )
 			symbol.set( "location|range|end|line", record.getIntbyName( "end_line" ) )
 			symbol.set( "location|range|end|character", record.getIntbyName( "end_char" ) )
+			symbol.set( "definition", record.getStringByName( "definition" ) )
+			symbol.set( "description", record.getStringByName( "description" ) )
 			data :+ [symbol]
 			'logfile.debug( symbol.stringify() )
 		Wend

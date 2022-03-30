@@ -144,7 +144,7 @@ Type TArguments
 		Next
 		
 'DebugStop		
-		If AppArgs.length<2 ; return
+		If AppArgs.length<2 ; Return
 		
 		' Parse CLI commands
 		Select Lower(AppArgs[1])
@@ -153,7 +153,7 @@ Type TArguments
 			exit_(1)
 		Case "--version", "-v", "/v"
 			Print AppTitle
-			Print "Version "+version+"."+build
+			Print "Version "+appvermax+"."+appvermin+" build "+appbuild
 			exit_(1)
 		Case "set"
 			If AppArgs.length<=3

@@ -23,6 +23,8 @@ start_line		INTEGER			NOT NULL DEFAULT 0
 start_char		INTEGER			NOT NULL DEFAULT 0
 end_line		INTEGER			NOT NULL DEFAULT 0
 end_char		INTEGER			NOT NULL DEFAULT 0
+definition		VARCHAR(255)	
+description		VARCHAR(255)
 
 EndRem
 
@@ -32,29 +34,40 @@ Type TModuleCache Extends TCacheDB
 	
 	Const CACHE_PATH:String = ".bls-cache"
 	Const CACHE_FILE:String = "module.cache"
-	Const CACHE_VERSION:Int = 2
+	'Const CACHE_VERSION:Int = 2
 	
 	Public 
 	
 	Method New()
-		Super.New( BlitzMaxPath()+"/mod", CACHE_PATH, CACHE_FILE, CACHE_VERSION )
+		Super.New( BlitzMaxPath()+"/mod", CACHE_PATH, CACHE_FILE )
 'DebugStop
 		initialise()
 	End Method
 
 	Private
 	
-	Method upgrade( currentVersion:Int )
-		If currentVersion<2 ; update_from_v1()	' Version 1 had a typo in field name modpath
+	Method upgrade( currentVerMax:Int, currentVerMin:Int )
+		logfile.debug( "module.cache.upgrade:" )
+		If  (currentVerMax=0 And currentVerMin<5) 
+			logfile.debug( "- Upgrading Tables" )
+			exec( "DROP TABLE symbols;" )
+			exec( "DROP TABLE modules;" )
+		Else
+			logfile.debug( "- Not required" )		
+		End If
 	End Method
 	
-	' Update from cache V1
-	Method update_from_v1()
-		' Version 1 had a misspelling in the modpath column name, so we need to rebuild this table
-		' Not ideal, but version 1 didn't use it, so it won't make any difference.
-		exec( "DROP TABLE modules;" )
-		exec( "DROP TABLE symbols;" )
-		'buildDB()
+	Method patch( currentVerMax:Int, currentVerMin:Int, currentBuild:Int )
+		logfile.debug( "module.cache.patch:" )
+		If  (currentVerMax=0 And currentVerMin<5) 		' Added definition field
+			logfile.debug( "- Patching Tables" )
+			exec( "DROP TABLE symbols;" )
+			exec( "DROP TABLE modules;" )
+			'exec( "DELETE FROM modules;" ) ' Clean up old data
+			exec( "DELETE FROM attr WHERE key='version' or key='blsversion';" ) ' Clean up old data
+		Else
+			logfile.debug( "- Not required" )		
+		End If
 	End Method
 	
 	' Build the database
@@ -78,7 +91,9 @@ Type TModuleCache Extends TCacheDB
 				"start_line INTEGER NOT NULL DEFAULT 0, " +..
 				"start_char INTEGER NOT NULL DEFAULT 0, " +..
 				"end_line INTEGER NOT NULL DEFAULT 0, " +..
-				"end_char INTEGER NOT NULL DEFAULT 0 " +..
+				"end_char INTEGER NOT NULL DEFAULT 0, " +..
+				"definition VARCHAR(255) NOT NULL DEFAULT ''," +..
+				"description VARCHAR(255) NOT NULL DEFAULT ''" +..
 				");" )
 		
 	End Method
@@ -155,11 +170,11 @@ Type TModuleCache Extends TCacheDB
 		LockMutex( lock )
 		' Remove old symbols
 		exec( "DELETE FROM symbols WHERE modname='"+modname+"';" )
-		
-		For Local symbol:TSymbolTableRow = EachIn symbols.data
+
+		For Local symbol:TSymbolTableRow = EachIn symbols.symbols
 			Try
 				If Not symbol.location Or Not symbol.location.range Or Not symbol.location.range.start Or Not symbol.location.range.ends ; Continue
-				sql = "INSERT INTO symbols( modname,uri,name,kind,start_line,start_char,end_line,end_char) "+ ..
+				sql = "INSERT INTO symbols( modname,uri,name,kind,start_line,start_char,end_line,end_char,definition,description) "+ ..
 					  "VALUES(" +..
 						"'"+modname+"'," +..
 						"'"+fileuri+"'," +..
@@ -168,7 +183,9 @@ Type TModuleCache Extends TCacheDB
 						symbol.location.range.start.line+"," +..
 						symbol.location.range.start.character+"," +..
 						symbol.location.range.ends.line+"," +..
-						symbol.location.range.ends.character+");"
+						symbol.location.range.ends.character+"," +..
+						"'"+symbol.definition+"'," +..
+						"'"+symbol.description+"');"
 				exec( sql )
 			Catch e:String
 				' Ignore and continue
@@ -180,7 +197,7 @@ Type TModuleCache Extends TCacheDB
 	' Get a WorkspaceSymbol[] JSON array from the cache
 	Method getSymbols:JSON[]( criteria:String )
 		Local SQL:String = ..
-			"SELECT modname,modpath,name,kind,start_line,start_char,end_line,end_char " +..
+			"SELECT modname,modpath,name,kind,start_line,start_char,end_line,end_char,definition,description " +..
 			"FROM symbols"
 		If criteria = ""
 			SQL :+ ";"
@@ -204,6 +221,8 @@ Type TModuleCache Extends TCacheDB
 			symbol.set( "location|range|start|character", record.getIntbyName( "start_char" ) )
 			symbol.set( "location|range|end|line", record.getIntbyName( "end_line" ) )
 			symbol.set( "location|range|end|character", record.getIntbyName( "end_char" ) )
+			symbol.set( "definition", record.getStringByName( "definition" ) )
+			symbol.set( "description", record.getStringByName( "description" ) )
 			data :+ [symbol]
 			'logfile.debug( symbol.stringify() )
 		Wend

@@ -132,6 +132,7 @@ Type TASTNode
 	
 	' Debugging text (Leaf value)
 	Method showLeafText:String()
+Print "?"+value
 		Return Replace(value,"~n","\n")
 	End Method
 	

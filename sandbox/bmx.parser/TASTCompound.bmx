@@ -46,6 +46,7 @@ Type TASTCompound Extends TASTNode	' No metadata by design.
 		Local block:String = ["!","."][errors.length>0]
 		block :+ " " + pos()[..9] + " " + indent.length
 		block :+ " " + indent+getname()
+		Local t:String = showLeafText()
 		block :+ " " + Trim(showLeafText()) + "~n"
 		'If value<>"" block :+ " "+Replace(value,"~n","\n")
 		'block :+ "~n"
@@ -88,4 +89,14 @@ Type TASTCompound Extends TASTNode	' No metadata by design.
 		Return data
 	End Method
 
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object, options:Int[] ), data:Object, options:Int[]=[] )
+'DebugStop
+		If children
+			For Local child:TASTNode = EachIn children
+				If data ; data = child.inorder( eval, data, options )
+			Next
+		End If
+		If data ; data = eval( Self, data, options )
+		Return data
+	End Method
 End Type

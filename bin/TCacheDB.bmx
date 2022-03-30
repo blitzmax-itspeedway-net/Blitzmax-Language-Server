@@ -25,15 +25,16 @@ Type TCacheDB
 	Field rootpath:String
 	Field cachePath:String = ".bls-cache"
 	Field cacheFile:String = "cache.db"
-	Field cacheVersion:Int = 0
+	'Field cacheVersion:Int = 0
 	
 	Public 
 	
-	Method New( rootPath:String, cachePath:String, cacheFile:String, cacheVersion:Int )
+	Method New( rootPath:String, cachePath:String, cacheFile:String )
 		Self.rootpath = rootpath
 		Self.cachePath = cachePath
 		Self.cacheFile = cacheFile
-		Self.cacheVersion = cacheVersion
+		'logfile.debug( "TCacheDB: "+rootPath+","+cachePath+","+cacheFile )
+		'Self.cacheVersion = cacheVersion
 	End Method
 	
 	Method initialise()
@@ -50,44 +51,52 @@ Type TCacheDB
 		Select FileType( cachedir  )
 		Case FILETYPE_DIR
 			' This is what we want...
-			Print( "CACHE FOLDER ALREADY EXISTS" )
+			'Print( "CACHE FOLDER ALREADY EXISTS" )
 		Case FILETYPE_FILE
 			' This is an unrecoverable situation.
 			' The folder cannot be created if a file exists!
-			Print( "CACHE FOLDER IS A FILE!" )
+			'Print( "CACHE FOLDER IS A FILE!" )
 			UnlockMutex( lock )
 			Return
 		Default
-			Print( "CREATING CACHE FOLDER" )
+			'Print( "CREATING CACHE FOLDER" )
 			CreateDir( cachedir, True )
 		End Select
+
 
 		'	Open Database
 		
 		dbpath = cachedir + "/" + cacheFile
+		
+		'	DELETE THE TABLE ON UNSTABLE VERSIONS
+		If appvermax=0 And (appvermin<4 Or (appvermin=4 And appbuild<87)) And FileType( dbpath ) = FILETYPE_FILE
+			logfile.debug( "** Deleted file: "+dbpath )
+			DeleteFile( dbpath )
+		End If
+		
 		db = LoadDatabase( "SQLITE", dbpath )
 		If Not db 
-			Print "Failed to load database"
+			'Print "Failed to load database"
 			UnlockMutex( lock )
 			Return
 		Else
-			Print "DATABASE:~n- Exists"
+			'Print "DATABASE:~n- Exists"
 		End If
 		If Not db.isOpen() 
 			UnlockMutex( lock )
 			Return
 		End If
-		Print "- Is Open"
+		'Print "- Is Open"
 		
 		'	Build or Update tables
 
 		Local table:TDBTable = db.getTableInfo("attr", False)
 		If table.columns
-			Print "- Checking for updates"
+			'Print "- Checking for updates"
 			Self.updateDatabase()
 		EndIf
 
-		Print "- Creating tables"
+		'Print "- Creating tables"
 		Self.buildDatabase()
 		
 		UnlockMutex( lock )
@@ -99,24 +108,49 @@ Type TCacheDB
 	Method buildDB() Abstract
 
 	' Allows the database to be updated if necessary
-	Method upgrade( currentVersion:Int ) ; End Method
-	Method downgrade( currentVersion:Int ) ; End Method
+	Method upgrade( currentVerMax:Int, currentVerMin:Int ) ; End Method
+	Method patch( currentVerMax:Int, currentVerMin:Int, currentBuild:Int ) ; End Method
+	Method downgrade( currentVerMax:Int, currentVerMin:Int ) ; End Method
 	
 	' Upgrade cache or delete records so we start again.
 	Method updateDatabase() Final
+DebugStop
 		' Get cache version and update
-		Local query:TDatabaseQuery = db.executeQuery("SELECT value FROM attr WHERE key='version';")			
+		Local SQL:String = ..
+			"SELECT " +..
+				"(SELECT value FROM attr WHERE key='blsvermax') AS vermax," +..
+				"(SELECT value FROM attr WHERE key='blsvermin') AS vermin," +..
+				"(SELECT value FROM attr WHERE key='blsbuild') AS build;"
+'Print SQL
+		Local query:TDatabaseQuery = db.executeQuery(SQL)
+		'Local query:TDatabaseQuery = db.executeQuery("SELECT key,value FROM attr WHERE key='blsversion' or key='blsbuild';")			
+		'query.nextRow()
 		Local record:TQueryRecord = query.rowRecord()
-		Local version:Int = record.getint(1)
-		
-		If version >= cacheVersion
-			If version > cacheVersion ; downgrade( version )
-			Return
-		EndIf
-				
-		' Update the version
-		upgrade( version )
-		exec( "UPDATE attr SET value="+cacheVersion+";" ) 
+		Local vermax:Int = Int(record.getStringbyName( "vermax" )) 
+		Local vermin:Int = Int(record.getStringbyName( "vermin" )) 
+		Local build:Int = Int(record.getStringbyName( "build" ))
+
+logfile.debug( cacheFile + " at V"+vermax+"."+vermin+" build "+build )
+'debugstop	
+		If appvermax = vermax And appvermin = vermin	' No change to version
+			If appbuild > build			' Running later build?
+logfile.debug( cacheFile + " may require patch..." )
+				patch( vermax, vermin, build )
+			Else
+logfile.debug( cacheFile + " is at latest version..." )
+				Return
+			End If
+		ElseIf appvermax < vermax Or ( appvermax = vermax And appvermin < vermin ) ' Downgrade the version
+logfile.debug( cacheFile + " requires downgrade..." )
+			downgrade( vermax, vermin )
+		Else							' Update the version
+logfile.debug( cacheFile + " requires upgrade..." )
+			upgrade( vermax, vermin )
+		End If
+
+		' Update table
+		exec( "UPDATE attr SET blsvermax='"+appvermax+"',blsvermin='"+appvermin+"',blsbuild='"+appbuild+"';" ) 
+		db.commit()				
 	End Method
 
 	' Build the database
@@ -128,12 +162,13 @@ Type TCacheDB
 				"key VARCHAR(10) NOT NULL PRIMARY KEY, " +..
 				"value VARCHAR(10) NOT NULL DEFAULT ''" +..
 				");" )
-		exec( "INSERT INTO attr VALUES('bls',"+BLS_VERSION+");" )		
-		exec( "INSERT INTO attr VALUES('version',"+cacheVersion+");" )		
+		exec( "INSERT INTO attr VALUES('blsvermax','"+appvermax+"');" )		
+		exec( "INSERT INTO attr VALUES('blsvermin','"+appvermin+"');" )		
+		exec( "INSERT INTO attr VALUES('blsbuild','"+appbuild+"');" )		
 	
 		'	Custom tables:
 		buildDB()
-		
+		db.commit()
 	End Method
 	
 	Method exec( sql:String ) Final

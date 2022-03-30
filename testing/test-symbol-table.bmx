@@ -30,6 +30,7 @@ Import bmx.lexer
 '	TEST BUILDING OF A SYMBOL TABLE
 Include "../bin/language-server-protocol.bmx"
 Include "../bin/TSymbolTable.bmx"
+'Include "../bin/TSignatureVisitor.bmx"
 Include "../bin/TGift.bmx"
 
 ' SANDBOX PARSER
@@ -37,6 +38,8 @@ Include "../sandbox/bmx.parser/TParser.bmx"
 Include "../sandbox/bmx.parser/TASTNode.bmx"
 Include "../sandbox/bmx.parser/TASTBinary.bmx"
 Include "../sandbox/bmx.parser/TASTCompound.bmx"
+Include "../sandbox/bmx.parser/TASTGroup.bmx"
+Include "../sandbox/bmx.parser/TASTUnary.bmx"
 Include "../sandbox/bmx.parser/TVisitor.bmx"
 Include "../sandbox/bmx.parser/TParseValidator.bmx"
 Include "../sandbox/bmx.parser/TASTErrorMessage.bmx"
@@ -94,9 +97,9 @@ Print ast.reveal()
 
 ' Parse the AST into a symbol table
 start = MilliSecs()
-DebugStop
-Local symTable:TSymbolTable = New TSymbolTable()
-symtable.extract( ast, filename )
+'DebugStop
+Local symTable:TSymbolTable = New TSymbolTable( ast )
+'symtable.run( ast, filename )
 finish = MilliSecs()
 
 Print "EXTRACT: "+(finish-start)+"ms"

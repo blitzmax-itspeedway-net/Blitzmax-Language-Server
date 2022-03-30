@@ -102,6 +102,23 @@ End Type
 '		
 'End Type
 
+' A Variable Arguments
+Rem
+	FUNCTION/METHOD
+		.name
+		.arguments:TAST_Arguments		<---
+			":"...
+				lnode	-> Name of the Argument
+				rnode 	-> Argument type or TAST_Function for function variables.
+	See also TAST_VarDef and TAST_Assignment
+End Rem
+Type TAST_Argument Extends TASTCompound { class="ARGUMENTS" }
+	Field name:TToken 
+	Field colon:TToken
+	Field vartype:TToken
+	Field func:TAST_Function	' Function variables
+End Type
+
 ' A Variable Assigment
 '	NODE WILL BE ONE OF THE FOLLOWING:
 '		TK_Local, TK_Global, TK_Field, TK_COnst
@@ -183,7 +200,7 @@ Type TAST_Function Extends TASTCompound { class="FUNCTION" }
 	Field colon:TTOken
 	Field returntype:TToken
 	Field lparen:TToken
-	Field def:TASTCompound
+	Field arguments:TASTCompound		' Arguments
 	Field rparen:TToken
 	Field ending:TToken
 	'Field body:TASTCompound
@@ -322,13 +339,14 @@ Type TAST_Method Extends TASTCompound { class="METHOD" }
 	Field colon:TTOken
 	Field returntype:TToken
 	Field lparen:TToken
-	Field def:TASTCompound
+	Field arguments:TASTCompound
 	Field rparen:TToken
 	Field ending:TToken
 
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Return name.value
+		If name ; Return name.value
+		Return "Undefined"
 	End Method
 	
 	Method validate()

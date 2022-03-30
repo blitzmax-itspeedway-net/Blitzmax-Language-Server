@@ -268,6 +268,72 @@ EndRem
 	
 '	End Method
 
+	' Passes arguments sent to a FUNCTION or METHOD
+	Method parseArguments:TASTCompound()
+'DebugStop
+		Local ast:TASTCompound = New TASTCompound( "Arguments" )
+		
+		'THIS NEEDS To BE FIXED For SIGNATURE To WORK
+		'ast.def = eatUntil( [TK_rparen,TK_EOL], token)
+'DebugStop
+		'Local token:TToken = lexer.token
+		While token And Not token.in( [TK_rparen,TK_EOL] )
+' function xyz( abc( something:int )
+	
+			Local varname:TToken = eat( TK_ALPHA )
+			Local tok:TToken = eatOptional( [TK_Colon,TK_LParen] )	' ":" or "(" fuction variable
+			Select tok.id
+			Case TK_Colon
+				Local vartype:TToken = eat( SYM_DATATYPES+[TK_ALPHA] )
+				' Optional parenthesis for function variable
+				Local paren:TToken = eatOptional( TK_LParen, Null )
+				If paren
+				'DebugStop
+					' Function variable WITH return value
+					Local func:TAST_Function = New TAST_Function()
+					'advance()
+					func.name = varname
+					func.colon = tok
+					func.returntype = vartype
+					func.rparen = eatOptional( TK_RParen,Null )
+					If Not func.rparen
+						func.arguments = parseArguments()
+						func.rparen = eat( TK_RParen )
+					End If
+					ast.add( func )					
+				Else
+					' Normal variable declaration
+					Local vardef:TASTBinary = New TASTBinary( New TASTNode(varname), tok, New TASTNode(vartype) )
+					vardef.classname = "ARGUMENT"
+					ast.add( vardef )
+				End If
+			Case TK_LParen
+				' Function variable without return value
+				Local func:TAST_Function = New TAST_Function()
+				'advance()
+				func.name = varname
+				'func.colon = eatOptional( TK_Colon, Null )
+				'If func.colon ; func.returntype = eat( SYM_DATATYPES+[TK_ALPHA] )
+				func.rparen = eatOptional( TK_RParen,Null )
+				If Not func.rparen
+					func.arguments = parseArguments()
+					func.rparen = eat( TK_RParen )
+				End If
+				ast.add( func )
+			Default
+			
+			End Select
+			
+			Local comma:TToken = eatOptional( TK_COMMA, Null )
+		Wend
+		Return ast
+		
+		Function parseFunctionArg:TASTNode()
+			
+		End Function
+		
+	End Method
+
 	' Parse a sequence.
 	' The tokens MUST exist in order or not be present (Creating a missing token)
 	Method parseSequence:TASTCompound( classname:String, options:Int[], closing:Int[]=Null, parent:Int[]=Null )
@@ -1026,54 +1092,23 @@ EndRem
 	'	function = function [ ":" <vartype> ] "(" [<args>] ")" [COMMENT] EOL
 	Method Parse_Function:TASTNode(  )
 		Local ast:TAST_Function = New TAST_Function( token )
-		'Local start:TPosition = New TPosition( token )
 		advance()
 
 		' PROPERTIES
 		
 		ast.name = eat( TK_ALPHA, Null )
 		ast.colon = eatOptional( TK_COLON, Null )
-		If ast.colon ast.returntype = eat( TK_ALPHA, Null )
+		If ast.colon ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
 		ast.lparen = eat( TK_lparen, Null )
-		ast.def = eatUntil( [TK_rparen,TK_EOL], token)
-		ast.rparen = eat( TK_rparen, Null )
-		
-		' VALIDATION
-'DebugStop
-
-		'Local valid:Int = True
-		'valid = valid & (ast.fnname<>Null) & (ast.lparen<>Null) & (ast.rparen<>Null)
-
-		'	VALIDATE FUNCTION NAME
-		
-'TODO: Must be unique and not a keyword
-
-
+		ast.rparen = eatOptional( TK_rparen, Null )
+		If Not ast.rparen
+			ast.arguments = ParseArguments()
+			ast.rparen = eat( TK_rparen, Null )
+		End If
 
 		'	READ BODY
-
-		'If ast.fnname And ast.lparen And ast.rparen
-			'Local body:TASTCompound 
-		'	ast.body = parseSequence( "BODY", SYM_FUNCTION_BODY+[TK_ALPHA], [TK_EndFunction], parent )	
-		'Else
-		'	ast.errors :+ [ New TDiagnostic( "Invalid function definition", DiagnosticSeverity.Warning, range ) ] 
-		'End If
-		' For the sake of simplicity at the moment, this will not parse the body
-		'ast.add( eatUntil( [TK_EndFunction], token ) )
-		'ast.add( body )
 		
 		parseSequence( ast, SYM_FUNCTION_BODY+[TK_ALPHA], [TK_EndFunction] )
-Rem
-		Local finished:Int = False
-		Repeat
-			token = lexer.getNext()
-			If token.id = TK_END
-				token = lexer.getNext()
-				If token.id = TK_FUNCTION ; finished = True
-			End If
-		Until token.id = TK_ENDFUNCTION Or finished
-End Rem
-		' End of block
 		
 		' CLOSING KEYWORD
 		
@@ -1218,37 +1253,31 @@ End Rem
 	Method Parse_Method:TAST_Method()
 		Local ast:TAST_Method = New TAST_Method( token )
 		advance()
-
-		' Get properties
-'DebugLog( "METHOD NAME IS "+token.reveal() )
-		ast.name = eat( [TK_ALPHA,TK_new] )
-'DebugLog( "METHOD NAME IS "+ast.name.reveal() )
+'Print "PASSING METHOD"
+'DebugStop
+		' PROPERTIES
+		
+		ast.name = eat( [TK_New,TK_ALPHA], Null )
 		ast.colon = eatOptional( TK_COLON, Null )
-		If ast.colon ast.returntype = eat( TK_ALPHA )
-		ast.lparen = eat( TK_lparen )
-		ast.def = eatUntil( [TK_rparen], token )
-		ast.rparen = eat( TK_rparen )
-		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], Null )
+		If ast.colon ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
+		ast.lparen = eat( TK_lparen, Null )
+		ast.rparen = eatOptional( TK_rparen, Null )
+		If ast.name And ast.lparen And Not ast.rparen
+			ast.arguments = ParseArguments()
+			ast.rparen = eat( TK_rparen, Null )
+		End If
+
+		'	READ BODY
 		
-		' BODY OF THE METHOD
+		If Not ast.name Or Not ast.lparen Or Not ast.rparen
+			' Do not parse body of a badly formed definition
+			ast.add( eatUntil( [TK_EndMethod], token ) )
+		Else
+			parseSequence( ast, SYM_METHOD_BODY+[TK_ALPHA], [TK_EndMethod] )
+		End If
 		
-		' For the sake of simplicity at the moment, this will not parse the body
-		' ast.add( ParseBlock( [ TK_LOCAL, TK_GLOBAL, TK_REPEAT, etc] )
-		'ast.add( eatUntil( [TK_EndMethod], ast.rparen ) )
+		' CLOSING KEYWORD
 		
-		parseSequence( ast, SYM_METHOD_BODY+[TK_ALPHA], [TK_EndMethod] )
-Rem
-		Local finished:Int = False
-		Repeat
-			token = lexer.getNext()
-			If token.id = TK_END
-				token = lexer.getNext()
-				If token.id = TK_FUNCTION ; finished = True
-			End If
-		Until token.id = TK_ENDFUNCTION Or finished
-End Rem
-		' End of block
 		ast.ending = eat( TK_EndMethod )
 		Return ast
 	End Method
@@ -1449,6 +1478,7 @@ End Rem
 		Return ast
 	End Method
 
+	' Variable Declaration using Const, Field, Global or Local
 	Method Parse_VarDef:TASTNode()
 'DebugStop
 		Local ast:TAST_VARDEF = New TAST_VARDEF( token )	' Variable Defintion (Const, Field, Global, Local )
@@ -1466,7 +1496,7 @@ End Rem
 			ast.func.colon = eatOptional( TK_Colon, Null )
 			If ast.func.colon ; ast.func.returntype = eat( SYM_DATATYPES+[TK_ALPHA] )
 			ast.func.lparen = eat( TK_LParen )
-			ast.func.def = eatUntil( [TK_RParen], token)
+			ast.func.arguments = eatUntil( [TK_RParen], token)
 			ast.func.rparen = eat( TK_RParen )		
 			Return ast
 		End If
@@ -1474,6 +1504,8 @@ End Rem
 		' Standard Variable declaration
 		Return ast
 	End Method
+	
+	
 	
 	Rem VARDECL
 	Local X:Int = 25
