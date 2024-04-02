@@ -35,7 +35,7 @@ Function bls_completionItem_resolve:JSON( message:TMessage )
 
 	' Generate response
 	Local response:JSON = Response_OK()
-	Local items:JSON = New JSON( JSON_ARRAY )
+	Local items:JSON = New JSON( JARRAY )
 	Local item:JSON
 	'response.set( "id", message.MsgID )
 	'response.set( "jsonrpc", JSONRPC )
@@ -60,6 +60,6 @@ Function bls_completionItem_resolve:JSON( message:TMessage )
 	End If
 	
 	' Reply to the client
-	return( response )  
+	Return( response )  
 
 End Function

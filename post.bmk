@@ -1,7 +1,23 @@
+## Move the language server into the BlitzMax folder
 
-echo Copying '%outfile%' to application folder..
-echo - SRC: %exepath%/
-echo - DST: ~/BlitzMax/bin/
+@define doPostInstall
+    #print( "BUILDPATH: " .. %buildpath% )
+    #print( "OUTFILE:   " .. %outfile% )
+    print()
 
-bmk.sys( 'cp %exepath%/%outfile% ~/BlitzMax/bin/' )
+    #if string.sub( %outfile%, -6, 6 ) == ".debug" then
+    #    print( "** DEBUG FILE HAS NOT BEEN COPIED **" )
+    #else
+        print( "## Copying '" .. %outfile% .. "' to application folder.." )
+
+        print( "- SRC: " .. %buildpath% .. "/" .. %outfile% )
+        print( "- DST: ~/BlitzMax/bin/" .. %outfile% )
+
+        sys.CopyFile( %buildpath% .. "/" .. %outfile%, "/home/si/BlitzMax/bin/" .. %outfile% )
+        # bmk.sys( 'cp %exepath%/%outfile% ~/BlitzMax/bin/' )
+    #end
+
+@end
+
+doPostInstall()
 

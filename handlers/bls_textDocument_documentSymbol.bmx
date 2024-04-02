@@ -198,7 +198,7 @@ Type TDocumentSymbolVisitor Extends TVisitor
 	End Method
 
 	Method run:JSON()
-		Local J:JSON = New JSON( JSON_ARRAY )	' DocumentSymbol[]
+		Local J:JSON = New JSON( JARRAY )	' DocumentSymbol[]
 		visit( ast, J, "outline" )
 		'logfile.debug( "OUTLINE:~n"+J.prettify() )
 		Return J
@@ -353,7 +353,7 @@ End Rem
 		Local data:JSON = JSON( arg.data )
 		data.addLast( documentSymbol )
 		' Children nodes
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 		visitChildren( arg.node, children, arg.prefix )
 	End Method
@@ -369,7 +369,7 @@ End Rem
 		documentSymbol.set( "range", JRange( arg.node ) )
 		documentSymbol.set( "selectionRange", JRange( arg.node ) )
 
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 
 		' Add to mother node
@@ -433,7 +433,7 @@ End Rem
 		data.addLast( documentSymbol )
 
 		' Children nodes
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )		
 	End Method
@@ -462,7 +462,7 @@ End Rem
 
 		'If node.body ; visitChildren( node.body, children, arg.prefix )
 		' Children nodes
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )
 	End Method
@@ -521,7 +521,7 @@ End Rem
 		data.addLast( documentSymbol )
 
 		' Children nodes
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )		
 	End Method
@@ -554,7 +554,7 @@ End Rem
 		data.addLast( documentSymbol )
 
 		' Children nodes
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )
 	End Method
@@ -601,7 +601,7 @@ End Rem
 		data.addLast( documentSymbol )
 
 		' Children nodes
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )		
 	End Method
@@ -630,7 +630,7 @@ End Rem
 		data.addLast( documentSymbol )
 
 		' Children nodes
-		Local children:JSON = New JSON( JSON_ARRAY )
+		Local children:JSON = New JSON( JARRAY )
 		documentSymbol.set( "children", children )
 		visitChildren( node, children, arg.prefix )
 	End Method

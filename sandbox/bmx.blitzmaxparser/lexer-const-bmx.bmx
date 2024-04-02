@@ -35,7 +35,7 @@ Const TK_CONST:Int			= 618
 Const TK_CONTINUE:Int		= 619
 Const TK_DEFAULT:Int		= 620
 Const TK_DEFDATA:Int		= 621
-Const TK_DELETE:Int			= 622
+'Const TK_DELETE:Int			= 622   ' Demoted from Symbol 7/4/22
 Const TK_DOUBLE:Int			= 33	'	!
 Const TK_EACHIN:Int			= 623
 Const TK_ELSE:Int			= 624
@@ -70,7 +70,7 @@ Const TK_FUNCTION:Int		= 651
 Const TK_GLOBAL:Int			= 652
 Const TK_GOTO:Int			= 653
 Const TK_IF:Int				= 654
-Const TK_IMPLEMENETS:Int	= 655
+Const TK_IMPLEMENTS:Int	= 655
 Const TK_IMPORT:Int			= 656
 Const TK_INCBIN:Int			= 657
 Const TK_INCBINLEN:Int		= 658
@@ -125,14 +125,17 @@ Const TK_TO:Int				= 704
 Const TK_TRUE:Int			= 705
 Const TK_TRY:Int			= 706
 Const TK_TYPE:Int			= 707
-Const TK_UNIT:Int			= 708
-Const TK_UNLONG:Int			= 709
+Const TK_UINT:Int			= 708
+Const TK_ULONG:Int			= 709
 Const TK_UNTIL:Int			= 710
 Const TK_VAR:Int			= 711
 Const TK_VARPTR:Int			= 712
 Const TK_WEND:Int			= 713
 Const TK_WHERE:Int			= 714
 Const TK_WHILE:Int			= 715
+
+Const TK_DIRECTIVE:Int 		= 716	'	? at char 1
+Const TK_TRANSPILE:Int 		= 717	'	Transpiler directive '#
 
 
 

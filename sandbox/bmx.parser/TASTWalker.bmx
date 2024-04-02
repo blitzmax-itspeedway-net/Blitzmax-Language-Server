@@ -11,12 +11,12 @@ Type TASTWalker Extends TVisitor
 	End Method
 	
 	' Search for nodes of a specific type
-	Method search:TList( criteria:Int[] )
+	Method searchByIDs:TList( criteria:Int[] )
 'DebugStop
 		Local list:TList = New TList()
 
 		'list = TASTNode[]( 
-		ast.inorder( Walker, list, criteria )
+		ast.inorder( WalkByIDs, list, criteria )
 		
 		' Convert list into a string so we can display it
 		'Local result:String
@@ -28,7 +28,12 @@ Type TASTWalker Extends TVisitor
 		Return list
 	End Method
 	
-	Function Walker:Object( node:TASTNode, data:Object, options:Int[])
+	' Search for nodes of a specific type
+	Method searchByID:TList( criteria:Int )
+		Return searchByIDs( [criteria] )
+	End Method
+		
+	Function WalkByIDs:Object( node:TASTNode, data:Object, options:Int[])
 'DebugStop
 		' Check if node found
 		If Not in( node.tokenid, options ); Return data

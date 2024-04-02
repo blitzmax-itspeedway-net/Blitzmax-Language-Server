@@ -62,5 +62,13 @@ Type TASTBinary Extends TASTNode
 		If data And rnode ; data = rnode.inorder( eval, data, options )
 		Return data
 	End Method
-	
+
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object, options:Int[] ), data:Object, options:Int[]=[] )
+		' Binary types are validated BETWEEN children
+		If data And lnode ; data = lnode.inorder( eval, data, options )
+		If data ; data = eval( Self, data, options )
+		If data And rnode ; data = rnode.inorder( eval, data, options )
+		Return data
+	End Method
+
 End Type

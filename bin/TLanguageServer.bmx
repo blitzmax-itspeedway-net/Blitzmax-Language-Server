@@ -904,7 +904,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		
 		' The request does not tell us which workspace the query should look in.
 		' So for now, we need to return ALL symbols in ALL workspaces!!!
-		Local data:JSON = New JSON( JSON_Array )
+		Local data:JSON = New JSON( JARRAY )
 		
 		For Local key:String = EachIn Workspaces.list.keys()
 			Local workspace:TWorkspace = TWorkspace( Workspaces.list[key] )

@@ -234,7 +234,7 @@ DebugLog( "FORNEXT is not fully implemented" )
 	End Method
 
 	Method symtable_METHOD()( arg:TGift )
-DebugStop
+DebugStop;'DebugStop
 		Local node:TAST_Method = TAST_Method( arg.node )
 		If node And node.name 
 			Local scope:String = String( arg.data )
@@ -361,7 +361,7 @@ DebugLog( "INVALID VARDECL TYPE" )
 				' Identify argument type
 				Local typeid:TTypeId = TTypeId.ForObject( arg )
 'DebugStop
-				Select typeid.name
+				Select typeid.name()
 				Case "TAST_Function"	' FUnction variable
 					Local func:TAST_Function = TAST_Function( arg )
 'DebugStop

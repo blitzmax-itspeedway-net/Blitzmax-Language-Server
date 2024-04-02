@@ -1,6 +1,6 @@
 SuperStrict
 
-Import bmx.json
+'Import bmx.json
 
 Include "../bin/language-server-protocol.bmx"
 'Include "../bin/constants.bmx"
@@ -45,7 +45,7 @@ start  = MilliSecs()
 lexer.run()
 finish = MilliSecs()
 
-debugstop
+DebugStop
 Print( "LEXER.TIME: "+(finish-start)+"ms" )
 Print( lexer.reveal() )
 

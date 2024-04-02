@@ -29,7 +29,7 @@ Type TTaskQueue
 		' PRIORITY QUEUE (12/11/21)
 		Local link:TLink = queue.lastlink()
 		While link 
-			Local item:TTask = TTask( link.value )
+			Local item:TTask = TTask( link.value() )
 			' Check Uniqueness
 			If task.unique And task.name=item.name
 				logfile.debug( "TTaskQueue: Unique task already exists "+task.name )
@@ -46,7 +46,7 @@ Type TTaskQueue
 				sleep.signal()			' Wake the sleeping thread
 				Return
 			EndIf
-			link = link.prevLink
+			link = link.prevLink()
 		Wend
 'DebugStop
 		' Queue is empty, or task goes at top...

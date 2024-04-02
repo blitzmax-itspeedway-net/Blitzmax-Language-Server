@@ -32,6 +32,7 @@ Type TTaskModuleScan Extends TTask
 
 		' Obtain a list of modules
 		Local mods:TList = EnumModules()
+		Local modlist:String[]				' List of validated modules being added
 		
 		' Loop through modules
 'DebugStop
@@ -48,15 +49,17 @@ Type TTaskModuleScan Extends TTask
 			If FileType( entry ) = FILETYPE_FILE
 				' Check if module needs to be parsed
 				If cachedfiles.contains( modname )
-					logfile.debug( "## MODULE SCAN: "+modname+" - Already processed" )
+					logfile.debug( "## MODULE SCAN: "+modname[..30]+" - Already processed" )
 					' Remove processed module from list (We dont need to do it again)
 					cachedfiles.remove( modname )
 				Else
-					logfile.debug( "## MODULE SCAN: "+modname+" - Added to TODO list" )
+					logfile.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
 					' Insert module into DB
-					cache.addmodule( modname, uri )
+					'cache.addmodule( modname, uri )
 					' Parse the module
 					'parseModule( modname, entry )
+					' Add module to validated list
+					modlist :+ [ "('"+ modname +"','"+uri.toString() +"')" ]
 					' Add to to-do list
 					Local ToDo:String[] = [ modname, entry ]
 					ToDoList.addlast( ToDo )
@@ -73,15 +76,26 @@ Type TTaskModuleScan Extends TTask
 			'client.progress_update( token, progress, total )
 		Next
 		
+		' Add modules to database
+		logfile.debug( "## MODULE SCAN: Adding Modules to database" )
+		cache.addmodules( modlist )
+		
 		' Parse files
 		While Not ToDoList.isEmpty()
 			Local ToDo:String[] = String[]( ToDoList.removeFirst() )
 			Local modname:String = todo[0]
 			Local filename:String = todo[1]
 			' Parse the module
-			logfile.debug( "## MODULE SCAN: PARSING " + modname + ":" + filename )
-			parseModule( modname, filename )
-			completed.insert( modname+":"+filename, "DONE" )
+			Local fullname:String = Lower(modname+":"+filename)
+			If completed.contains( fullname )
+				logfile.debug( "## MODULE SCAN: " + modname[..30]+" - "+filename +" - Already scanned" )
+			Else
+'If modname = "text.format" ; DebugStop
+				logfile.debug( "## MODULE SCAN: PARSING " + modname+":"+filename )
+				parseModule( modname, filename )
+				completed.insert( fullname, "DONE" )
+				logfile.debug( "## MODULE SCAN: PARSE COMPLETE" )
+			End If
 		Wend
 		
 		logfile.debug( "## MODULE SCAN - FINISHED" )
@@ -90,6 +104,7 @@ Type TTaskModuleScan Extends TTask
 	End Method
 	
 	Method parseModule( modname:String, filename:String )
+'DebugStop
 		Local start:Int, finish:Int
 		logfile.debug( "TTaskModuleScan: "+ modname + "  " + filename )
 		Local uri:TURI = New TURI( filename )
@@ -102,30 +117,74 @@ Type TTaskModuleScan Extends TTask
 		'logfile.debug( "TTaskModuleScan: Lexer initialised" )
 		Local parser:TParser = New TBlitzMaxParser( lexer )
 		'logfile.debug( "TTaskModuleScan: Parser initialised" )
+		'DebugStop
 		Local ast:TASTNode = parser.parse_ast()
 		'logfile.debug( "TTaskModuleScan: Module parsed" )
 		
-		' Parse the AST into a symbol table
+DebugStop;		' Parse the AST into a symbol table
 		cache.addSymbols( modname, uri, New TSymbolTable( ast ) )
 		logfile.debug( "TTaskModuleScan: Symbols added" )
 		
 		' Parse IMPORT and INCLUDE and add them to TODO list
 
-		 
-
-		logfile.debug( "TTaskModuleScan: *** IMPORT IGNORED" )
-		logfile.debug( "TTaskModuleScan: *** INCLUDE IGNORED" )
-
-' WORKING HERE
 		Local walker:TASTWalker = New TASTWalker( ast )
-		Local results:TList = walker.search( [ TK_INCLUDE, TK_IMPORT ] )
+		Local results:TList = walker.searchByIDs( [ TK_INCLUDE, TK_IMPORT ] )
 		
-		For Local result:TASTNode = EachIn results
-			debugstop
+		' Loop through IMPORT's
+		For Local result:TAST_Import = EachIn results
+			'DebugStop
+			'DebugLog( result.reveal() )
+			' Add Includes and Imports to TODO list
+			If result.localfile
+				' Same module, different file
+				' Ignore everything except blitzmax files
+				If ExtractExt( result.filename.value ) = "bmx"
+					'DebugStop
+					'Local file:TPath = New TPath( result.filename.value )
+					'Local name:String[] = result.filename.split(".")
+					Local path:String = ExtractDir( filename )
+					Local entry:String = joinPaths( path, result.filename.value )
+					'Local epath:String = path + filename
+					logfile.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
+					ToDoList.addlast( [ modname, entry ] )
+				Else
+					DebugLog( "  - Import ~q"+result.filename.value+"~q - SKIPPED" )
+				End If
+			Else
+				'DebugStop
+				' Different module
+				Local modname:String = result.filename.value
+				Local name:String[] = modname.split(".")
+				Local path:String = modpath + "/" + name[0]+".Mod" + "/" + name[1]+".Mod"
+				Local entry:String = path + "/" + name[1] + ".bmx"
+				logfile.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
+				ToDoList.addlast( [ modname, entry ] )
+			End If
+		Next
+
+		' Loop through INCLUDES's
+		For Local result:TAST_Include = EachIn results
+			DebugStop
 			DebugLog( result.reveal() )
+' NODE DOES NOT CONTAIN FILE NAME!
+			' Add Includes and Imports to TODO list
+			'If result.localfile
+				' Same module, different file
+				' todo.addlast( [ modname, result.filename.value ] )
+			'Else
+				' Different module
+				'Local name:String[] = results.filename.split(".")
+				'Local path:String = modpath+"/"+name[0]+".mod/"+name[1]+".mod"
+				'Local entry:String = path + "/" + name[1] + ".bmx"
+				' todo.addlast( [ modname, entry ] )
+			'End If
 		Next
 		
-		DebugStop
+
+		'logfile.debug( "TTaskModuleScan: *** IMPORT IGNORED" )
+		'logfile.debug( "TTaskModuleScan: *** INCLUDE IGNORED" )
+		
+		'DebugStop
 		
 		finish = MilliSecs()	
 

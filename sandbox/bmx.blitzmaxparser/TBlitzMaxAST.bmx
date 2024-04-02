@@ -294,17 +294,32 @@ Type TAST_If Extends TASTCompound { class="IF" }
 		If data And otherwise ; data = otherwise.inorder( eval, data, options )
 		Return data
 	End Method
-	
+
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object, options:Int[] ), data:Object, options:Int[]=[] )
+		If data ; data = eval( Self, data, options )
+		If data And condition ; data = condition.inorder( eval, data, options )
+		If children
+			For Local child:TASTNode = EachIn children
+				If data ; data = child.inorder( eval, data, options )
+			Next
+		End If
+		If data And otherwise ; data = otherwise.inorder( eval, data, options )
+		Return data
+    End Method
+
 End Type
 
 Type TAST_Import Extends TASTNode { class="IMPORT" }
 	Field major:TToken
-	Field dot:TToken
 	Field minor:TToken
+	'Field dot:TToken
+    Field filename:TToken
+	Field localfile:Int		' Filename is quoted for local files, unquoted for modules.
 
 	' Used for debugging tree structure
 	Method showLeafText:String()
-		Return major.value +"." + minor.value
+		If localfile; Return "~q"+filename.value+"~q"
+		Return filename.value
 	End Method
 	
 End Type

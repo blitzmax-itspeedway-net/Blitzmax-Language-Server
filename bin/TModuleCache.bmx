@@ -124,6 +124,17 @@ Type TModuleCache Extends TCacheDB
 		UnlockMutex( lock )
 	End Method
 
+	Method addModules( modlist:String[] )
+		LockMutex( lock )
+		Local sql:String = "INSERT INTO modules(modname,uri) VALUES"
+		For Local values:String = EachIn modlist
+			sql :+ values+","
+		Next
+		sql = sql[..(Len(sql)-1)]	' Strip trailing comma		
+		exec( sql+";" )
+		UnlockMutex( lock )
+	End Method
+
 	' Delete a file from cache
 	Method DeleteModule( modname:String )
 		LockMutex( lock )

@@ -264,7 +264,7 @@ EndRem
 		list = TDiagnostic[]( ast.inorder( GetDiagnostic, list, 0 ) )
 
 		' Convert diagnostics into JSON and send to client
-		Local diagnostics:JSON = New JSON( JSON_Array )
+		Local diagnostics:JSON = New JSON( JARRAY )
 		Local diagnostic:JSON 
 				
 		' Convert diagnostics into a string so we can display it

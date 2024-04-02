@@ -42,15 +42,15 @@ End Rem
 
 Global SYM_HEADER:Int[] = [ TK_STRICT, TK_SUPERSTRICT, TK_FRAMEWORK, TK_MODULE, TK_IMPORT, TK_MODULEINFO ]
 
-Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_CONST, TK_FOR, TK_REPEAT, TK_WHILE, TK_IF ]
+Global SYM_BLOCK_KEYWORDS:Int[] = [ TK_CONST, TK_FOR, TK_REPEAT, TK_WHILE, TK_IF, TK_EXTERN ]
 
-Global SYM_PROGRAM_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_ENUM, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE, TK_INTERFACE, TK_STRUCT ]+SYM_BLOCK_KEYWORDS
-Global SYM_MODULE_BODY:Int[] = [ TK_CONST, TK_INCLUDE, TK_MODULEINFO, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
+Global SYM_PROGRAM_BODY:Int[] = [ TK_PRIVATE, TK_PUBLIC, TK_CONST, TK_INCLUDE, TK_ENUM, TK_EXTERN, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE, TK_INTERFACE, TK_STRUCT ]+SYM_BLOCK_KEYWORDS
+Global SYM_MODULE_BODY:Int[] = [ TK_PRIVATE, TK_PUBLIC, TK_CONST, TK_INCLUDE, TK_MODULEINFO, TK_EXTERN, TK_LOCAL, TK_GLOBAL, TK_FUNCTION, TK_TYPE ]
 
-Global SYM_TYPE_BODY:Int[] = [ TK_FIELD, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
+Global SYM_TYPE_BODY:Int[] = [ TK_PRIVATE, TK_PUBLIC, TK_FIELD, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_METHOD, TK_FUNCTION ]
 
-Global SYM_FUNCTION_BODY:Int[] = [ TK_LOCAL, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_ALPHA, TK_FUNCTION, TK_RETURN ]+SYM_BLOCK_KEYWORDS
-Global SYM_METHOD_BODY:Int[] = [ TK_LOCAL, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_ALPHA, TK_FUNCTION, TK_RETURN ]+SYM_BLOCK_KEYWORDS
+Global SYM_FUNCTION_BODY:Int[] = [ TK_EXTERN, TK_LOCAL, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_ALPHA, TK_FUNCTION, TK_RETURN ]+SYM_BLOCK_KEYWORDS
+Global SYM_METHOD_BODY:Int[] = [ TK_EXTERN, TK_LOCAL, TK_CONST, TK_INCLUDE, TK_GLOBAL, TK_ALPHA, TK_FUNCTION, TK_RETURN ]+SYM_BLOCK_KEYWORDS
 
 Global SYM_ENUM_BODY:Int[] = [ TK_INCLUDE ]
 Global SYM_INTERFACE_BODY:Int[] = [ TK_FIELD, TK_GLOBAL, TK_INCLUDE, TK_METHOD ]
@@ -61,11 +61,13 @@ Global SYM_REPEAT_BODY:Int[] = [ TK_INCLUDE ]+SYM_BLOCK_KEYWORDS
 Global SYM_WHILE_BODY:Int[] = [ TK_INCLUDE ]+SYM_BLOCK_KEYWORDS
 Global SYM_IF_BODY:Int[] = [ TK_INCLUDE ]+SYM_BLOCK_KEYWORDS
 
-Global SYM_DATATYPES:Int[] = [ TK_BYTE, TK_DOUBLE, TK_FLOAT, TK_INT, TK_LONG, TK_SHORT, TK_STRING ]
+Global SYM_DATATYPES:Int[] = [ TK_OBJECT, TK_BYTE, TK_DOUBLE, TK_FLOAT, TK_INT, TK_LONG, TK_SHORT, TK_STRING, TK_UINT, TK_ULONG ]
+Global SYM_TYPETAG:Int[] = [ TK_STRING, TK_INT, TK_FLOAT, TK_DOUBLE ]
 
 Type TBlitzMaxParser Extends TParser
 	
 	Field strictmode:Int = 0
+	
 	'Field symbolTable:TSymbolTable = New TSymbolTable()	
 	'
 	'Field prev:TToken, save:TToken	' Used for lookback (Specifically for END XXX statements)
@@ -272,6 +274,7 @@ EndRem
 	Method parseArguments:TASTCompound()
 'DebugStop
 		Local ast:TASTCompound = New TASTCompound( "Arguments" )
+		Local lastToken:TToken ' FAILSAFE
 		
 		'THIS NEEDS To BE FIXED For SIGNATURE To WORK
 		'ast.def = eatUntil( [TK_rparen,TK_EOL], token)
@@ -280,11 +283,35 @@ EndRem
 		While token And Not token.in( [TK_rparen,TK_EOL] )
 ' function xyz( abc( something:int )
 	
+			' FAILSAFE
+			If token = lasttoken
+				DebugLog( "**" )
+				DebugLog( "** PARSER FAILSAFE VAILDATION FAILURE **" )
+				DebugLog( token.reveal() )					
+				DebugLog( "**" )
+				advance()
+				Return ast	' Fail
+			End If
+			lasttoken = token
+
 			Local varname:TToken = eat( TK_ALPHA )
-			Local tok:TToken = eatOptional( [TK_Colon,TK_LParen] )	' ":" or "(" fuction variable
+			Local tok:TToken = eatOptional( [TK_Colon,TK_LParen,TK_Var] )	' ":" or "(" fuction variable
+			
+' Arguments can be any of the following:
+' XYZ							' Non-strict Integer
+' XYZ#							' Basic style Type Tags
+' XYZ ":" <typedef|ALPHA>		' Blitz style type declaration	- SUPPORTED
+' <definition> Var				' By Reference
+' <definition> "(" <args> ")"	' Fucntion variables			- SUPPORTED
+
 			Select tok.id
 			Case TK_Colon
 				Local vartype:TToken = eat( SYM_DATATYPES+[TK_ALPHA] )
+				If vartype.id = TK_MISSING
+					DebugLog( "** MISSING DATATYPE: "+token.value )
+					advance()
+					vartype.value = "MISSING"	' Add this because it's an error!
+				End If
 				' Optional parenthesis for function variable
 				Local paren:TToken = eatOptional( TK_LParen, Null )
 				If paren
@@ -320,11 +347,33 @@ EndRem
 					func.rparen = eat( TK_RParen )
 				End If
 				ast.add( func )
+			'Case TK_VAR
+				' By Reference variable
+			
+			Case TK_Var
+DebugStop
+	
 			Default
+			
+'				If tok.in( SYM_TYPETAGS )
+'EXPERIMENTAL			
+'				End If
+			
 			
 			End Select
 			
 			Local comma:TToken = eatOptional( TK_COMMA, Null )
+			
+'EXPERIMENTAL
+			' Default variable type to INT
+'			If comma And Not func.colon And Not func.rparen
+'				func.colon = New TToken( TK_Colon, ":", tok.line, tok.pos, ":" )
+'				' Normal variable declaration
+'				Local vardef:TASTBinary = New TASTBinary( New TASTNode(varname), tok, New TASTNode(vartype) )
+'				vardef.classname = "ARGUMENT"
+'				ast.add( vardef )
+'			EndIf
+			
 		Wend
 		Return ast
 		
@@ -343,7 +392,7 @@ EndRem
 		
 	' The tokens MUST exist in order Or Not be present (Creating a missing token)
 	Method parseSequence:TASTCompound( ast:TASTCompound, options:Int[], closing:Int[]=Null, parent:Int[]=Null )
-
+		Local lastToken:TToken		' Used to implement FAILSAFE when parser does not advance correctly.
 		'If closing = Null
 
 		' TRY HEADER
@@ -377,6 +426,18 @@ EndRem
 			Try
 				' Failsafe!
 				If Not token Or token.id=TK_EOF ; Return ast
+				If token = lasttoken
+					DebugLog( "**" )
+					DebugLog( "** PARSER FAILSAFE VAILDATION FAILURE **" )
+					DebugLog( token.reveal() )					
+					DebugLog( "**" )
+					advance()
+					Return ast	' Fail
+				End If
+				lasttoken = token
+
+				' Debugging
+'DebugLog( token.reveal() )
 				
 				' Process EOL/Comments and Return at EOF
 				'If Not token Or parseCEOL( ast ) Return ast
@@ -401,6 +462,9 @@ EndRem
 						ast.add( Parse_Const() )
 					Case TK_Enum
 						ast.add( Parse_Enum() )
+					Case TK_Extern
+						'DebugStop
+						ast.add( Parse_Extern() )
 					Case TK_Field
 						ast.add( Parse_Field() )
 					Case TK_For
@@ -422,6 +486,10 @@ EndRem
 						ast.add( Parse_Local() )
 					Case TK_Method
 						ast.add( Parse_Method() )
+					Case TK_Private
+						ast.add( Parse_Private() )
+					Case TK_Public
+						ast.add( Parse_Public() )
 					Case TK_Repeat
 						ast.add( Parse_Repeat() )
 					Case TK_Return
@@ -1029,7 +1097,21 @@ EndRem
 		ast.ending = eat( TK_EndEnum )
 		Return ast
 	End Method
-	
+
+	Method Parse_Extern:TASTNode()
+'DebugStop
+		Local ast:TASTCompound = New TASTCompound( token )
+		advance()
+
+		' EXTERN is currently unsupported
+		ast.add( eatUntil( [TK_EndExtern], token ) )
+		eat( TK_EndExtern )	' Skip END
+		
+		' End of block
+		'ast.ending = eat( TK_EndExtern )
+		Return ast
+	End Method
+		
 	Method Parse_Field:TASTNode()
 		Local ast:TAST_Assignment = New TAST_Assignment( token )	' LOCAL, GLOBAL or FIELD
 		ast.lnode = Parse_VarDef()	
@@ -1097,8 +1179,24 @@ EndRem
 		' PROPERTIES
 		
 		ast.name = eat( TK_ALPHA, Null )
-		ast.colon = eatOptional( TK_COLON, Null )
-		If ast.colon ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
+		
+		'ast.colon = eatOptional( TK_COLON, Null )
+		'If ast.colon ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
+
+		Local datatype:TToken = eatOptional( SYM_TYPETAG+[TK_COLON], Null )
+		If datatype 
+			' Have we found a Type Tag Shortcut?
+			If datatype.in( SYM_TYPETAG )
+DebugStop
+				' We have a Type Tag Shortcut, so we need to insert a Colon:
+				ast.colon = New TToken( TK_Colon, ":", datatype.line, datatype.pos, ":" )
+				ast.returntype = datatype
+			Else
+				' We have found a colon
+				ast.colon = datatype
+				ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
+			EndIf
+		EndIf
 		ast.lparen = eat( TK_lparen, Null )
 		ast.rparen = eatOptional( TK_rparen, Null )
 		If Not ast.rparen
@@ -1194,19 +1292,36 @@ EndRem
 	'	Create an AST Node for Import containing all imported modules as children
 	'	import = import ALPHA PERIOD ALPHA [COMMENT] EOL
 	Method Parse_Import:TASTNode()
+'DebugStop
 		Local ast:TAST_Import = New TAST_Import( token )
 		advance()
 		' Get module name
-		ast.major = eat( TK_ALPHA )
-		ast.dot = eat( TK_PERIOD )
-		ast.minor = eat( TK_ALPHA )
-		' Trailing comment is a description
-		'ast.comment = eatOptional( [TK_COMMENT], Null )
+		Select token.id
+		Case TK_ALPHA
+			' UNQUOTED FILENAME REFERS TO A MODULE
+			ast.localfile = False
+			Local major:TToken = eat( TK_ALPHA )
+			Local dot:TToken = eat( TK_PERIOD )
+			Local minor:TToken = eat( TK_ALPHA )
+			If major.id <> TK_ALPHA Or dot.id <> TK_PERIOD Or minor.id <> TK_ALPHA
+				ast.filename = New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+			Else
+				ast.filename = New TToken( TK_QString, major.value+"."+minor.value, major.line, major.pos, "QSTRING" )
+			End If
+		Case TK_QString
+			' UNQUOTES FILENAME REFERS TO A FILE
+			ast.localfile = True
+			ast.filename = eat( TK_QString )
+		Default
+			ast.localfile = False
+			ast.filename = New TToken( TK_MISSING, "", token.line, token.pos, "MISSING" )
+		End Select
 		Return ast
 	End Method
 
 	'	Create an AST Node for Import
 	Method Parse_Include:TASTNode()
+DebugStop
 		Local ast:TAST_Include = New TAST_Include( token )
 		advance()
 		' Get module name
@@ -1253,13 +1368,30 @@ EndRem
 	Method Parse_Method:TAST_Method()
 		Local ast:TAST_Method = New TAST_Method( token )
 		advance()
-'Print "PASSING METHOD"
-'DebugStop
+
 		' PROPERTIES
 		
-		ast.name = eat( [TK_New,TK_ALPHA], Null )
-		ast.colon = eatOptional( TK_COLON, Null )
-		If ast.colon ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
+		ast.name = eat( [TK_New, TK_ALPHA], Null )
+		
+'DebugLog( "METHOD "+ast.name.value )
+		'ast.colon = eatOptional( TK_COLON, Null )
+		'If ast.colon ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
+
+		Local datatype:TToken = eatOptional( SYM_TYPETAG+[TK_COLON], Null )
+		If datatype 
+			' Have we found a Type Tag Shortcut?
+			If datatype.in( SYM_TYPETAG )
+DebugStop
+				' We have a Type Tag Shortcut, so we need to insert a Colon:
+				ast.colon = New TToken( TK_Colon, ":", datatype.line, datatype.pos, ":" )
+				ast.returntype = datatype
+			Else
+				' We have found a colon
+				ast.colon = datatype
+				ast.returntype = eat( SYM_DATATYPES+[TK_ALPHA], Null )
+			EndIf
+		EndIf
+		
 		ast.lparen = eat( TK_lparen, Null )
 		ast.rparen = eatOptional( TK_rparen, Null )
 		If ast.name And ast.lparen And Not ast.rparen
@@ -1331,6 +1463,20 @@ Rem	Method Parse_Rem:TASTNode()
 	End Method
 EndRem
 
+	Method Parse_Private:TASTNode()
+'DebugStop
+		Local ast:TASTNode = New TASTNode( token )
+		advance()
+		Return ast
+	End Method
+
+	Method Parse_Public:TASTNode()
+'DebugStop
+		Local ast:TASTNode = New TASTNode( token )
+		advance()
+		Return ast
+	End Method
+	
 	' REPEAT .. UNTIL|FOREVER
 	Method Parse_Repeat:TASTNode()
 'DebugStop

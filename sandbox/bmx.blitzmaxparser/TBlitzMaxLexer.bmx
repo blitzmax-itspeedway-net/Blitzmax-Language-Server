@@ -178,21 +178,21 @@ End Type
 
 #bmx_reservedwords
 '		ID				 CLASS
-DefData TK_ALIAS,        "alias"
+'DefData TK_ALIAS,        "alias"		' ## WHAT IS THIS ##
 DefData TK_AND,          "and"
-DefData TK_ASC,          "asc"
+DefData TK_ASC,          "asc"			' Should this be a function?
 DefData TK_ASSERT,       "assert"
 DefData TK_BYTE,         "byte"
 DefData TK_CASE,         "case"
 DefData TK_CATCH,        "catch"
-DefData TK_CHR,          "chr"
+DefData TK_CHR,          "chr"			' Should this be a function?
 DefData TK_CONST,        "const"
 DefData TK_CONTINUE,     "continue"
 DefData TK_DEFDATA,      "defdata"
-DefData TK_DEFAULT,      "default"
-DefData TK_DELETE,       "delete"
+DefData TK_DEFAULT,      "default"		' Should we use ELSE instead of DEFAULT?
+'DefData TK_DELETE,       "delete"		' It this actually used? Why is it a keyword?
 DefData TK_DOUBLE,       "double"
-DefData TK_EACHIN,       "eachin"
+DefData TK_EACHIN,       "eachin"		' Should this be a function?
 DefData TK_ELSE,         "else"
 DefData TK_ELSEIF,       "elseif"
 DefData TK_END,          "end"
@@ -210,45 +210,45 @@ DefData TK_ENDTYPE,      "endtype"
 DefData TK_ENDWHILE,     "endwhile"
 DefData TK_ENUM,         "enum"
 DefData TK_EXIT,         "exit"
-DefData TK_EXPORT,       "export"
+DefData TK_EXPORT,       "export"		' Must be a better was of doing this!
 DefData TK_EXTENDS,      "extends"
 DefData TK_EXTERN,       "extern"
-DefData TK_FALSE,        "false"
+DefData TK_FALSE,        "false"		' Should this be a constant?
 DefData TK_FIELD,        "field"
 DefData TK_FINAL,        "final"
 DefData TK_FINALLY,      "finally"
 DefData TK_FLOAT,        "float"
 DefData TK_FOR,          "for"
 DefData TK_FOREVER,      "forever"
-DefData TK_FRAMEWORK,    "framework"
+DefData TK_FRAMEWORK,    "framework"	' Compiler directive
 DefData TK_FUNCTION,     "function"
 DefData TK_GLOBAL,       "global"
-DefData TK_GOTO,         "goto"
+DefData TK_GOTO,         "goto"			' Should this be depreciated?
 DefData TK_IF,           "if"
-DefData TK_IMPLEMENETS,  "implements"
-DefData TK_IMPORT,       "import"
+DefData TK_IMPLEMENTS,   "implements"
+DefData TK_IMPORT,       "import"		' Compiler directive
 DefData TK_INCBIN,       "incbin"
 DefData TK_INCBINLEN,    "incbinlen"
 DefData TK_INCBINPTR,    "incbinptr"
-DefData TK_INCLUDE,      "include"
+DefData TK_INCLUDE,      "include"		' Compiler directive
 DefData TK_INT,          "int"
 DefData TK_INTERFACE,    "interface"
-DefData TK_LEN,          "len"
+DefData TK_LEN,          "len"			' Should this be a function?
 DefData TK_LOCAL,        "local"
 DefData TK_LONG,         "long"
 DefData TK_METHOD,       "method"
-DefData TK_MOD,          "mod"
-DefData TK_MODULE,       "module"
-DefData TK_MODULEINFO,   "moduleinfo"
+DefData TK_MOD,          "mod"			' Should this be a function?
+DefData TK_MODULE,       "module"		' Compiler directive
+DefData TK_MODULEINFO,   "moduleinfo"	' Compiler directive
 DefData TK_NEW,          "new"
 DefData TK_NEXT,         "next"
-DefData TK_NODEBUG,      "nodebug"
+DefData TK_NODEBUG,      "nodebug"		' Compiler directive
 DefData TK_NOT,          "not"
 DefData TK_NULL,         "null"
 DefData TK_OBJECT,       "object"
 DefData TK_OPERATOR,     "operator"
 DefData TK_OR,           "or"
-DefData TK_PI,           "pi"
+DefData TK_PI,           "pi"			' Should this be a constant!
 DefData TK_PRIVATE,      "private"
 DefData TK_PROTECTED,    "protected"
 DefData TK_PTR,          "ptr"
@@ -260,28 +260,28 @@ DefData TK_REM,          "rem"
 DefData TK_REPEAT,       "repeat"
 DefData TK_RESTOREDATA,  "restoredata"
 DefData TK_RETURN,       "return"
-DefData TK_SAR,          "sar"
+DefData TK_SAR,          "sar"			' Should this be a function?
 DefData TK_SELECT,       "select"
 DefData TK_SELF,         "self"
-DefData TK_SHL,          "shl"
+DefData TK_SHL,          "shl"			' Should this be a function?
 DefData TK_SHORT,        "short"
-DefData TK_SHR,          "shr"
+DefData TK_SHR,          "shr"			' Should this be a function?
 DefData TK_SIZEOF,       "sizeof"
 DefData TK_SIZE_T,       "size_t"
 DefData TK_STEP,         "step"
 DefData TK_STRICT,       "strict"
 DefData TK_STRING,       "string"
 DefData TK_STRUCT,       "struct"
-DefData TK_SUPER,        "super"
-DefData TK_SUPERSTRICT,  "superstrict"
+DefData TK_SUPER,        "super"		' Compiler directive
+DefData TK_SUPERSTRICT,  "superstrict"	' Compiler directive
 DefData TK_THEN,         "then"
 DefData TK_THROW,        "throw"
 DefData TK_TO,           "to"
-DefData TK_TRUE,         "true"
+DefData TK_TRUE,         "true"			' Should this be a constant?
 DefData TK_TRY,          "try"
 DefData TK_TYPE,         "type"
-DefData TK_UNIT,         "uint"
-DefData TK_UNLONG,       "ulong"
+DefData TK_UINT,         "uint"
+DefData TK_ULONG,        "ulong"
 DefData TK_UNTIL,        "until"
 DefData TK_VAR,          "var"
 DefData TK_VARPTR,       "varptr"

@@ -34,7 +34,8 @@ Import brl.stringbuilder
 Import brl.system
 Import brl.threads
 Import brl.threadpool
-Import brl.randomdefault	' Used by genWorkDoneToken()
+'Import brl.randomdefault	' Used by genWorkDoneToken()
+Import random.core	' Used by genWorkDoneToken()
 
 Import bah.database
 Import bah.dbsqlite
@@ -156,8 +157,8 @@ Const JSON_MINIMUM_BUILD:Int = 0
 Function Print( Message:String ) ; End Function
 
 'Local td:TDiagnostic = New TDiagnostic()
-
 DebugStop
+
 '   GLOBALS
 Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
 Global CONFIG:TConfig = New TConfig					' Configuration manager
@@ -205,8 +206,8 @@ Else
 	logfile.critical( "Failed to create client" )
 End If
 
-'	LANGUAGE SERVER
-DebugStop
+DebugStop;'	LANGUAGE SERVER
+
 Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 'DebugStop
 
@@ -224,8 +225,8 @@ Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 'Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager, Depreciated (See Workspace)
 Global Workspaces:TWorkspaces = New TWorkspaces()
 
-'	CREATE MODULE SCAN TASK
-DebugStop
+DebugStop;'	CREATE MODULE SCAN TASK
+
 Global modules:TModuleCache = New TModuleCache()
 'DebugStop
 Local task:TTaskModuleScan = New TTaskModuleScan( modules )

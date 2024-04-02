@@ -52,5 +52,12 @@ Type TASTUnary Extends TASTNode
 		If data And node ; data = node.inorder( eval, data, options )
 		Return data
 	End Method
-	
+
+	Method inorder:Object( eval:Object( node:TASTNode, data:Object, options:Int[] ), data:Object, options:Int[]=[] )
+		' Unary types are validated BEFORE children
+		If data ; data = eval( Self, data, options )
+		If data And node ; data = node.inorder( eval, data, options )
+		Return data
+	End Method
+
 End Type

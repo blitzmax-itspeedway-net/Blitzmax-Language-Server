@@ -255,7 +255,7 @@ End Rem
 			logfile.debug( "# Client supports workspace configuration" )
 			
 			' Create a JSON array for the configuration Parameters
-			Local configParams:JSON = New JSON( JSON_ARRAY )
+			Local configParams:JSON = New JSON( JARRAY )
 
 			' Create ConfigurationItem array
 			Local configurationItem:JSON = New JSON()

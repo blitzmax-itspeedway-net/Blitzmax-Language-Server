@@ -85,7 +85,7 @@ Function bls_textDocument_signatureHelp:JSON( message:TMessage )
 	logfile.debug( "** TOKEN: "+token.reveal() )
 
 	' Lookup signature in databases
-	Local data:JSON = New JSON( JSON_Array )
+	Local data:JSON = New JSON( JARRAY )
 	Local sym_workspace:JSON[] = workspace.cache.getSymbols( token.value )
 	Local sym_module:JSON[] = modules.getSymbols( token.value )
 				
@@ -117,7 +117,7 @@ Function bls_textDocument_signatureHelp:JSON( message:TMessage )
 	  }
 	}
 EndRem
-		Local data:JSON = New JSON( JSON_Array )
+		Local data:JSON = New JSON( JARRAY )
 		For Local symbol:JSON = EachIn sym_workspace
 			logfile.debug( symbol.stringify() )
 			Local item:JSON = New JSON()

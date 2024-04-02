@@ -36,7 +36,7 @@ Function bls_textDocument_completion:JSON( message:TMessage )
 
     ' Generate response
     Local response:JSON = Response_Ok( id )
-    Local items:JSON = New JSON( JSON_ARRAY )
+    Local items:JSON = New JSON( JARRAY )
     'response.set( "id", message.MsgID )
     'response.set( "jsonrpc", JSONRPC )
     response.set( "result|isIncomplete", "true" )
@@ -57,7 +57,7 @@ Function bls_textDocument_completion:JSON( message:TMessage )
     items.addlast( item )
 
     ' Reply to the client
-    return( response )
+    Return( response )
 
 End Function
 
