@@ -1,6 +1,6 @@
 # BlitzMax Language Server (for Blitzmax NG)
 (c) Copyright Si Dunford, June 2021, All Rights Reserved
-VERSION 0.4 Alpha
+VERSION 0.5 Alpha
 
 ## CURRENT STATE:
 
@@ -17,4 +17,7 @@ VERSION 0.4 Alpha
 * [Compiling](https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Compiling)
 * [Features](https://github.com/blitzmax-itspeedway-net/Blitzmax-Language-Server/wiki/Features)
 
+## KNOWN ISSUES
+
+* CLI Arguments do not work because of print override.
 

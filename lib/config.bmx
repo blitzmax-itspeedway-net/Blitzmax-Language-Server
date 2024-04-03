@@ -2,7 +2,14 @@
 '   JSON PARSER / CONFIG
 '   (c) Copyright Si Dunford, June 2021, All Right Reserved
 
-Import bmx.observer
+'	03 APR 2024, Default Config folder is:
+'		WINDOWS  C:\Documents And Settings\<username>\Application Data\bls\bls.config
+'		LINUX	/home/<username>/.bls/bls.config
+'		MACOS   /Users/<username>/Library/Application Support/bls/bls.config
+
+Import BRL.volumes
+
+'Import bmx.observer
 Import bmx.json
 
 'Import "generic.bmx"
@@ -24,19 +31,28 @@ Type TConfig ' Extends TMap
     Method New()
         'logfile.write( "Config started" )
         'defaults()
-        filename = AppDir+"/bls.config"
+		DebugStop
+?win32
+		filename = GetUserAppDir() + "\bls\bls.config"
+?linux
+		filename = GetUserAppDir() + "/.bls/bls.config"
+?macos
+		filename = GetUserAppDir() + "/bls/bls.config"
+?
+		CreateDir( ExtractDir( filename ), True )
         'Try
 		' Check if file exists
 		Select FileType( filename )
 		Case 0  ' File does not exist
-			'writeconfig( filename )
+			defaults()
+			save()
 		Case 1  ' File exists
 			readconfig( filename )
-			'writeconfig( filename )
-		Case 2  ' Directory !!
+			defaults()
+		'Case 2  ' Directory !!
 		Default
 			'Publish( "log", "WARN", "Invalid configuration file" )
-			Trace.Error( "Invalid configuration file" )
+			Trace.Error( "Invalid configuration file: "+filename )
 		End Select
         'Catch exception:String
         '    ' Show the error, but otherwise just continue
@@ -44,7 +60,7 @@ Type TConfig ' Extends TMap
         '    'Publish( "log", "ERRR", "ERROR: "+exception )
 		'	Trace.Critical( exception )
         'End Try
-		defaults()
+		'defaults()
 		'
     End Method
 
@@ -111,8 +127,10 @@ End Rem
 
     Method save()
 		If filename="" ; Return
+		CreateDir( ExtractDir( filename ), True )
         Local file:TStream = WriteStream( filename )
-        WriteString( file, J.Stringify() )
+        'WriteString( file, J.Stringify() )
+        WriteString( file, J.Prettify() )
         file.Close()
     End Method
 

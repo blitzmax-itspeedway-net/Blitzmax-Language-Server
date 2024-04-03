@@ -36,6 +36,7 @@ Import brl.stringbuilder
 Import brl.system
 Import brl.threads
 Import brl.threadpool
+'Import brl.standardio
 'Import brl.randomdefault	' Used by genWorkDoneToken()
 Import random.core	' Used by genWorkDoneToken()
 
@@ -64,16 +65,16 @@ Import bmx.json
 
 ' ########## APPLICATION LIBRARIES
 
-'DebugStop
 ' FIRST LOADED WILL BE LAST EXIT PROCEDURE TO RUN
 Import "lib/logfile.bmx"
 
 ' ########## APPLICATION
+DebugStop
 
 AppTitle = "BlitzMax Language Server"	' BLS
 
 ' Load order - FIRST
-Include "bin/TArguments.bmx"	' Uses TConfig, TLogger
+'Include "bin/TArguments.bmx"	' Uses TConfig, TLogger
 'Include "bin/TConfig.bmx"		
 'Include "bin/TLogger.bmx"		' Uses TConfig
 
@@ -156,17 +157,20 @@ Include "bin/constants.bmx"
 
 '	INCLUDE SUPPORTED ARGUMENTS
 
-Incbin "arguments.json"
+'Incbin "arguments.json"
+Include "lib/Arguments.bmx"
 
-' USING PRINT SCREWS UP STDIO SO DONT USE IT!
-Function Print( Message:String ) ; End Function
+'# Override BRL.Print()
+Function Print( str:String )
+	Throw "Print() overrides stdio and is not permitted"
+End Function
 
 'Local td:TDiagnostic = New TDiagnostic()
 
 'DebugStop
 '   GLOBALS
 Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
-Global CONFIG:TConfig = New TConfig					' Configuration manager
+'Global CONFIG:TConfig = New TConfig					' Configuration manager
 ' Apply Command line arguments
 'Global Logfile:TLogger = New TLogger()				' Log File Manager
 
@@ -222,7 +226,7 @@ Trace.Debug( "- APPDIR:     "+AppDir )
 
 '	ARGUMENTS AND CONFIGURATION
 'DebugStop
-New TArguments()			' Arguments
+'New TArguments()			' Arguments
 Trace.debug( "CONFIG:~n"+config.J.prettify() )
 
 '	START THE MESSAGE QUEUE

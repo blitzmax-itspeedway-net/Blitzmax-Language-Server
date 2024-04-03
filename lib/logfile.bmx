@@ -5,6 +5,14 @@ SuperStrict
 '
 '   FILE LOGGING
 
+'	03 APR 2024, Default logging folder is:
+'		WINDOWS  C:\Documents And Settings\<username>\Application Data\bls\bls.log
+'		LINUX	/home/<username>/.bls/bls.log
+'		MACOS   /Users/<username>/Library/Application Support/bls/bls.log
+'	This can be overwridden in bls.config, logfile=
+
+Import BRL.volumes
+
 Import bmx.observer
 Import bmx.json
 
@@ -25,8 +33,20 @@ Type TLogfile Implements IObserver
         ' Set loglevel from config within bounds
         loglevel = Min( Max( Int( CONFIG["loglevel"] ), 0), 7 )
         Try
+			DebugStop
             Local filename:String = Trim(CONFIG["logfile"])
-            If Not filename; Throw( "No logfile defined" )
+            If Not filename 'Or filename = ""
+				' Revert to default log location
+?win32
+				filename = GetUserAppDir() + "\bls\bls.log"
+?linux
+				filename = GetUserAppDir() + "/.bls/bls.log"
+?macos
+				filename = GetUserAppDir() + "/bls/bls.log"
+?				
+			End If
+			CreateDir( ExtractDir( filename ), True )
+
 			file = OpenStream( filename, False, WRITE_MODE_APPEND )
 			If Not file; Throw( "Unable to open logfile" )
 			
