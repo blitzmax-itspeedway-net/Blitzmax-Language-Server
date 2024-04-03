@@ -46,23 +46,23 @@ Type TWorkspaceCache Extends TCacheDB
 	Private
 	
 	Method upgrade( currentVerMax:Int, currentVerMin:Int )
-		logfile.debug( "workspace.cache.upgrade:" )
+		Trace.debug( "workspace.cache.upgrade:" )
 		If  (currentVerMax=0 And currentVerMin<5) 		' Added definition field
-			logfile.debug( "- Upgrading Tables" )
+			Trace.debug( "- Upgrading Tables" )
 			exec( "DROP TABLE symbols;" )
 		Else
-			logfile.debug( "- Not required" )		
+			Trace.debug( "- Not required" )		
 		End If
 	End Method
 
 	Method patch( currentVerMax:Int, currentVerMin:Int, currentBuild:Int )
-		logfile.debug( "workspace.cache.patch:" )
+		Trace.debug( "workspace.cache.patch:" )
 		If  (currentVerMax=0 And currentVerMin<5)		' Added definition field
-			logfile.debug( "- Patching Tables" )
+			Trace.debug( "- Patching Tables" )
 			exec( "DROP TABLE symbols;" )
 			exec( "DELETE FROM attr WHERE key='version' or key='blsversion';" ) ' Clean up old data
 		Else
-			logfile.debug( "- Not required" )		
+			Trace.debug( "- Not required" )		
 		End If
 	End Method
 	
@@ -214,7 +214,7 @@ Type TWorkspaceCache Extends TCacheDB
 			symbol.set( "definition", record.getStringByName( "definition" ) )
 			symbol.set( "description", record.getStringByName( "description" ) )
 			data :+ [symbol]
-			'logfile.debug( symbol.stringify() )
+			'Trace.debug( symbol.stringify() )
 		Wend
 		Return data
 		
@@ -241,7 +241,7 @@ Type TWorkspaceCache Extends TCacheDB
 		
 		SQL :+ ";"
 		
-logfile.debug( SQL )
+Trace.debug( SQL )
 
 		LockMutex( lock )
 		Local query:TDatabaseQuery = db.executeQuery( SQL )

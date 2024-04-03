@@ -20,7 +20,7 @@ Type TLanguageServer Extends TEventHandler
 	Field state:Int					= STATE_UNINITIALISED
 	'Field initialised:Int			= False   	' Set by "initialized" message
     'Field shutdown:Int				= False		' Set by "shutdown" message
-	Field trace:String				= "off"		' Set by $/setTrace or OnTraceNotification
+	Field onTrace:String				= "off"		' Set by $/setTrace or OnTraceNotification
 	Field sendbuffer:TTask[]		= []
 	
 	Field requests:TMap							' Requests that have been sent to client
@@ -81,9 +81,9 @@ Type TLanguageServer Extends TEventHandler
 		If id<>""    ; class = TMessage._ID
 		If methd<>"" ; class :+ TMessage._METHOD
 		
-		'logfile.debug( "# METHOD IS '"+ message.find("method").tostring()+"'" )
+		'Trace.debug( "# METHOD IS '"+ message.find("method").tostring()+"'" )
 		'If response 
-		logfile.debug( "# MESSAGE CLASS IS "+class )
+		Trace.debug( "# MESSAGE CLASS IS "+class )
 
 		' Validation
 		Local allowed:Int = ( state = STATE_INITIALISED )
@@ -100,7 +100,7 @@ Type TLanguageServer Extends TEventHandler
 		If Not allowed
 			Select state
 			Case STATE_UNINITIALISED		' Server not connected, nothing to send to!
-				logfile.critical( "## SERVER IS UNINITIALISED:~n"+Text )
+				Trace.critical( "## SERVER IS UNINITIALISED:~n"+Text )
 			Case STATE_INITIALISING
 				Select methd
 				Case "initialize", "window/showMessage", "window/logMessage", "telemetry/event", "window/showMessageRequest"
@@ -109,30 +109,30 @@ Type TLanguageServer Extends TEventHandler
 			'Case STATE_INITIALISED
 			'	allowed = True
 			Case STATE_SHUTDOWN
-				logfile.critical( "## SERVER IS SHUTDOWN:~n"+Text )
+				Trace.critical( "## SERVER IS SHUTDOWN:~n"+Text )
 			End Select
 		End If
-		logfile.debug( "# ALLOWED TO SEND: "+["FALSE","TRUE"][allowed]+" ("+allowed+")" )
+		Trace.debug( "# ALLOWED TO SEND: "+["FALSE","TRUE"][allowed]+" ("+allowed+")" )
 		
 		' Send message
 		Local msg:TTask = New TTaskSend( Text )
 		If allowed	' SEND MESSAGE
 			msg.post()
 		Else		' ADD TO BUFFER
-			logfile.debug( "# BUFFERING MESSAGE:~n"+Text )
+			Trace.debug( "# BUFFERING MESSAGE:~n"+Text )
 			sendbuffer :+ [msg]
 		End If
 		
 		' Send buffered messages?
 		If state = STATE_INITIALISED And sendbuffer<>[]
-			logfile.debug( "# EMPTYING BUFFER" )
+			Trace.debug( "# EMPTYING BUFFER" )
 			For msg = EachIn sendbuffer
 				'Local msg:TTask = New TTaskSend( buffered )
 				msg.post()
 				'client.sendMessage( buffered )
 			Next
 			sendbuffer = []			
-			logfile.debug( "# BUFFER EMPTY" )
+			Trace.debug( "# BUFFER EMPTY" )
 		End If
 			
 	End Method
@@ -144,11 +144,11 @@ Type TLanguageServer Extends TEventHandler
 	End Function
 	
 	Method matchResponseToRequest:TServerRequest( id:String )
-		logfile.debug( "MATCHING ID="+id )
+		Trace.debug( "MATCHING ID="+id )
 		
 '		For Local key:String = EachIn requests.keys()
 '			Local o:Object = requests[key]
-'			logfile.debug( "- KEY:"+key+" = "+typeof( o ) )
+'			Trace.debug( "- KEY:"+key+" = "+typeof( o ) )
 '		Next
 		
 		' Pop Request (if it exists)
@@ -156,9 +156,9 @@ Type TLanguageServer Extends TEventHandler
 		If request ; requests.remove( id )
 		
 		If request 
-			logfile.debug( "- REQUEST FOUND" )
+			Trace.debug( "- REQUEST FOUND" )
 		Else
-			logfile.debug( "- REQUEST NOT FOUND" )
+			Trace.debug( "- REQUEST NOT FOUND" )
 		End If
 
 		' Timeout old messages			
@@ -166,12 +166,12 @@ Type TLanguageServer Extends TEventHandler
 			Local message:TServerRequest = TServerRequest( requests[key] )
 			If message 
 				If message.timeout()
-					logfile.debug( "- KEY "+key+" TIMEOUT" )
+					Trace.debug( "- KEY "+key+" TIMEOUT" )
 					requests.remove( key )
 				End If
 			Else
 				' Invalid message, remove key
-			    logfile.debug( "- INVALID KEY "+key+" REMOVED" )
+			    Trace.debug( "- INVALID KEY "+key+" REMOVED" )
 				requests.remove( key )
 			End If
 		Next
@@ -183,14 +183,14 @@ Type TLanguageServer Extends TEventHandler
     Function ExitProcedure()
         'Publish( "debug", "Exit Procedure running" )
         'Publish( "exitnow" )
-		logfile.info( "Running Exit Procedure" )
+		Trace.info( "Running Exit Procedure" )
         instance.Close()
-        'Logfile.Close()
+        'Trace.Close()
 
 		'	STOP the global message queue
-		logfile.debug( "- Stopping Message Queue" )
+		Trace.debug( "- Stopping Message Queue" )
 		TaskQueue.stop()
-		logfile.debug( "- Message Queue Stopped" )
+		Trace.debug( "- Message Queue Stopped" )
 		
     End Function
 
@@ -216,7 +216,7 @@ Rem
             ' Report an error to the Client using stdOut
             If Not J Or J.isInvalid()
 				Local errtext:String
-				logfile.error( content )
+				Trace.error( content )
 				If J.isInvalid()
 					errtext = "ERROR("+J.errNum+") "+J.errText+" at {"+J.errLine+","+J.errpos+"}"
 				Else
@@ -225,7 +225,7 @@ Rem
                 ' Send error message to LSP Client
 				'Publish( "debug", errtext )
                 'Publish( "send", Response_Error( ERR_PARSE_ERROR, errtext ) )
-				logfile.debug( errtext )
+				Trace.debug( errtext )
 				'send( Response_Error( ERR_PARSE_ERROR, errtext ) )
                 Continue
             End If
@@ -237,9 +237,9 @@ Rem
 			Local message:TMessage = New TMessage( J )
 			Local methd:String = message.methd
 
-			logfile.debug( "- ID:      "+message.id )
-			logfile.debug( "- METHOD:  "+message.methd )
-			logfile.debug( "- CLASS:   "+message.classname() )
+			Trace.debug( "- ID:      "+message.id )
+			Trace.debug( "- METHOD:  "+message.methd )
+			Trace.debug( "- CLASS:   "+message.classname() )
 		
 			Select message.class
 			Case TMessage._REQUEST
@@ -247,11 +247,11 @@ Rem
 				' Check server has initialised
 				Select True
 				Case lsp.state = lsp.STATE_INITIALISED And methd="initialize"
-					logfile.critical( "## Server already initialized~n"+J.stringify() )
+					Trace.critical( "## Server already initialized~n"+J.stringify() )
 					lsp.send( Response_Error( ERR_INVALID_REQUEST, "Server already initialized", message.id ) )
 					Continue
 				Case lsp.state <> lsp.STATE_INITIALISED And methd<>"initialize"
-					logfile.critical( "## Server is not initialized~n"+J.stringify() )
+					Trace.critical( "## Server is not initialized~n"+J.stringify() )
 					lsp.send( Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized", message.id ))
 					Continue
 				End Select
@@ -273,7 +273,7 @@ Rem
 				message.postv1()
 				
 			Default
-				logfile.critical( "## Invalid message~n"+J.Stringify() )
+				Trace.critical( "## Invalid message~n"+J.Stringify() )
 				Continue
 			End Select
 
@@ -285,7 +285,7 @@ End Rem
 
 	' Report an Implementation Incomplete State
 	Method ImplementationIncomplete( message:TMessage )
-		logfile.error( "## IMPLEMENTATION INCOMPLETE: "+message.className()+"{"+message.getid()+"|"+message.methd+"}~n"+message.J.Prettify() )
+		Trace.error( "## IMPLEMENTATION INCOMPLETE: "+message.className()+"{"+message.getid()+"|"+message.methd+"}~n"+message.J.Prettify() )
 	End Method
 
 Rem
@@ -299,11 +299,11 @@ Rem
         Repeat
             Try
                 'Publish( "debug", "TLSP.SenderThread going to sleep")
-                logfile.debug("TLSP.SenderThread going To sleep")
+                Trace.debug("TLSP.SenderThread going To sleep")
 				
                 WaitSemaphore( client.sendcounter )
                 'Publish( "debug", "TLSP.SenderThread is awake" )
-                logfile.debug( "TLSP.SenderThread is awake" )
+                Trace.debug( "TLSP.SenderThread is awake" )
                 ' Create a Response from message
                 Local content:String = client.popSendQueue()
                 'Publish( "log", "DEBG", "Sending '"+content+"'" )
@@ -323,11 +323,11 @@ Rem
             Catch Exception:String 
                 'DebugLog( Exception )
                 'Publish( "log", "CRIT", Exception )
-				logfile.critical( Exception )
+				Trace.critical( Exception )
             End Try
         Until CompareAndSwap( lsp.QuitSender, quit, True )
         'Publish( "debug", "SenderThread - Exit" )
-        logfile.debug( "SenderThread - Exit" )
+        Trace.debug( "SenderThread - Exit" )
     End Function  
 End Rem
 
@@ -375,29 +375,29 @@ EndRem
 	' ##### GENERAL MESSAGES #####################################
 
 	Method on_Exit:JSON( message:TMessage )						' NOTIFICATION
-		logfile.debug( "TLSP.onExit()" )
+		Trace.debug( "TLSP.onExit()" )
 
 		' QUIT MAIN LOOP
         AtomicSwap( QuitMain, True )
 
 		'	STOP the global message queue
-		logfile.debug( "- Stopping Message Queue" )
+		Trace.debug( "- Stopping Message Queue" )
 		TaskQueue.stop()
-		logfile.debug( "- Message Queue Stopped" )
+		Trace.debug( "- Message Queue Stopped" )
 		
 		' NOTIFICATION: No response necessary
 	End Method
 	
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialize
 	Method on_Initialize:JSON( message:TMessage )				' REQUEST
-		'logfile.debug( "MESSAGE:~n"+message.J.prettify() )
+		'Trace.debug( "MESSAGE:~n"+message.J.prettify() )
 		Local id:String = message.getid()
 		Local params:JSON = message.params
 	
 		state = STATE_INITIALISING
 				
-		'logfile.debug( "onInitialise()~n"+message.J.prettify() )
-		'logfile.debug( "ONINITIALISE ID="+id )
+		'Trace.debug( "onInitialise()~n"+message.J.prettify() )
+		'Trace.debug( "ONINITIALISE ID="+id )
 		
 		' Client must extract capabilities etc.
 		client.initialise( params )			' Will extract "capabilities" and "clientInfo"
@@ -408,12 +408,12 @@ EndRem
 		' Standardise the rootUri path
 		'	(If multi-workspace is disabled, this will be set, otherwise it will be file:///"
 		Local uri:TURI = New TURI( params.find( "rootUri" ).toString() )
-		'logfile.debug( "ROOTURI:" + params.find( "rootUri" ).toString() ) 
-		'logfile.debug( "ROOTURI:" + uri.toString() ) 
-		'logfile.debug( "-~tOriginal: "+uri ) 
+		'Trace.debug( "ROOTURI:" + params.find( "rootUri" ).toString() ) 
+		'Trace.debug( "ROOTURI:" + uri.toString() ) 
+		'Trace.debug( "-~tOriginal: "+uri ) 
 '		uri = TURI.parse( uri ).toString()			' Normalise the uri
-		'logfile.debug( "-~tStandard: "+uri )
-		'logfile.debug( "Adding 'root' workspace: "+uri )
+		'Trace.debug( "-~tStandard: "+uri )
+		'Trace.debug( "Adding 'root' workspace: "+uri )
 		workspaces.add( uri, New TWorkspace( "root", uri ) )
 		
 		' Create a workspace and add it to the workspace manager
@@ -431,33 +431,33 @@ Rem
 EndRem
 		If params.contains( "workspaceFolders" )
 			Local workspaceFolders:JSON[] = params.find( "workspaceFolders" ).toArray()
-			'logfile.debug( "WORKSPACEFOLDERS:~n"+params.find( "workspaceFolders" ).prettify() )
-			'logfile.debug( "ARRAY:"+workspaceFolders[0].prettify() )
-			'logfile.debug( workspacefolders.length + " WORKSPACES" )
+			'Trace.debug( "WORKSPACEFOLDERS:~n"+params.find( "workspaceFolders" ).prettify() )
+			'Trace.debug( "ARRAY:"+workspaceFolders[0].prettify() )
+			'Trace.debug( workspacefolders.length + " WORKSPACES" )
 			For Local workspace:JSON = EachIn workspaceFolders
 				Local name:String = workspace.find( "name" ).toString()
 				uri = New TURI( workspace.find( "uri" ).toString())
 				'uri = TURI.parse( uri ).toString()			' Normalise the uri
-				'logfile.debug( "ADDING '"+name+"' at "+uri )
+				'Trace.debug( "ADDING '"+name+"' at "+uri )
 				If name And uri
-					'logfile.debug( ".. Adding" )
+					'Trace.debug( ".. Adding" )
 					workspaces.add( uri, New TWorkspace( name, uri ) )
 				End If
 			Next
-			logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+			Trace.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		End If
 		
 		' Extract other information that we may need
 		' clientProcessID = params.find( "processId" )
 		' locale = params.find( "locale" )
 		' initializationOptions = params.find( "initializationOptions" )
-		' trace = params.find( "trace" )
+		' ontrace = params.find( "trace" )
 		
 		Local value:String = params.find( "trace" ).toString()
 		If value = "off" Or value="messages" Or value="verbose"
-			trace = value
+			onTrace = value
 		End If
-		logfile.info( "# TraceValue is '"+trace+"'" )
+		Trace.info( "# TraceValue is '"+onTrace+"'" )
 		
 		' Respond to the client
 		Local serverCapabilities:JSON = New JSON()
@@ -466,12 +466,12 @@ EndRem
 		'serverCapabilities.set( "completionProvider|workDoneProgress", "true" )
 		'serverCapabilities.set( "definitionProvider", "true" )
 		If client.contains( "workspace|symbol" ) And config.has( "experimental|hover" )
-			logfile.debug( "# ENABLING: hoverProvider" )
+			Trace.debug( "# ENABLING: hoverProvider" )
 			serverCapabilities.set( "hoverProvider", "true" )
 			'serverCapabilities.set( "hoverProvider|workDoneProgress", "true" )
 		End If
 		If client.contains( "textDocument|signatureHelp" ) And config.has( "experimental|sighelp" )
-			logfile.debug( "# ENABLING: signatureHelpProvider" )
+			Trace.debug( "# ENABLING: signatureHelpProvider" )
 			serverCapabilities.set( "signatureHelpProvider|triggerCharacters", "(" )
 			serverCapabilities.set( "signatureHelpProvider|retriggerCharacters", ",:" )
 			'serverCapabilities.set( "signatureHelpProvider|workDoneProgress", "true" )
@@ -510,7 +510,7 @@ EndRem
 		'	WORKSPACE CAPABILITIES
 		
 		If client.contains( "workspace|symbol" ) And config.has( "experimental|wsym" )
-			logfile.debug( "# ENABLING: workspaceSymbolProvider" )
+			Trace.debug( "# ENABLING: workspaceSymbolProvider" )
 			If client.has( "workspace|symbol|workDone" )	'Progress support
 			'serverCapabilities.set( "workspaceSymbolProvider", [] )
 				serverCapabilities.set( "workspaceSymbolProvider|workDoneProgress", "true" )
@@ -519,7 +519,7 @@ EndRem
 			End If
 		End If
 		If client.has( "workspace|workspaceFolders" ) 
-			logfile.debug( "# ENABLING: workspace|workspaceFolders" )
+			Trace.debug( "# ENABLING: workspace|workspaceFolders" )
 			serverCapabilities.set( "workspace|workspaceFolders|supported", "true" )
 			' send plural and non-plural due to a typo in the LSP 3.16 documentation that doesn't explain
 			' which one is correct!
@@ -527,7 +527,7 @@ EndRem
 			serverCapabilities.set( "workspace|workspaceFolders|changeNotification", "true" )
 		End If
 		'If client.has( "workspace|configuration" )
-		'	logfile.debug( "# ENABLING: workspace|configuration" )
+		'	Trace.debug( "# ENABLING: workspace|configuration" )
 		'	serverCapabilities.set( "workspace|configuration", "file" )
 		'End If
 		'serverCapabilities.set( "workspace|fileOperations|didCreate|filters|scheme", ["file"] )
@@ -558,7 +558,7 @@ EndRem
 	
 	Method on_Initialized:JSON( message:TMessage )		' NOTIFICATION
 		'publish( "log", "DBG", "EVENT onInitialized()" )
-		logfile.debug( "TLSP.on_Initialized()" )
+		Trace.debug( "TLSP.on_Initialized()" )
 		
 		' Dynamically Register Capabilities
 		'client.RegisterForConfigChanges()		' Register for configuration changes
@@ -574,7 +574,7 @@ EndRem
 
 Rem ' TEST A PROGRESS BAR
 If client.has( "window|workDoneProgress" )
-	logfile.debug( "## CLIENT SUPPORTS: window|workDoneProgress" )
+	Trace.debug( "## CLIENT SUPPORTS: window|workDoneProgress" )
 	
 	' Generate and register a token
 	Local workDoneToken:String = client.progress_register()
@@ -592,17 +592,17 @@ If client.has( "window|workDoneProgress" )
 	Until MilliSecs() > finished	
 	client.progress_end( workDoneToken, "Completed" )
 Else
-	logfile.debug( "## CLIENT DOES NOT SUPPORT: window|workDoneProgress" )
+	Trace.debug( "## CLIENT DOES NOT SUPPORT: window|workDoneProgress" )
 End If
 EndRem
 
-		'logfile.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
+		'Trace.trace( "THIS IS A TEST 'LOGTRACE' MESSAGE", "WITH VERBOSE STUFF IN HERE, SORRY ABOUT ALL THE WAFFLE" )
 		
 		'	MODULE COMPATABILITY
 
-		If Not JSON.VersionCheck( JSON_MINIMUM_VERSION, JSON_MINIMUM_BUILD )
+		If Not JSON.VersionCheck( JSON_MINIMUM_VERSION, 0 )
 			Local error:String = "JSON Version "+JSON.Version()+" is not compatible."
-			logfile.critical( "## "+error )
+			Trace.critical( "## "+error )
 			client.logMessage( error, EMessageType.Error.Ordinal() )
 		'	Print( error )
 		End If
@@ -611,7 +611,7 @@ EndRem
 	End Method 
 
 	Method on_Shutdown:JSON( message:TMessage )			' REQUEST
-		logfile.debug( "TLSP.onShutdown()" )
+		Trace.debug( "TLSP.onShutdown()" )
 		state = STATE_SHUTDOWN
 		' SEND RESPONSE
 		Return Response_OK( message.getid() )
@@ -622,11 +622,11 @@ EndRem
 
 	' 3.16 documentation says $/setTrace, but VSCODE sends $/setTraceNotification
 	Method on_dollar_setTrace:JSON( message:TMessage )					' NOTIFICATION
-		logfile.debug( "TLSP.on_dollar_setTrace()~n"+message.J.prettify() )
+		Trace.debug( "TLSP.on_dollar_setTrace()~n"+message.J.prettify() )
 		Local value:String = message.params.find( "value" ).toString()
 		If value = "off" Or value="messages" Or value="verbose"
-			trace = value
-			logfile.info( "## TraceValue is '"+trace+"'" )
+			onTrace = value
+			Trace.info( "## TraceValue is '"+onTrace+"'" )
 		End If
 		' NOTIFICATION: No response necessary
 	End Method
@@ -635,11 +635,11 @@ EndRem
 	' Library version in BlitzMax Extension updated by Hezkore 12/11/21 fixed this issue
 	' Trace notifications
 '	Method on_dollar_setTraceNotification:JSON( message:TMessage )			' NOTIFICATION
-'		logfile.debug( "TLSP.on_dollar_setTraceNotification()~n"+message.J.prettify() )
+'		Trace.debug( "TLSP.on_dollar_setTraceNotification()~n"+message.J.prettify() )
 '		Local value:String = message.params.find( "value" ).toString()
 '		If value = "off" Or value="message" Or value="verbose"
 '			trace = value
-'			logfile.info( "? TraceValue is now: '"+trace+"'" )
+'			Trace.info( "? TraceValue is now: '"+trace+"'" )
 '		End If
 '		' NOTIFICATION: No response necessary
 '	End Method
@@ -655,10 +655,10 @@ EndRem
 		Local Text:String = params.find( "textDocument|text" ).toString()
 		Local version:UInt = params.find( "textDocument|version" ).toint()
 		
-		logfile.debug( "DOCUMENT: "+uri.tostring() )
+		Trace.debug( "DOCUMENT: "+uri.tostring() )
 
 		Local workspace:TWorkspace = Workspaces.get( uri )
-If Not workspace logfile.debug( "WORKSPACE IS NULL" )
+If Not workspace Trace.debug( "WORKSPACE IS NULL" )
 		If Not workspace ; Return Null
 
 		workspace.open( uri, Text, version )
@@ -736,7 +736,7 @@ End Rem
 		Local uri:TURI = New TURI( params.find( "textDocument|uri" ).tostring() )
 		Local workspace:TWorkspace = Workspaces.get( uri )
 		workspace.remove( uri )
-		logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+		Trace.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		' NOTIFICATION: No response necessary
 	End Method
 		
@@ -779,7 +779,7 @@ End Rem
 '	Method onHover:TMessage( message:TMessage )							
 	' REQUEST: textDocument/hover
 	Method on_textDocument_hover:JSON( message:TMessage )
-		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
+		Trace.debug( "MESSAGE:~n"+message.J.prettify() )
 
 		ImplementationIncomplete( message )
 		Return bls_textDocument_hover( message )
@@ -792,14 +792,14 @@ End Rem
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_documentSymbol
 	' REQUEST: textDocument/documentSymbol
 	Method on_textDocument_documentSymbol:JSON( message:TMessage )
-		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
+		Trace.debug( "MESSAGE:~n"+message.J.prettify() )
 		Return bls_textDocument_documentSymbol( message )
 	End Method
 
 	' https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_signatureHelp
 	' REQUEST: textDocument/signatureHelp
 	Method on_textDocument_signatureHelp:JSON( message:TMessage )
-		logfile.debug( "MESSAGE:~n"+message.J.prettify() )
+		Trace.debug( "MESSAGE:~n"+message.J.prettify() )
 		Return bls_textDocument_signatureHelp( message )
 	End Method
 	
@@ -818,25 +818,25 @@ End Rem
 		Local params:JSON = message.params
 		
 		Local add:JSON = params.find( "event|added" )
-logfile.debug( add.getClassName()+":"+add.stringify() )
+Trace.debug( add.getClassName()+":"+add.stringify() )
 		Local sub:JSON = params.find( "event|removed" )
-logfile.debug( sub.getClassName()+":"+sub.stringify() )
+Trace.debug( sub.getClassName()+":"+sub.stringify() )
 		
 		Local added:JSON[] = params.find( "event|added" ).toArray()
 		Local removed:JSON[] = params.find( "event|removed" ).toArray()
 
-logfile.debug( "ADDED: "+added.length )
-If added.length>0 ; logfile.debug( added[0].stringify() )
-logfile.debug( "REMOVED: "+removed.length )
-If removed.length>0 ; logfile.debug( removed[0].stringify() )
+Trace.debug( "ADDED: "+added.length )
+If added.length>0 ; Trace.debug( added[0].stringify() )
+Trace.debug( "REMOVED: "+removed.length )
+If removed.length>0 ; Trace.debug( removed[0].stringify() )
 
 
 		' Add new Workspaces
 		For Local item:JSON = EachIn added
 			Local name:String = item.find( "name" ).toString()
 			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
-			logfile.debug( "Adding "+name+" - "+ uri.tostring() )
-			logfile.debug( item.stringify() )
+			Trace.debug( "Adding "+name+" - "+ uri.tostring() )
+			Trace.debug( item.stringify() )
 			If uri ; Workspaces.add( uri, New TWorkspace( name, uri ) )
 		Next
 
@@ -844,8 +844,8 @@ If removed.length>0 ; logfile.debug( removed[0].stringify() )
 		For Local item:JSON = EachIn removed
 			Local name:String = item.find( "name" ).toString()
 			Local uri:TURI = New TURI( item.find( "uri" ).toString() )
-			logfile.debug( "Removing "+name+" - "+ uri.tostring() )
-			logfile.debug( item.stringify() )
+			Trace.debug( "Removing "+name+" - "+ uri.tostring() )
+			Trace.debug( item.stringify() )
 
 			If uri ; Workspaces.remove( uri )
 			
@@ -866,11 +866,11 @@ If removed.length>0 ; logfile.debug( removed[0].stringify() )
 			'End If
 		Next
 		
-logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+Trace.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 		'If Not rootworkspace Return Null
 
-'logfile.debug( ">> REVIEWING WORKSPACES" )
+'Trace.debug( ">> REVIEWING WORKSPACES" )
 
 		' Check if any documents in the root workspace should be moved
 		'For Local document:TTextDocument = EachIn rootworkspace.all()
@@ -881,7 +881,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		'	rootworkspace.document_remove( document.uri )
 		'Next
 
-'logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+'Trace.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 	End Method
 
@@ -889,7 +889,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 	' REQUEST: workspace/symbol
 	Method on_workspace_symbol:JSON( message:TMessage )		
 		'ImplementationIncomplete( message )
-'logfile.debug( "WORKSPACE/SYMBOLS - START" )
+'Trace.debug( "WORKSPACE/SYMBOLS - START" )
 
 		Local id:String = message.getid()
 		Local params:JSON = message.params
@@ -898,7 +898,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		Local query:String = ""
 		Local criteria:JSON  = params.search( "query" )
 		If criteria ; query = criteria.toString()
-		'logfile.debug( "QUERY: "+query )
+		'Trace.debug( "QUERY: "+query )
 				
 		Local response:JSON = Response_OK( id )
 		
@@ -908,7 +908,7 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		
 		For Local key:String = EachIn Workspaces.list.keys()
 			Local workspace:TWorkspace = TWorkspace( Workspaces.list[key] )
-'logfile.debug( "WORKSPACE:" + workspace.name + "/" + key )
+'Trace.debug( "WORKSPACE:" + workspace.name + "/" + key )
 			If workspace.cache
 				Local symbols:JSON[] = workspace.cache.getSymbols( query )
 				' Append workspace symbols to results
@@ -916,15 +916,15 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 					data.addlast( symbol )
 				Next
 '			Else
-'logfile.debug( "- invalid cache" )
+'Trace.debug( "- invalid cache" )
 			End If
 		Next
 
 
 		' Insert workspace results set into response.
 		response.set( "result", data )
-'logfile.debug( "RESPONSE~n"+response.stringify() )
-'logfile.debug( "WORKSPACE/SYMBOLS - FINISH" )
+'Trace.debug( "RESPONSE~n"+response.stringify() )
+'Trace.debug( "WORKSPACE/SYMBOLS - FINISH" )
 		Return response
 	End Method
 
@@ -949,10 +949,10 @@ logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
 		Local request:TServerRequest = TServerRequest( message )
 		
 		If request
-			logfile.debug( "# REQUEST ="+request.classname()+"{"+request.getid()+"|"+request.methd+"}" )
-			logfile.debug( "# RESPONSE~n"+request.ClientResponse.prettify() )
+			Trace.debug( "# REQUEST ="+request.classname()+"{"+request.getid()+"|"+request.methd+"}" )
+			Trace.debug( "# RESPONSE~n"+request.ClientResponse.prettify() )
 		Else
-			logfile.debug( "# RESPONSE WAS NOT MATCHED" )
+			Trace.debug( "# RESPONSE WAS NOT MATCHED" )
 		End If
 
 		' DEBUG

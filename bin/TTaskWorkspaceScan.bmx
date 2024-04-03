@@ -25,8 +25,8 @@ Type TTaskWorkspaceScan Extends TTask
 	End Method
 	
 	Method launch()
-		logfile.debug( "## WORKSPACE SCAN - STARTED" )
-		logfile.debug( "   ("+workspace.uri.tostring()+")" )
+		Trace.debug( "## WORKSPACE SCAN - STARTED" )
+		Trace.debug( "   ("+workspace.uri.tostring()+")" )
 		
 		' Request known files from cache
 		Local cachedfiles:TMap = workspace.cache.getDocuments()
@@ -52,7 +52,7 @@ Type TTaskWorkspaceScan Extends TTask
 			If cachedfiles.contains( filename )
 				Local document:TDBDocument = TDBDocument( cachedfiles[filename] )
 				If file.file_size <> document.size Or file.file_date <> document.date Or file.file_checksum <> document.checksum
-					logfile.debug( "## WORKSPACE SCAN - CHANGED FILE '"+filename+"'" )
+					Trace.debug( "## WORKSPACE SCAN - CHANGED FILE '"+filename+"'" )
 					' Add it to the workspace:
 					workspace.add( file )
 					' Add it to the cache:
@@ -67,7 +67,7 @@ Type TTaskWorkspaceScan Extends TTask
 				' Remove from cachedfiles as we've processed it.
 				cachedfiles.remove( filename )
 			Else
-				logfile.debug( "## WORKSPACE SCAN - ADD FILE '"+filename+"'" )
+				Trace.debug( "## WORKSPACE SCAN - ADD FILE '"+filename+"'" )
 				' Add it to the workspace:
 				workspace.add( file )
 				' Add it to the cache:
@@ -84,7 +84,7 @@ Type TTaskWorkspaceScan Extends TTask
 
 		' Files remaining in cachedfiles list exist in database, but not on disk
 		For Local filename:String = EachIn cachedfiles.keys()
-			logfile.debug( "## WORKSPACE SCAN - REMOVE DELETED FILE '"+filename+"'" )
+			Trace.debug( "## WORKSPACE SCAN - REMOVE DELETED FILE '"+filename+"'" )
 			workspace.cache.DeleteDocument( filename )
 			' Update progress bar
 			progress :+ 1
@@ -92,8 +92,8 @@ Type TTaskWorkspaceScan Extends TTask
 		Next
 		'client.progress_close( token )
 
-		logfile.debug( "## WORKSPACE SCAN - FINISHED" )
-		logfile.debug( workspaces.reveal() )
+		Trace.debug( "## WORKSPACE SCAN - FINISHED" )
+		Trace.debug( workspaces.reveal() )
 	End Method
 	
 	Method progress( percent:Int )

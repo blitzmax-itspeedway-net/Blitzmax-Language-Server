@@ -21,6 +21,8 @@ SuperStrict
 '		TTaskWorkspaceScan Extends TTask
 '		TTaskSend Extends TTask						' Sends a message to the client
 
+' ########## BLITZMAX MODULES
+
 Framework brl.standardio 
 
 Import brl.collections      ' Used for Tokeniser
@@ -37,35 +39,43 @@ Import brl.threadpool
 'Import brl.randomdefault	' Used by genWorkDoneToken()
 Import random.core	' Used by genWorkDoneToken()
 
+' ########## BRUCEYS MODULES
+
 Import bah.database
 Import bah.dbsqlite
 
+' ########## CRYPTOGRAPHIC MODULES
+
 Import Crypto.MD5Digest		' Used by MD5 checksums in TWorkspace
+
+' ########## PUBLIC MODULES
 
 Import pub.freeprocess
 
+' ########## TEXT MODULES
+
 Import Text.RegEx
 
+' ########## ITSPEEDWAY/SCAREMONGER MODULES
+
+Import bmx.observer
 Import bmx.json
 'import bmx.blitzmaxparser
 
-AppTitle = "BlitzMax Language Server"	' BLS
-
-?Debug
-' @bmk echo
-' @bmk echo ****
-' @bmk echo **** WARNING
-' @bmk echo **** You are compiling in DEBUG mode
-' @bmk echo ****
-' @bmk echo
-?Not Debug
-?
+' ########## APPLICATION LIBRARIES
 
 'DebugStop
+' FIRST LOADED WILL BE LAST EXIT PROCEDURE TO RUN
+Import "lib/logfile.bmx"
+
+' ########## APPLICATION
+
+AppTitle = "BlitzMax Language Server"	' BLS
+
 ' Load order - FIRST
 Include "bin/TArguments.bmx"	' Uses TConfig, TLogger
-Include "bin/TConfig.bmx"		
-Include "bin/TLogger.bmx"		' Uses TConfig
+'Include "bin/TConfig.bmx"		
+'Include "bin/TLogger.bmx"		' Uses TConfig
 
 ' Language Server Protocol Interface
 Include "bin/language-server-protocol.bmx"
@@ -148,42 +158,72 @@ Include "bin/constants.bmx"
 
 Incbin "arguments.json"
 
-'	COMPATABILITY
-
-Const JSON_MINIMUM_VERSION:Float = 2.3		' 2.2, Need support for search(), 2.3 improved prettify()
-Const JSON_MINIMUM_BUILD:Int = 0
-
 ' USING PRINT SCREWS UP STDIO SO DONT USE IT!
 Function Print( Message:String ) ; End Function
 
 'Local td:TDiagnostic = New TDiagnostic()
-DebugStop
 
+'DebugStop
 '   GLOBALS
 Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
 Global CONFIG:TConfig = New TConfig					' Configuration manager
 ' Apply Command line arguments
-Global Logfile:TLogger = New TLogger()				' Log File Manager
+'Global Logfile:TLogger = New TLogger()				' Log File Manager
 
-'   INCREMENT BUILD NUMBER
+' #####
+' ########## BMK FEATURES
 
+' @bmk echo
+' @bmk echo *******************************
+?Debug
+' @bmk echo ****  DEBUG MODE
+?Not Debug
+' @bmk echo ****  RELEASE MODE
+?
+' @bmk echo *******************************
+' INCREMENT BUILD NUMBER
 ' @bmk include bin/version.bmk
 ' @bmk incrementVersion 
+' @bmk echo *******************************
+' @bmk echo
 Include "bin/version.bmx"
-'Global BLS_VERSION:String = version+"."+build
 
-logfile.debug( "------------------------------------------------------------" )
-logfile.info( AppTitle )
-logfile.info( "  VERSION:    V"+appvermax+"."+appvermin+" build "+appbuild )
-logfile.info( "  JSON:       V"+JSON.Version() )
-logfile.debug( "  CURRENTDIR: "+CurrentDir$() )
-logfile.debug( "  APPDIR:     "+AppDir )
-'Print( "AppTitle" )
+' ##########
+' #####
+
+Const JSON_MINIMUM_VERSION:Float = 3.0
+'Const JSON_MINIMUM_BUILD:Int = 0
+
+Const OBSERVER_MINIMUM_VERSION:Float = 1.6
+'Const OBSERVER_MINIMUM_BUILD:Int = 0
+
+'Local Watcher:TWatcher = New TWatcher()	' Create Test
+
+Observer.threaded()		' Enable thread protection
+
+Trace.Debug( "------------------------------------------------------------" )
+Trace.Info( AppTitle )
+Trace.Info( "- VERSION:    V"+appvermax+"."+appvermin+" build "+appbuild )
+Trace.Info( "- JSON:       V"+JSON.Version() )
+Trace.Info( "- OBSERVER:   V"+Observer.Version() )
+ 
+If JSON.Version() < JSON_MINIMUM_VERSION
+	Trace.Critical( "bmx.json version is below minimum requirements; please update." )
+	End
+End If
+If OBSERVER.Version() < OBSERVER_MINIMUM_VERSION
+	Trace.Critical( "bmx.observer version is below minimum requirements; please update." )
+	End
+End If
+Trace.Debug( "- CURRENTDIR: "+CurrentDir$() )
+Trace.Debug( "- APPDIR:     "+AppDir )
+
+
 
 '	ARGUMENTS AND CONFIGURATION
 'DebugStop
 New TArguments()			' Arguments
-logfile.debug( "CONFIG:~n"+config.J.prettify() )
+Trace.debug( "CONFIG:~n"+config.J.prettify() )
 
 '	START THE MESSAGE QUEUE
 
@@ -203,11 +243,11 @@ End Select
 If client
 	client.open()					' Start the client
 Else
-	logfile.critical( "Failed to create client" )
+	Trace.critical( "Failed to create client" )
 End If
 
-DebugStop;'	LANGUAGE SERVER
-
+'	LANGUAGE SERVER
+'DebugStop
 Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 'DebugStop
 
@@ -225,8 +265,8 @@ Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 'Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager, Depreciated (See Workspace)
 Global Workspaces:TWorkspaces = New TWorkspaces()
 
-DebugStop;'	CREATE MODULE SCAN TASK
-
+'	CREATE MODULE SCAN TASK
+DebugStop
 Global modules:TModuleCache = New TModuleCache()
 'DebugStop
 Local task:TTaskModuleScan = New TTaskModuleScan( modules )
@@ -257,7 +297,7 @@ End Type
 End Rem
 
 '   Run the Application
-logfile.debug( "Starting Language Server..." )
+Trace.debug( "Starting Language Server..." )
 
 'DebugStop
 
@@ -271,7 +311,7 @@ Try
 	client.wait()
 
 Catch exception:String
-    logfile.critical( exception )
+    Trace.critical( exception )
 End Try
 
-logfile.debug( "Language Server Closing..." )
+Trace.debug( "Language Server Closing..." )

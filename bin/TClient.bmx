@@ -56,11 +56,11 @@ Type TClient Extends TEventHandler	'TMessageQueue
 	
 	'Method onInitialize:TMessage( message:TMessage )
 	Method initialise( params:JSON )
-		logfile.debug( "TClient.initialize()" )
+		Trace.debug( "TClient.initialize()" )
 		initialized = True
-		'logfile.debug( "PARAMS:~n"+params.prettify() )
+		'Trace.debug( "PARAMS:~n"+params.prettify() )
 		If Not params Return
-		'logfile.write( "PARAMS EXIST" )
+		'Trace.write( "PARAMS EXIST" )
 
 		'Local id:String = message.getid()
 		'Local params:JSON = message.params
@@ -73,14 +73,14 @@ Type TClient Extends TEventHandler	'TMessageQueue
         ' Save Client information
 		Local clientinfo:JSON = params.find( "clientInfo" )    ' VSCODE=clientInfo
 		If clientinfo
-			'logfile.write( "CLIENT INFO EXISTS" )
+			'Trace.write( "CLIENT INFO EXISTS" )
 			clientname = clientinfo["name"]
 			clientver = clientinfo["version"]
-			logfile.info "CLIENT INFORMATION:"
-			logfile.info "  NAME:    "+clientname
-			logfile.info "  VERSION: "+clientver
+			Trace.info "CLIENT INFORMATION:"
+			Trace.info "  NAME:    "+clientname
+			Trace.info "  VERSION: "+clientver
 		Else
-			logfile.info( "NO CLIENT INFO EXISTS" )
+			Trace.info( "NO CLIENT INFO EXISTS" )
 		End If	
 		
 	End Method
@@ -118,9 +118,9 @@ Type TClient Extends TEventHandler	'TMessageQueue
 	' 21/12/21 - REPLACED BY TTaskSend
 '	Method SendMessage( message:String )
 '		If Len(message)>500 
-'			logfile.debug( "TClient.SendMessage()~n"+message[0..500]+"..." )
+'			Trace.debug( "TClient.SendMessage()~n"+message[0..500]+"..." )
 '		Else
-'			logfile.debug( "TClient.SendMessage()~n"+message )
+'			Trace.debug( "TClient.SendMessage()~n"+message )
 '		End If
 '		' Send to IDE
 '		If message ; write( message )
@@ -193,7 +193,7 @@ Type TClient Extends TEventHandler	'TMessageQueue
 	' Methods implemented by Child types
 	Method open:Int() Abstract
 	Method Close() Abstract
-	Method read:String() Abstract
+	Method Read:String() Abstract
 	Method write( data:String ) Abstract
 	
 End Type

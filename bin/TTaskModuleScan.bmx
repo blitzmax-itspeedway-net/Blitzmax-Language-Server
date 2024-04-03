@@ -24,7 +24,7 @@ Type TTaskModuleScan Extends TTask
 	Method launch()
 		Local start:Int = MilliSecs()
 		Local finish:Int
-		logfile.debug( "## MODULE SCAN - STARTED" )
+		Trace.debug( "## MODULE SCAN - STARTED" )
 'DebugStop
 		client.logMessage( "BlitzMax module parsing started", EMessageType.info.ordinal() )
 		' Request known files from cache
@@ -49,11 +49,11 @@ Type TTaskModuleScan Extends TTask
 			If FileType( entry ) = FILETYPE_FILE
 				' Check if module needs to be parsed
 				If cachedfiles.contains( modname )
-					logfile.debug( "## MODULE SCAN: "+modname[..30]+" - Already processed" )
+					Trace.debug( "## MODULE SCAN: "+modname[..30]+" - Already processed" )
 					' Remove processed module from list (We dont need to do it again)
 					cachedfiles.remove( modname )
 				Else
-					logfile.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
+					Trace.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
 					' Insert module into DB
 					'cache.addmodule( modname, uri )
 					' Parse the module
@@ -69,7 +69,7 @@ Type TTaskModuleScan Extends TTask
 		
 		' Modules remaining in cachedfiles list exist in database, but not on disk
 		For Local modname:String = EachIn cachedfiles.keys()
-			logfile.debug( "## MODULE SCAN: "+modname+" - Removed deleted module" )
+			Trace.debug( "## MODULE SCAN: "+modname+" - Removed deleted module" )
 			cache.deleteModule( modname )
 			' Update progress bar
 			'progress :+ 1
@@ -77,7 +77,7 @@ Type TTaskModuleScan Extends TTask
 		Next
 		
 		' Add modules to database
-		logfile.debug( "## MODULE SCAN: Adding Modules to database" )
+		Trace.debug( "## MODULE SCAN: Adding Modules to database" )
 		cache.addmodules( modlist )
 		
 		' Parse files
@@ -88,17 +88,17 @@ Type TTaskModuleScan Extends TTask
 			' Parse the module
 			Local fullname:String = Lower(modname+":"+filename)
 			If completed.contains( fullname )
-				logfile.debug( "## MODULE SCAN: " + modname[..30]+" - "+filename +" - Already scanned" )
+				Trace.debug( "## MODULE SCAN: " + modname[..30]+" - "+filename +" - Already scanned" )
 			Else
 'If modname = "text.format" ; DebugStop
-				logfile.debug( "## MODULE SCAN: PARSING " + modname+":"+filename )
+				Trace.debug( "## MODULE SCAN: PARSING " + modname+":"+filename )
 				parseModule( modname, filename )
 				completed.insert( fullname, "DONE" )
-				logfile.debug( "## MODULE SCAN: PARSE COMPLETE" )
+				Trace.debug( "## MODULE SCAN: PARSE COMPLETE" )
 			End If
 		Wend
 		
-		logfile.debug( "## MODULE SCAN - FINISHED" )
+		Trace.debug( "## MODULE SCAN - FINISHED" )
 		finish=MilliSecs()
 		client.logMessage( "BlitzMax module parsing complete in "+(finish-start)+"ms", EMessageType.info.ordinal() )
 	End Method
@@ -106,7 +106,7 @@ Type TTaskModuleScan Extends TTask
 	Method parseModule( modname:String, filename:String )
 'DebugStop
 		Local start:Int, finish:Int
-		logfile.debug( "TTaskModuleScan: "+ modname + "  " + filename )
+		Trace.debug( "TTaskModuleScan: "+ modname + "  " + filename )
 		Local uri:TURI = New TURI( filename )
 		
 		Local content:String = loadfile( filename )
@@ -114,16 +114,16 @@ Type TTaskModuleScan Extends TTask
 		
 		start = MilliSecs()
 		Local lexer:TLexer = New TBlitzMaxLexer( content )
-		'logfile.debug( "TTaskModuleScan: Lexer initialised" )
+		'Trace.debug( "TTaskModuleScan: Lexer initialised" )
 		Local parser:TParser = New TBlitzMaxParser( lexer )
-		'logfile.debug( "TTaskModuleScan: Parser initialised" )
+		'Trace.debug( "TTaskModuleScan: Parser initialised" )
 		'DebugStop
 		Local ast:TASTNode = parser.parse_ast()
-		'logfile.debug( "TTaskModuleScan: Module parsed" )
+		'Trace.debug( "TTaskModuleScan: Module parsed" )
 		
 DebugStop;		' Parse the AST into a symbol table
 		cache.addSymbols( modname, uri, New TSymbolTable( ast ) )
-		logfile.debug( "TTaskModuleScan: Symbols added" )
+		Trace.debug( "TTaskModuleScan: Symbols added" )
 		
 		' Parse IMPORT and INCLUDE and add them to TODO list
 
@@ -145,7 +145,7 @@ DebugStop;		' Parse the AST into a symbol table
 					Local path:String = ExtractDir( filename )
 					Local entry:String = joinPaths( path, result.filename.value )
 					'Local epath:String = path + filename
-					logfile.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
+					Trace.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
 					ToDoList.addlast( [ modname, entry ] )
 				Else
 					DebugLog( "  - Import ~q"+result.filename.value+"~q - SKIPPED" )
@@ -157,7 +157,7 @@ DebugStop;		' Parse the AST into a symbol table
 				Local name:String[] = modname.split(".")
 				Local path:String = modpath + "/" + name[0]+".Mod" + "/" + name[1]+".Mod"
 				Local entry:String = path + "/" + name[1] + ".bmx"
-				logfile.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
+				Trace.debug( "## MODULE SCAN: "+modname[..30]+" ADD " + entry )
 				ToDoList.addlast( [ modname, entry ] )
 			End If
 		Next
@@ -181,23 +181,23 @@ DebugStop;		' Parse the AST into a symbol table
 		Next
 		
 
-		'logfile.debug( "TTaskModuleScan: *** IMPORT IGNORED" )
-		'logfile.debug( "TTaskModuleScan: *** INCLUDE IGNORED" )
+		'Trace.debug( "TTaskModuleScan: *** IMPORT IGNORED" )
+		'Trace.debug( "TTaskModuleScan: *** INCLUDE IGNORED" )
 		
 		'DebugStop
 		
 		finish = MilliSecs()	
 
-		logfile.debug( "TTaskModuleScan: Parsed '"+modname+"' in "+(finish-start)+"ms" )
+		Trace.debug( "TTaskModuleScan: Parsed '"+modname+"' in "+(finish-start)+"ms" )
 		client.logMessage( "Parsed module '"+modname+"' in "+(finish-start)+"ms", EMessageType.info.ordinal() )
 
-		'logfile.debug( "TTaskModuleScan: *** CONFIG NOT UPDATED" )
+		'Trace.debug( "TTaskModuleScan: *** CONFIG NOT UPDATED" )
 		' Update config file
 		'If config.has( "modules|modname|scan" )
 		'	config.set( "modules|modname|scan", False )
 		'End If
 		
-		logfile.debug( "TTaskModuleScan: "+ modname + " is finished" )
+		Trace.debug( "TTaskModuleScan: "+ modname + " is finished" )
 	End Method
 
 	Method LoadFile:String( filename:String )

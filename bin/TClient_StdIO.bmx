@@ -14,7 +14,7 @@ Type TClient_StdIO Extends TClient
 'DebugLog( "STDIO OPEN" )
 		If StdIn ; Return True
 'DebugLog( "STDIO - FAILED" )
-		logfile.critical( "Failed To open StdIN" )
+		Trace.critical( "Failed To open StdIN" )
 		Return False
 	End Method
 	
@@ -23,7 +23,7 @@ Type TClient_StdIO Extends TClient
 	End Method
 	
 	' Read Message from Client
-	Method read:String()
+	Method Read:String()
 		If Not StdIn ; Return ""
 		
 'DebugLog( "STDIN NOT NULL" )
@@ -43,26 +43,26 @@ Type TClient_StdIO Extends TClient
 'DebugLog( "GOT CONTENT" )
                 If line.startswith("Content-Length:")
                     contentlength = Int( line[15..] )
-                    logfile.debug( "Content-Length:"+contentlength)
+                    Trace.debug( "Content-Length:"+contentlength)
                 ElseIf line.startswith("Content-Type:")
                     contenttype = Int( line[13..] )
                     ' Backward compatibility, utf8 is no longer supported
                     If contenttype = "utf8" contenttype = "utf-8"
-                   logfile.debug( "Content-Type:"+contenttype)
+                   Trace.debug( "Content-Type:"+contenttype)
                 ElseIf line=""
-                    logfile.debug( "WAITING FOR CONTENT...")
+                    Trace.debug( "WAITING FOR CONTENT...")
                     content = stdIN.ReadString$( contentlength )
-                    logfile.debug( "TLSP_Stdio.getRequest() received "+contentlength+" bytes" )
+                    Trace.debug( "TLSP_Stdio.getRequest() received "+contentlength+" bytes" )
                     Return content
                 Else
-                    logfile.debug( "Skipping: "+line )
+                    Trace.debug( "Skipping: "+line )
                 End If
             Catch Exception:String
-                logfile.critical( Exception )
+                Trace.critical( Exception )
             End Try
         'Until endprocess
         Until CompareAndSwap( lsp.QuitMain, running, False )
-logfile.debug( "TClient_StdIO() - Quitting" )
+Trace.debug( "TClient_StdIO() - Quitting" )
 	End Method
 	
 	' Write Message to Client
@@ -76,13 +76,13 @@ logfile.debug( "TClient_StdIO() - Quitting" )
 		response :+ EOL
 		response :+ content
 		' Log the response
-'		logfile.debug( "TClient_StdIO() - Writing data to client~n"+response )
+'		Trace.debug( "TClient_StdIO() - Writing data to client~n"+response )
 		' Send to client
 '		StdIOlock.lock()
 		StandardIOStream.WriteString( response )
 		StandardIOStream.Flush()
 '		StdIOlock.unlock()
-'logfile.debug( "TClient_StdIO() - data written to client" )
+'Trace.debug( "TClient_StdIO() - data written to client" )
 	End Method
 	
 End Type

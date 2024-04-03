@@ -124,7 +124,7 @@ Type TMessage Extends TTask
 	'End Method
 
 	Method Launch()
-		'logfile.critical( "## TTaskDocumentParse Launch() is not implemented" )
+		'Trace.critical( "## TTaskDocumentParse Launch() is not implemented" )
 		lsp.distribute( Self )
 	End Method
 
@@ -135,9 +135,9 @@ Type TMessage Extends TTask
 			now :+ 4294967296:Long
 		End If
 		
-		logfile.debug( "> CREATED "+created )
-		logfile.debug( "> EXPIRES "+(created+EXPIRATION) )
-		logfile.debug( "> NOW     "+now )		
+		Trace.debug( "> CREATED "+created )
+		Trace.debug( "> EXPIRES "+(created+EXPIRATION) )
+		Trace.debug( "> NOW     "+now )		
 		
 		Return( now > created+EXPIRATION )
 	End Method
@@ -187,7 +187,7 @@ End Type
 		'Case "NEXTONE" 		; id = NEXTONE
 '		Default
 '			'Publish( "log", "DBG", "** TMessage: UNKNOWN EVENT '"+methd+"'" )
-'			logfile.debug( "** TMessage: UNKNOWN EVENT '"+methd+"'" )
+'			Trace.debug( "** TMessage: UNKNOWN EVENT '"+methd+"'" )
 '			id = EV_UNKNOWN
 '		End Select
 '		'Publish( "log", "DBG", "** TMSG: '"+methd+"' ("+id+")" )		
@@ -204,10 +204,10 @@ End Type
 	'	Local call:TMethod = this.FindMethod( callable )
 'DebugStop
 	'	If call 
-	'		logfile.debug( "CALLING: "+callable+"()" )
+	'		Trace.debug( "CALLING: "+callable+"()" )
 	'		call.invoke( Self, [Self] )
 	'	Else
-	'		logfile.debug( "UNABLE TO CALL: "+callable+"()" )
+	'		Trace.debug( "UNABLE TO CALL: "+callable+"()" )
 	'	End If
 	'End Method
 	
@@ -217,7 +217,7 @@ End Type
 	'Method Emit_OLD()
 	'	Local data:Object = RunHooks( EmitEventHook, Self )		
 	'	If data
-	'		logfile.debug( "## TMessage.emit() - UNHANDLED EVENT: "+methd )
+	'		Trace.debug( "## TMessage.emit() - UNHANDLED EVENT: "+methd )
 	'		' Identify unhandled requests so that we can send an error back to the client
 	'		If J.contains("id")
 	'			Local JID:JSON = J.find("id")

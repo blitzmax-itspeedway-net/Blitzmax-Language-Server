@@ -32,7 +32,7 @@ Type TTaskQueue
 			Local item:TTask = TTask( link.value() )
 			' Check Uniqueness
 			If task.unique And task.name=item.name
-				logfile.debug( "TTaskQueue: Unique task already exists "+task.name )
+				Trace.debug( "TTaskQueue: Unique task already exists "+task.name )
 				' Task already exists with this name and identifier, so drop it.
 				UnlockMutex( mutex )
 				sleep.signal()			' Wake the sleeping thread
@@ -40,7 +40,7 @@ Type TTaskQueue
 			End If
 			' Check Priority
 			If item.priority<=task.priority
-				logfile.debug( "TTaskQueue: Inserting "+task.name+", Priority "+task.priority )
+				Trace.debug( "TTaskQueue: Inserting "+task.name+", Priority "+task.priority )
 				queue.insertAfterLink( task, link )
 				UnlockMutex( mutex )
 				sleep.signal()			' Wake the sleeping thread
@@ -50,7 +50,7 @@ Type TTaskQueue
 		Wend
 'DebugStop
 		' Queue is empty, or task goes at top...
-		logfile.debug( "TTaskQueue: Inserting "+task.name+", Priority "+task.priority )
+		Trace.debug( "TTaskQueue: Inserting "+task.name+", Priority "+task.priority )
 		queue.addFirst( task )
 		UnlockMutex( mutex )
 		sleep.signal()			' Wake the sleeping thread
@@ -77,15 +77,15 @@ Type TTaskQueue
 		Local wait:TMutex = CreateMutex()
 		'
 		LockMutex( wait )
-		logfile.debug( "TTaskQueue Thread Starting" )
+		Trace.debug( "TTaskQueue Thread Starting" )
 		Repeat
 			LockMutex( this.mutex )
 			Local task:TTask = TTask( this.queue.removeFirst() )
 			UnlockMutex( this.mutex )
 			If task
-				logfile.debug( "TTaskqueue: Running   "+task.name+" ("+( ["BLOCKING","THREADED"][task.operation] )+")" )
+				Trace.debug( "TTaskqueue: Running   "+task.name+" ("+( ["BLOCKING","THREADED"][task.operation] )+")" )
 				task.run()
-				logfile.debug( "TTaskqueue: Finished  "+task.name )
+				Trace.debug( "TTaskqueue: Finished  "+task.name )
 			End If
 
 			If this.queue.isEmpty()
@@ -95,7 +95,7 @@ Type TTaskQueue
 			End If
 			
 		Until CompareAndSwap( this.quitflag, running, False ) 
-		logfile.debug( "TTaskQueue Thread Exiting" )
+		Trace.debug( "TTaskQueue Thread Exiting" )
 		'UnlockMutex( wait )
 	End Function
 

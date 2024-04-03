@@ -1308,6 +1308,8 @@ DebugStop
 			Else
 				ast.filename = New TToken( TK_QString, major.value+"."+minor.value, major.line, major.pos, "QSTRING" )
 			End If
+            ast.major = major
+            ast.minor = minor
 		Case TK_QString
 			' UNQUOTES FILENAME REFERS TO A FILE
 			ast.localfile = True

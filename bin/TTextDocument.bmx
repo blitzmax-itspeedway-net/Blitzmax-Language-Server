@@ -82,7 +82,7 @@ Type TTextDocument Implements ITextDocument
 	End Method
 
 	Method change( changes:JSON[], version:Int )
-		logfile.debug( "TTextDocument.change() is not implemented" )
+		Trace.debug( "TTextDocument.change() is not implemented" )
 		Self.version = version
 		
 		For Local change:JSON = EachIn changes
@@ -92,7 +92,7 @@ Type TTextDocument Implements ITextDocument
 			Local ending:Int = offsetAt( range.ends )
 			content = content[0..starting]+Text+content[ending..]
 			
-			logfile.debug( "? "+range.reveal()+" "+Text+"~n"+content[0..100] )
+			Trace.debug( "? "+range.reveal()+" "+Text+"~n"+content[0..100] )
 		Next
 		validated = False
 	End Method
@@ -225,25 +225,25 @@ End Rem
 'DebugStop	
 '		ast = parser.parse_ast()
 
-'logfile.debug( "FILE '"+uri.tostring()+"':" )
-'logfile.debug( lexer.reveal() )
-'logfile.debug( parser.reveal() )
-'logfile.debug( ast.reveal() )
+'Trace.debug( "FILE '"+uri.tostring()+"':" )
+'Trace.debug( lexer.reveal() )
+'Trace.debug( parser.reveal() )
+'Trace.debug( ast.reveal() )
 
 '	End Method
 
 Rem Moved to TTaskDocumentParse 22/11/21
 	Method validate()
 		If Not validated And content <> ""
-			logfile.debug( "> Parsing "+uri.tostring() )
+			Trace.debug( "> Parsing "+uri.tostring() )
 			lexer = New TBlitzMaxLexer( content )
 			Local parser:TParser = New TBlitzMaxParser( lexer )
 			ast = parser.parse_ast()
 
-			'logfile.debug( "FILE '"+uri.tostring()+"':" )
-			'logfile.debug( lexer.reveal() )
-			'logfile.debug( parser.reveal() )
-			'logfile.debug( ast.reveal() )
+			'Trace.debug( "FILE '"+uri.tostring()+"':" )
+			'Trace.debug( lexer.reveal() )
+			'Trace.debug( parser.reveal() )
+			'Trace.debug( ast.reveal() )
 			
 			' Send diagnostics to client
 			sendDiagnostics()
@@ -259,7 +259,7 @@ EndRem
 
 	Method sendDiagnostics()
 	
-		logfile.debug( "# DIAGNOSTICS" )
+		Trace.debug( "# DIAGNOSTICS" )
 		Local list:TDiagnostic[]
 		list = TDiagnostic[]( ast.inorder( GetDiagnostic, list, 0 ) )
 
@@ -290,16 +290,16 @@ EndRem
 				End If
 			End If
 		Next
-		logfile.debug( "DIAGNOSTIC:~n"+result )
+		Trace.debug( "DIAGNOSTIC:~n"+result )
 
 		Local message:JSON = EmptyResponse( "textDocument/publishDiagnostics" )
-		logfile.debug( ">>URI>>"+uri.tostring() )
+		Trace.debug( ">>URI>>"+uri.tostring() )
 		message.set( "params|uri", uri.tostring() )
 		message.set( "params|version", version )
 		message.set( "params|diagnostics", diagnostics )
 	
-		'logfile.debug( "DIAGNOSTICS:~n"+message.prettify() )
-		'logfile.debug( "DIAGNOSTICS:~n"+message.stringify() )
+		'Trace.debug( "DIAGNOSTICS:~n"+message.prettify() )
+		'Trace.debug( "DIAGNOSTICS:~n"+message.stringify() )
 		
 		lsp.send( message )
 		

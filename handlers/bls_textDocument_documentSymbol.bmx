@@ -45,37 +45,37 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
     Local params:JSON = message.params
 	
 	'If config.istrue("experimental|docsym")
-	'	logfile.warning( "EXPERIMENTAL FEATURE ENABLED: textDocument/documentSymbol~n"+message.J.prettify() )
+	'	Trace.warning( "EXPERIMENTAL FEATURE ENABLED: textDocument/documentSymbol~n"+message.J.prettify() )
 	'Else
-	'	logfile.warning( "EXPERIMENTAL FEATURE DISABLED: textDocument/documentSymbol" )
+	'	Trace.warning( "EXPERIMENTAL FEATURE DISABLED: textDocument/documentSymbol" )
 	'	Return Response_OK( id )
 	'End If
 	
-'logfile.debug( "Getting document" )
+'Trace.debug( "Getting document" )
 
 	' Get the document
 	Local doc_uri:String = message.J.find( "params|textDocument|uri" ).toString()
 
-'logfile.debug( "Got doc_uri: "+doc_uri )
+'Trace.debug( "Got doc_uri: "+doc_uri )
 
 	Local workspace:TWorkspace = workspaces.get( doc_uri )
 
-'logfile.debug( "Got Workspace" )
+'Trace.debug( "Got Workspace" )
 'If workspace 
-'	logfile.debug( "Workspace IS NOT NULL" )
+'	Trace.debug( "Workspace IS NOT NULL" )
 'Else
-'	logfile.debug( "Workspace IS NULL" )
+'	Trace.debug( "Workspace IS NULL" )
 'EndIf
 
 	Local document:TTextDocument = TTextDocument( workspace.get( doc_uri ) )
 
-'logfile.debug( "Got document" )
+'Trace.debug( "Got document" )
 
 	' Can only work with FULL TEXT DOCUMENTS at present
 	' Later we may be able to load an AST from file
 
 	If Not document Or Not document.ast
-'		logfile.debug( "# NOT A FULL TEXT DOCUMENT" )
+'		Trace.debug( "# NOT A FULL TEXT DOCUMENT" )
 		Return Response_OK( id )
 	End If
 	
@@ -84,7 +84,7 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
 	' Send outline view to VSCODE
 			
 	' Identify capabilities of the client:
-	'logfile.debug( "CLIENT CAPABILITIES:~n"+client.capabilities.prettify() )
+	'Trace.debug( "CLIENT CAPABILITIES:~n"+client.capabilities.prettify() )
 	
 	'Local documentsymbols:JSON = client.capabilities.find( "textDocument|documentSymbol" )
 	'Local symbols:JSON = documentsymbols.find( "symbolKind|valueset" )
@@ -103,29 +103,29 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
 	'	00000010	Show AST
 	'	00000100	Show EOL			(Disabled by default)
 	
-'logfile.debug( "Getting Options" )
+'Trace.debug( "Getting Options" )
 
 	Local options:Int = TDocumentSymbolVisitor.OPT_FLAT
 	
 	If client.has( "textDocument|documentSymbol|hierarchicalDocumentSymbolSupport" )
-		logfile.debug( "# Client HAS textDocument|documentSymbol|hierarchicalDocumentSymbolSupport" )
+		Trace.debug( "# Client HAS textDocument|documentSymbol|hierarchicalDocumentSymbolSupport" )
 		options = TDocumentSymbolVisitor.OPT_TREE
 	Else
-		logfile.debug( "# Client only supports SymbolInformation" )	
+		Trace.debug( "# Client only supports SymbolInformation" )	
 	End If
 
 	' An AST can only be shown in Tree (Hierarchial) symbol information
 	Local showAST:Int = config.find("outline|ast").toint()
 	If showAST And ( options & TDocumentSymbolVisitor.OPT_TREE >0 )
-		'logfile.debug( "## ENABLING AST VIEW" )
+		'Trace.debug( "## ENABLING AST VIEW" )
 		options = options | TDocumentSymbolVisitor.OPT_AST
 		Local showEOL:Int = config.find("outline|eol").toint()
 		If showEOL 
-			'logfile.debug( "## ENABLING EOL IN AST VIEW" )
+			'Trace.debug( "## ENABLING EOL IN AST VIEW" )
 			options = options | TDocumentSymbolVisitor.OPT_EOL
 		End If
 	'Else
-	'	logfile.debug( "## AST VIEW IS DISABLED" )
+	'	Trace.debug( "## AST VIEW IS DISABLED" )
 	End If
 	
 	'OPTIONS DEBUGGING
@@ -138,7 +138,7 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
 	'options = TDocumentSymbolVisitor.OPT_TREE | TDocumentSymbolVisitor.OPT_AST
 
 	' Generate DocumentSymbol Information
-	logfile.debug( "RUNNING VISITOR~nOPTIONS:~n" + ..
+	Trace.debug( "RUNNING VISITOR~nOPTIONS:~n" + ..
 		"FLAT: "+ (options & TDocumentSymbolVisitor.OPT_FLAT ) + "~n" + ..
 		"TREE: "+ (options & TDocumentSymbolVisitor.OPT_TREE ) + "~n" + ..
 		"AST:  "+ (options & TDocumentSymbolVisitor.OPT_AST ) + "~n" + ..
@@ -165,12 +165,12 @@ Function bls_textDocument_documentSymbol:JSON( message:TMessage )
 	'data.addLast( documentSymbol )	
 
 	'data = JSON( document.ast.preorder( SymbolInformation, data, options ) )
-	'If data ; logfile.debug( "SYMBOLINFORMATION~n"+data.prettify() )
+	'If data ; Trace.debug( "SYMBOLINFORMATION~n"+data.prettify() )
 	'data = JSON( ast.inorder( DocumentSymbol, data ) )
-	'If data ; logfile.debug( "DOCUMENTSYMBOL~n"+data.prettify() )		
+	'If data ; Trace.debug( "DOCUMENTSYMBOL~n"+data.prettify() )		
 
-logfile.debug( "CREATED DATA" )
-'logfile.debug( "SYMBOLINFORMATION~n"+data.prettify() )
+Trace.debug( "CREATED DATA" )
+'Trace.debug( "SYMBOLINFORMATION~n"+data.prettify() )
 	Local response:JSON = Response_OK( id )
 		
 	response.set( "result", data )
@@ -193,14 +193,14 @@ Type TDocumentSymbolVisitor Extends TVisitor
 
 	Method New( ast:TASTNode, options:Int )
 		Self.ast = ast
-		logfile.debug( "## VISITOR OPTIONS: "+options )
+		Trace.debug( "## VISITOR OPTIONS: "+options )
 		Self.options = options
 	End Method
 
 	Method run:JSON()
 		Local J:JSON = New JSON( JARRAY )	' DocumentSymbol[]
 		visit( ast, J, "outline" )
-		'logfile.debug( "OUTLINE:~n"+J.prettify() )
+		'Trace.debug( "OUTLINE:~n"+J.prettify() )
 		Return J
 	End Method
 	
@@ -222,7 +222,7 @@ Type TDocumentSymbolVisitor Extends TVisitor
 		' Only show selective nodes unless in AST mode
 		If options & OPT_AST = 0	' NOT SHOWING AST
 Local within:Int = in( class, VALID_SYMBOLS )
-logfile.debug( "OPT:"+options+", '"+class+"', "+within+" skipped" )
+Trace.debug( "OPT:"+options+", '"+class+"', "+within+" skipped" )
 			If Not in( Lower(class), VALID_SYMBOLS ) ; Return
 		End If
 

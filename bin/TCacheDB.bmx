@@ -70,7 +70,7 @@ Type TCacheDB
 		
 		'	DELETE THE TABLE ON UNSTABLE VERSIONS
 		If appvermax=0 And (appvermin<4 Or (appvermin=4 And appbuild<87)) And FileType( dbpath ) = FILETYPE_FILE
-			logfile.debug( "** Deleted file: "+dbpath )
+			Trace.debug( "** Deleted file: "+dbpath )
 			DeleteFile( dbpath )
 		End If
 		
@@ -130,21 +130,21 @@ DebugStop
 		Local vermin:Int = Int(record.getStringbyName( "vermin" )) 
 		Local build:Int = Int(record.getStringbyName( "build" ))
 
-logfile.debug( cacheFile + " at V"+vermax+"."+vermin+" build "+build )
+Trace.debug( cacheFile + " at V"+vermax+"."+vermin+" build "+build )
 'debugstop	
 		If appvermax = vermax And appvermin = vermin	' No change to version
 			If appbuild > build			' Running later build?
-logfile.debug( cacheFile + " may require patch..." )
+Trace.debug( cacheFile + " may require patch..." )
 				patch( vermax, vermin, build )
 			Else
-logfile.debug( cacheFile + " is at latest version..." )
+Trace.debug( cacheFile + " is at latest version..." )
 				Return
 			End If
 		ElseIf appvermax < vermax Or ( appvermax = vermax And appvermin < vermin ) ' Downgrade the version
-logfile.debug( cacheFile + " requires downgrade..." )
+Trace.debug( cacheFile + " requires downgrade..." )
 			downgrade( vermax, vermin )
 		Else							' Update the version
-logfile.debug( cacheFile + " requires upgrade..." )
+Trace.debug( cacheFile + " requires upgrade..." )
 			upgrade( vermax, vermin )
 		End If
 

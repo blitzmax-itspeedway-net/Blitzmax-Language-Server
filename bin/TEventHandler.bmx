@@ -53,7 +53,7 @@ Type TEventHandler
 			Local call:TMethod = this.FindMethod( callable )
 	'DebugStop
 			If call 
-				logfile.debug( "CALLING: "+callable+"() .. "+message.classname() )
+				Trace.debug( "CALLING: "+callable+"() .. "+message.classname() )
 				'Local response:JSON = JSON( call.invoke( Self, [message] ) )
 				count :+1
 				
@@ -88,7 +88,7 @@ Type TEventHandler
 						call.invoke( Self, [message] )
 					End Select
 				Catch Exception:String
-					logfile.critical( "TEventHandler.distribute(): "+ exception )
+					Trace.critical( "TEventHandler.distribute(): "+ exception )
 				End Try
 
 			End If
@@ -97,11 +97,11 @@ Type TEventHandler
 		' Report unhandled messages
 		If count=0
 			If message.class = TMessage._REQUEST
-				logfile.critical( "## No registered handler for '"+message.methd+"'" ) 
+				Trace.critical( "## No registered handler for '"+message.methd+"'" ) 
 			Else
-				logfile.warning( "## No registered handler for '"+message.methd+"'" ) 
+				Trace.warning( "## No registered handler for '"+message.methd+"'" ) 
 			End If
-			logfile.debug( "## Method "+callable+"() is missing" )
+			Trace.debug( "## Method "+callable+"() is missing" )
 		End If
 	End Method
 	
@@ -180,10 +180,10 @@ Type TEventHandler
 '			'Case NEXTONE			;	NEXTONE( message )
 '			Default
 '				'publish( "log", "DBG", "# TEventHandler: Missing '"+message.methd+"'" )	
-'				logfile.debug( "# TEventHandler: Missing '"+message.methd+"'" )		
+'				Trace.debug( "# TEventHandler: Missing '"+message.methd+"'" )		
 '			End Select
 '		Catch Exception:String
-'			logfile.info( "## EXCEPTION: TEventHandler.distribute~n"+Exception )
+'			Trace.info( "## EXCEPTION: TEventHandler.distribute~n"+Exception )
 '		End Try
 '
 '	End Method
@@ -269,7 +269,7 @@ Type TEventHandler
 '			' We didn;t process this, so pass to next handler
 '			Return data
 '		Catch Exception:String
-'			logfile.info( "## EXCEPTION: TEventHandler.EventHandler~n"+Exception )
+'			Trace.info( "## EXCEPTION: TEventHandler.EventHandler~n"+Exception )
 '		End Try
 '	End Function
 	

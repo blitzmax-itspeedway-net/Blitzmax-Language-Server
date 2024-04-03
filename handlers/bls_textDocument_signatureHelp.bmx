@@ -58,20 +58,20 @@ Function bls_textDocument_signatureHelp:JSON( message:TMessage )
 	' Later we may be able to load an AST from file
 
 	If Not document Or Not document.ast Or Not document.lexer
-'		logfile.debug( "# NOT A FULL TEXT DOCUMENT" )
+'		Trace.debug( "# NOT A FULL TEXT DOCUMENT" )
 		Return Response_OK( id )		' This is "result":null by default
 	End If
 		
 	Local token:TToken = document.lexer.find( position.line+1, position.character-1 ) ' -1 to get NAME
 	
 '	For Local t:TToken = EachIn document.lexer.tokens
-'		logfile.debug( t.reveal() )
+'		Trace.debug( t.reveal() )
 '		If position.line+1 = t.line And position.character-1 >= t.pos And position.character-1 <= (t.pos+Len(t.value))
-'			logfile.debug( "* FOUND" )
+'			Trace.debug( "* FOUND" )
 '			token = t
 '			Exit
 '		ElseIf t.line > position.line+1
-'			logfile.debug( "* SEARCH STOPPED" )
+'			Trace.debug( "* SEARCH STOPPED" )
 '			' Stop searching if we have passed the line number
 '			Exit
 '		End If
@@ -79,10 +79,10 @@ Function bls_textDocument_signatureHelp:JSON( message:TMessage )
 	
 	' Did we find a suitable token?
 	If Not token 'Or Not token.in( TK_
-		logfile.debug( "***** TOKEN IS NULL *****" )
+		Trace.debug( "***** TOKEN IS NULL *****" )
 		Return Response_OK( id )		' This is "result":null by default
 	End If
-	logfile.debug( "** TOKEN: "+token.reveal() )
+	Trace.debug( "** TOKEN: "+token.reveal() )
 
 	' Lookup signature in databases
 	Local data:JSON = New JSON( JARRAY )
@@ -119,7 +119,7 @@ Function bls_textDocument_signatureHelp:JSON( message:TMessage )
 EndRem
 		Local data:JSON = New JSON( JARRAY )
 		For Local symbol:JSON = EachIn sym_workspace
-			logfile.debug( symbol.stringify() )
+			Trace.debug( symbol.stringify() )
 			Local item:JSON = New JSON()
 			item.set( "label", symbol.find("definition").toString() )
 			'item.set( "documentation", "DOCUMENTATION" )
@@ -152,7 +152,7 @@ Rem
 	data.set( "range|end|line", token.line-1 )
 	data.set( "range|end|character", token.pos + Len(token.value)-2 )
 	
-	logfile.debug( "***** SIGNATURE IS~n"+data.prettify() )
+	Trace.debug( "***** SIGNATURE IS~n"+data.prettify() )
 EndRem
 Rem
 	Local options:Int = 0
@@ -161,10 +161,10 @@ Rem
 		Select J.toString()
 		Case "markdown"
 			options :| CONTENT_MARKDOWN
-			logfile.debug( "# HOVER supports Markdown" )
+			Trace.debug( "# HOVER supports Markdown" )
 		Case "plaintext"
 			options :| CONTENT_PLAINTEXT
-			logfile.debug( "# HOVER supports plaintext" )
+			Trace.debug( "# HOVER supports plaintext" )
 HERE->
 		EndSelect
 	Next
@@ -179,14 +179,14 @@ Rem
 	data.set( "contents|value", content )
 	
 '	Local data:JSON = workspace.cache.getSymbolAt( position )
-	logfile.debug( "CREATED DATA" )
+	Trace.debug( "CREATED DATA" )
 
 
 	Local response:JSON = Response_OK( id )
 		
 	response.set( "result", data )
 EndRem
-	logfile.debug( "RESPONSE:~n"+response.prettify() )
+	Trace.debug( "RESPONSE:~n"+response.prettify() )
 
 	Return response
 

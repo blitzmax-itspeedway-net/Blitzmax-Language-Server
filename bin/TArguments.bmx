@@ -216,8 +216,8 @@ Type TArguments
 			DebugLog "INTERNAL ERROR:"
 			DebugLog "TArguments.new() - Invalid Argment Data"
 			DebugLog Features.error()
-			logfile.critical( "## INTERNAL ERROR" )
-			logfile.critical( "## TArguments.New() - Invalid Argument Data" )
+			Trace.critical( "## INTERNAL ERROR" )
+			Trace.critical( "## TArguments.New() - Invalid Argument Data" )
 		Else
 'DebugStop
 		'DebugLog( "ARGS:"+AppArgs.length )
@@ -239,7 +239,7 @@ Type TArguments
 				
 				' Check the section key is supported
 				If Not Features.contains( section )
-					logfile.warning "## Invalid argument: "+AppArgs[n]
+					Trace.warning "## Invalid argument: "+AppArgs[n]
 					Continue
 				End If
 	'DebugLog "SECTION='"+section+"'"
@@ -259,7 +259,7 @@ Type TArguments
 						Local JOption:JSON = JSection.find( keyvalue[0] )
 	'DebugLog( "- VALID "+section+":"+keyvalue[0])
 						Local hint:String = JOption.find("hint").toString()
-						If hint <> "" ; logfile.info( "## " + hint )
+						If hint <> "" ; Trace.info( "## " + hint )
 						
 						If keyvalue.length=1 
 							value = JOption.find("value").toString()
@@ -268,7 +268,7 @@ Type TArguments
 						End If
 						CONFIG[ JOption.find("key").toString() ] = value
 					Else
-						logfile.warning "## Invalid argument: "+section+":"+key
+						Trace.warning "## Invalid argument: "+section+":"+key
 					End If
 					
 					

@@ -11,7 +11,7 @@ Type TWorkspaces Extends TEventHandler
 		
 	' Add a Workspace
 	Method add( uri:TURI, workspace:TWorkspace )
-logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
+Trace.debug( "# Adding workspace '"+uri.tostring()+"'" )
 		list[ uri.toString() ] = workspace
 	End Method
 	
@@ -24,9 +24,9 @@ logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
 	Method get:TWorkspace( doc_uri:String )
 		Local uri:TURI = New TURI( doc_uri )
 'If uri
-'	logfile.debug( "uri is "+uri.toString() )
+'	Trace.debug( "uri is "+uri.toString() )
 'Else
-'	logfile.debug( "uri is NULL" )
+'	Trace.debug( "uri is NULL" )
 'EndIf
 		If uri ; Return get( uri )
 	End Method
@@ -38,15 +38,15 @@ logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
 		
 		
 		' Extract filepath from uri path (Drop the filename)
-		'logfile.debug( "FOLDER IS:" + ExtractDir( uri.path ) )
+		'Trace.debug( "FOLDER IS:" + ExtractDir( uri.path ) )
 		Local path:String = uri.folder()
 		Local candidate:TWorkspace
-		'logfile.debug( "Finding URI: "+ uri.toString()+"~n  SCHEME:"+uri.scheme+"~n  AUTHORITY:"+uri.authority+"~n  PATH: "+path )
+		'Trace.debug( "Finding URI: "+ uri.toString()+"~n  SCHEME:"+uri.scheme+"~n  AUTHORITY:"+uri.authority+"~n  PATH: "+path )
 		
 		' Match workspaces
 		For Local key:String = EachIn list.keys()
 			Local workspace:TWorkspace = TWorkspace( list[key] )
-			'logfile.debug( "Comparing: "+ workspace.uri.toString()+"~n  SCHEME:"+workspace.uri.scheme+"~n  AUTHORITY:"+workspace.uri.authority+"~n  PATH: "+workspace.uri.path )
+			'Trace.debug( "Comparing: "+ workspace.uri.toString()+"~n  SCHEME:"+workspace.uri.scheme+"~n  AUTHORITY:"+workspace.uri.authority+"~n  PATH: "+workspace.uri.path )
 			If workspace.uri.scheme = uri.scheme And ..
 			   workspace.uri.authority = uri.authority 
 				If workspace.uri.path = path
@@ -59,8 +59,8 @@ logfile.debug( "# Adding workspace '"+uri.tostring()+"'" )
 			End If
 		Next
 
-		'logfile.debug( "# No workspace match was found" )
-		'If candidate ; logfile.debug( "# Using candidate "+candidate.uri.toString() )
+		'Trace.debug( "# No workspace match was found" )
+		'If candidate ; Trace.debug( "# Using candidate "+candidate.uri.toString() )
 
 		' We get here if no exact match has been found
 		' In this case, we return the closest candidate (if found)

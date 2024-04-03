@@ -25,8 +25,8 @@ Rem EXAMPLE
 End Rem
 
 Function bls_textDocument_definition:JSON( message:TMessage )
-    logfile.debug( "bls_textDocument_definition() - TEST CODE~n"+message.J.stringify() )
-    logfile.info( "~n"+message.j.Prettify() )
+    Trace.debug( "bls_textDocument_definition() - TEST CODE~n"+message.J.stringify() )
+    Trace.info( "~n"+message.j.Prettify() )
 	
     Local id:String = message.getid()
     Local params:JSON = message.params

@@ -12,7 +12,7 @@ Type TTaskReceiver Extends TTask
 
 	Method New( parent:TClient )
 		Super.New( THREADED )
-		logfile.debug( "TTaskReceiver.new()" )
+		Trace.debug( "TTaskReceiver.new()" )
 		name        = "Receiver{}"	
 		priority    = QUEUE_PRIORITY_HIGH	
 		sleeper     = CreateMutex()	
@@ -21,7 +21,7 @@ Type TTaskReceiver Extends TTask
 	End Method
 	
 	Method launch()
-		logfile.debug( "## TTaskReceiver - STARTED" )
+		Trace.debug( "## TTaskReceiver - STARTED" )
 		
 		Local running:Int = True    ' Local loop state
 		
@@ -29,7 +29,7 @@ Type TTaskReceiver Extends TTask
 			' Get inbound message from Language Client
             'Local content:String = client.getRequest()
 'DebugLog( "TTaskReceiver - Reading client" )
-            Local content:String = client.read()
+            Local content:String = client.Read()
 'DebugLog( "TTaskReceiver - content received" )
 
             ' Parse message into a JSON object
@@ -38,14 +38,14 @@ Type TTaskReceiver Extends TTask
             ' Report an error to the Client using stdOut
             If Not J Or J.isInvalid()
 				Local errtext:String
-				logfile.error( content )
+				Trace.error( content )
 				If J.isInvalid()
 					errtext = "ERROR("+J.errNum+") "+J.errText+" at {"+J.errLine+","+J.errpos+"}"
 				Else
 					errtext = "ERROR: Parse returned null"
 				End If
                 ' Send error message to LSP Client
-				logfile.debug( errtext )
+				Trace.debug( errtext )
                 Continue
             End If
 
@@ -54,9 +54,9 @@ Type TTaskReceiver Extends TTask
 			Local message:TMessage = New TMessage( J )
 			Local methd:String = message.methd
 
-			logfile.debug( "- ID:      "+message.id )
-			logfile.debug( "- METHOD:  "+message.methd )
-			logfile.debug( "- CLASS:   "+message.classname() )
+			Trace.debug( "- ID:      "+message.id )
+			Trace.debug( "- METHOD:  "+message.methd )
+			Trace.debug( "- CLASS:   "+message.classname() )
 		
 			Select message.class
 			Case TMessage._REQUEST
@@ -64,11 +64,11 @@ Type TTaskReceiver Extends TTask
 				' Check server has initialised
 				Select True
 				Case lsp.state = lsp.STATE_INITIALISED And methd="initialize"
-					logfile.critical( "## Server already initialized~n"+J.stringify() )
+					Trace.critical( "## Server already initialized~n"+J.stringify() )
 					lsp.send( Response_Error( ERR_INVALID_REQUEST, "Server already initialized", message.id ) )
 					Continue
 				Case lsp.state <> lsp.STATE_INITIALISED And methd<>"initialize"
-					logfile.critical( "## Server is not initialized~n"+J.stringify() )
+					Trace.critical( "## Server is not initialized~n"+J.stringify() )
 					lsp.send( Response_Error( ERR_SERVER_NOT_INITIALIZED, "Server is not initialized", message.id ))
 					Continue
 				End Select
@@ -85,24 +85,24 @@ Type TTaskReceiver Extends TTask
 				Local request:TServerRequest = lsp.matchResponseToRequest( message.id )
 				
 				If request
-					logfile.debug( "RESPONSE MATCHED TO~n"+request.J.prettify() )
+					Trace.debug( "RESPONSE MATCHED TO~n"+request.J.prettify() )
 
 					' Update the ServerRequest with Response
 					'message.addResponse( J )
 
 					' Post the response to the TaskQueue
 					message.priority = QUEUE_PRIORITY_RESPONSE
-					logfile.debug( "RESPONSE" )
-					logfile.debug( "  METHOD: "+ methd )
+					Trace.debug( "RESPONSE" )
+					Trace.debug( "  METHOD: "+ methd )
 					If message.params
-						logfile.debug( "  PARAMS: "+ message.params.stringify() )
+						Trace.debug( "  PARAMS: "+ message.params.stringify() )
 					Else
-						logfile.debug( "  PARAMS: NULL" )
+						Trace.debug( "  PARAMS: NULL" )
 					End If
-					logfile.debug( "  J:~n"+message.J.prettify() )
+					Trace.debug( "  J:~n"+message.J.prettify() )
 					'message.post()
 				Else
-					logfile.debug( "# REPONSE NOT MATCHED TO REQUEST" )
+					Trace.debug( "# REPONSE NOT MATCHED TO REQUEST" )
 				End If
 								
 			Case TMessage._NOTIFICATION
@@ -112,13 +112,13 @@ Type TTaskReceiver Extends TTask
 				message.post()
 				
 			Default
-				logfile.critical( "## Invalid message~n"+J.Stringify() )
+				Trace.critical( "## Invalid message~n"+J.Stringify() )
 'DebugStop
 				Continue
 			End Select		
 		Until CompareAndSwap( parent.quitflag, running, False )
 		sleep.Signal()			' Wake the Task (see wait() method)
-		logfile.debug( "## TTaskReceiver - FINISHED" )
+		Trace.debug( "## TTaskReceiver - FINISHED" )
 	End Method
 
 	' Block until launch() completes

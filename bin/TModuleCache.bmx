@@ -47,26 +47,26 @@ Type TModuleCache Extends TCacheDB
 	Private
 	
 	Method upgrade( currentVerMax:Int, currentVerMin:Int )
-		logfile.debug( "module.cache.upgrade:" )
+		Trace.debug( "module.cache.upgrade:" )
 		If  (currentVerMax=0 And currentVerMin<5) 
-			logfile.debug( "- Upgrading Tables" )
+			Trace.debug( "- Upgrading Tables" )
 			exec( "DROP TABLE symbols;" )
 			exec( "DROP TABLE modules;" )
 		Else
-			logfile.debug( "- Not required" )		
+			Trace.debug( "- Not required" )		
 		End If
 	End Method
 	
 	Method patch( currentVerMax:Int, currentVerMin:Int, currentBuild:Int )
-		logfile.debug( "module.cache.patch:" )
+		Trace.debug( "module.cache.patch:" )
 		If  (currentVerMax=0 And currentVerMin<5) 		' Added definition field
-			logfile.debug( "- Patching Tables" )
+			Trace.debug( "- Patching Tables" )
 			exec( "DROP TABLE symbols;" )
 			exec( "DROP TABLE modules;" )
 			'exec( "DELETE FROM modules;" ) ' Clean up old data
 			exec( "DELETE FROM attr WHERE key='version' or key='blsversion';" ) ' Clean up old data
 		Else
-			logfile.debug( "- Not required" )		
+			Trace.debug( "- Not required" )		
 		End If
 	End Method
 	
@@ -235,7 +235,7 @@ Type TModuleCache Extends TCacheDB
 			symbol.set( "definition", record.getStringByName( "definition" ) )
 			symbol.set( "description", record.getStringByName( "description" ) )
 			data :+ [symbol]
-			'logfile.debug( symbol.stringify() )
+			'Trace.debug( symbol.stringify() )
 		Wend
 		Return data
 	End Method

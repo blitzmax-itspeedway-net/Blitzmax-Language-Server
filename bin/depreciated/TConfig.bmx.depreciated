@@ -7,9 +7,10 @@ Type TConfig ' Extends TMap
 	Field filename:String
 
     Method New()
-        'logfile.write( "Config started" )
+        'Trace.write( "Config started" )
         'defaults()
         filename = AppDir+"/bls.config"
+		'DebugStop
         Try
             ' Check if file exists
             Select FileType( filename )
@@ -21,13 +22,13 @@ Type TConfig ' Extends TMap
             Case 2  ' Directory !!
             Default
                 'Publish( "log", "WARN", "Invalid configuration file" )
-				logfile.warning( "Invalid configuration file" )
+				Trace.warning( "Invalid configuration file" )
             End Select
         Catch exception:String
             ' Show the error, but otherwise just continue
-            'Logfile.write( exception, "CRITICAL" )
+            'Trace.write( exception, "CRITICAL" )
             'Publish( "log", "ERRR", "ERROR: "+exception )
-			logfile.error( exception )
+			Trace.error( exception )
         End Try
 		defaults()
 		'
@@ -120,7 +121,7 @@ End Rem
 
 	Method isTrue:Int( path:String )
 		Local key:JSON = J.find( path )
-'logfile.debug( "KEY:"+key.stringify() )
+'Trace.debug( "KEY:"+key.stringify() )
 		Return key.isTrue()
 	End Method
 	

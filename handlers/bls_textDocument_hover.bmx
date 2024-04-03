@@ -52,16 +52,16 @@ Function bls_textDocument_hover:JSON( message:TMessage )
 	' Later we may be able to load an AST from file
 
 	If Not document Or Not document.ast
-'		logfile.debug( "# NOT A FULL TEXT DOCUMENT" )
+'		Trace.debug( "# NOT A FULL TEXT DOCUMENT" )
 		Return Response_OK( id )		' This is "result":null by default
 	End If
 	
 	' Find the token at the cursor
 
 	If document.lexer = Null
-		logfile.debug( "***** LEXER IS NULL *****" )
+		Trace.debug( "***** LEXER IS NULL *****" )
 	Else
-		logfile.debug( "***** LEXER IS OK *****" )
+		Trace.debug( "***** LEXER IS OK *****" )
 	End If
 	
 	Local token:TToken
@@ -73,7 +73,7 @@ Function bls_textDocument_hover:JSON( message:TMessage )
 			token = t
 			Exit
 		ElseIf t.line-1 > position.line
-			logfile.debug( "* SEARCH STOPPED AT "+t.reveal() )
+			Trace.debug( "* SEARCH STOPPED AT "+t.reveal() )
 			' Stop searching if we have passed the line number
 			Exit
 		End If
@@ -81,7 +81,7 @@ Function bls_textDocument_hover:JSON( message:TMessage )
 	
 	' Did we find a suitable token?
 	If Not token 'Or Not token.in( TK_
-		logfile.debug( "***** TOKEN IS NULL *****" )
+		Trace.debug( "***** TOKEN IS NULL *****" )
 		Return Response_OK( id )		' This is "result":null by default
 	End If
 	
@@ -101,10 +101,10 @@ Rem
 		Select J.toString()
 		Case "markdown"
 			options :| CONTENT_MARKDOWN
-			logfile.debug( "# HOVER supports Markdown" )
+			Trace.debug( "# HOVER supports Markdown" )
 		Case "plaintext"
 			options :| CONTENT_PLAINTEXT
-			logfile.debug( "# HOVER supports plaintext" )
+			Trace.debug( "# HOVER supports plaintext" )
 HERE->
 		EndSelect
 	Next
@@ -168,7 +168,7 @@ End Rem
 	data.set( "range|end|character", token.pos + Len(token.value)-2 )
 	
 '	Local data:JSON = workspace.cache.getSymbolAt( position )
-	logfile.debug( "CREATED DATA~n"+data.prettify() )
+	Trace.debug( "CREATED DATA~n"+data.prettify() )
 
 
 	Local response:JSON = Response_OK( id )

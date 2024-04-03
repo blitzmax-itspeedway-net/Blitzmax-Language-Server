@@ -10,7 +10,7 @@ Type TTaskDiagnostic Extends TTask
 	End Method
 
 	Method execute()
-		logfile.debug( "DIAGNOSTIC TASK IS NOT IMPLEMENTED" )
+		Trace.debug( "DIAGNOSTIC TASK IS NOT IMPLEMENTED" )
 	End Method
 
 End Type

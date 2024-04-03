@@ -37,29 +37,29 @@ Type TTaskDocumentParse Extends TTask
 		Try
 			' Parse the document
 			
-			logfile.debug( "> Parsing '"+document.uri.tostring()+"'" )
+			Trace.debug( "> Parsing '"+document.uri.tostring()+"'" )
 			client.logMessage( "Parsing '"+document.uri.tostring()+"'", EMessageType.info.ordinal() )
 
 			start = MilliSecs()
 			document.lexer = New TBlitzMaxLexer( document.content )
-			logfile.debug( "TTaskDocumentParse: Lexer initialised" )
+			Trace.debug( "TTaskDocumentParse: Lexer initialised" )
 			Local parser:TParser = New TBlitzMaxParser( document.lexer )
-			logfile.debug( "TTaskDocumentParse: Parser initialised" )
+			Trace.debug( "TTaskDocumentParse: Parser initialised" )
 			document.ast = parser.parse_ast()
-			logfile.debug( "TTaskDocumentParse: Document parsed" )
+			Trace.debug( "TTaskDocumentParse: Document parsed" )
 
 			' Parse the AST into a symbol table
 			workspace.cache.addSymbols( document.uri, New TSymbolTable( document.ast ) )
-			logfile.debug( "TTaskDocumentParse: Symbols added" )
+			Trace.debug( "TTaskDocumentParse: Symbols added" )
 			
 			finish = MilliSecs()
 			
-			'logfile.debug( "FILE '"+uri.tostring()+"':" )
-			'logfile.debug( lexer.reveal() )
-			'logfile.debug( parser.reveal() )
-			'logfile.debug( ast.reveal() )
+			'Trace.debug( "FILE '"+uri.tostring()+"':" )
+			'Trace.debug( lexer.reveal() )
+			'Trace.debug( parser.reveal() )
+			'Trace.debug( ast.reveal() )
 
-			logfile.debug( "TTaskDocumentParse: Parsed '"+document.uri.tostring()+"' in "+(finish-start)+"ms" )
+			Trace.debug( "TTaskDocumentParse: Parsed '"+document.uri.tostring()+"' in "+(finish-start)+"ms" )
 			client.logMessage( "Parsed '"+document.uri.tostring()+"' in "+(finish-start)+"ms", EMessageType.info.ordinal() )
 
 
@@ -69,7 +69,7 @@ Type TTaskDocumentParse Extends TTask
 			document.lexer = Null
 			document.ast = Null
 		Catch e:String
-			logfile.critical( "TTaskDocumentParse.launch() Failed: "+e )
+			Trace.critical( "TTaskDocumentParse.launch() Failed: "+e )
 		EndTry
 	End Method
 	

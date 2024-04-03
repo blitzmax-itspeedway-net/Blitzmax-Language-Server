@@ -36,26 +36,26 @@ Type TWorkspace
 		cache = New TWorkspaceCache( location )
 				
 Rem	
-'		logfile.debug( "# WORKSPACE IS "+uri.tostring()+", "+location )
+'		Trace.debug( "# WORKSPACE IS "+uri.tostring()+", "+location )
 		If location <> "/"
-'			logfile.debug( "# WORKSPACE IS NOT ROOT ("+location+")" )
+'			Trace.debug( "# WORKSPACE IS NOT ROOT ("+location+")" )
 			Local cachefolder:String = location + "/" + CACHE_FOLDER
-'			logfile.debug( "# CACHE FOLDER("+cachefolder+")" )
+'			Trace.debug( "# CACHE FOLDER("+cachefolder+")" )
 			Select FileType( cachefolder )
 			Case 0	' DOES NOT EXIST
-'				logfile.critical( "# WORKSPACE CACHE FOLDER DOES NOT EXIST" )
+'				Trace.critical( "# WORKSPACE CACHE FOLDER DOES NOT EXIST" )
 				If CreateDir( cachefolder ) 
-'					logfile.critical( "# CREATED CACHE FOLDER" )
+'					Trace.critical( "# CREATED CACHE FOLDER" )
 					cachefile = cachefolder + "/" + CACHE_FILE
 				Else
-					logfile.critical( "# UNABLE TO CREATE CACHE FOLDER" )
+					Trace.critical( "# UNABLE TO CREATE CACHE FOLDER" )
 					client.logmessage( "Unable to create cache folder.", EMessageType.Error.ordinal() )
 				End If
 			Case FILETYPE_FILE
-				logfile.critical( "# WORKSPACE CACHE FOLDER IS A FILE!" )
+				Trace.critical( "# WORKSPACE CACHE FOLDER IS A FILE!" )
 				client.logmessage( "Workspace cache folder is a File! Please delete it!", EMessageType.Error.ordinal() )
 			Case FILETYPE_DIR
-'				logfile.debug( "# WORKSPACE CACHE FOLDER EXISTS" )
+'				Trace.debug( "# WORKSPACE CACHE FOLDER EXISTS" )
 			End Select
 		End If
 End Rem
@@ -67,9 +67,9 @@ End Rem
 		' Create thread to scan workspace for documents
 		
 		If location = "/"
-			logfile.debug( "## NOT RUNNING SCANNER ON ROOT" )
+			Trace.debug( "## NOT RUNNING SCANNER ON ROOT" )
 		Else
-			logfile.debug( "## RUNNING SCANNER ON "+location )
+			Trace.debug( "## RUNNING SCANNER ON "+location )
 			' scanThread = new TThread( WorkSpaceScan, self )	
 			Local task:TTaskWorkspaceScan = New TTaskWorkspaceScan( Self )
 			task.post()
@@ -104,7 +104,7 @@ End Rem
 	Method add( document:TTextDocument )
 		If Not document ; Return
 		Local index:String = document.uri.toString()
-		logfile.debug( "-Adding "+index+" to workspace" )
+		Trace.debug( "-Adding "+index+" to workspace" )
 		If documents.contains( index ) ; Return			' Just ignore...
 		' Add document to list
 		documents[ index ] = document
@@ -146,14 +146,14 @@ End Rem
 			task.post()
 		
 '			Local document:TFullTextDocument = New TFullTextDocument( uri, Text, version )
-'			logfile.debug( "Created document" )
-'	If Not document logfile.debug( "DOCUMENT IS NULL" )
+'			Trace.debug( "Created document" )
+'	If Not document Trace.debug( "DOCUMENT IS NULL" )
 '			If workspace And document
-'				logfile.debug( "Got workspace" )
+'				Trace.debug( "Got workspace" )
 '				' Add document to workspace
 '				workspace.add( uri, document )
 '	'logfile( "Document is in workspace: "+workspace.name )
-'				logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+'				Trace.debug( "WORKSPACES:~n"+workspaces.reveal() )
 '				
 '				' Invalidate document
 '				workspace.invalidate( document )
@@ -168,10 +168,10 @@ End Rem
 '				' Wake up the Document Thread
 '				'PostSemaphore( semaphore )
 '			End If
-			logfile.debug( "WORKSPACES:~n"+workspaces.reveal() )
+			Trace.debug( "WORKSPACES:~n"+workspaces.reveal() )
 
 		Catch Exception:Object
-			logfile.critical( "## EXCEPTION: TWorkspace.open()~n"+Exception.toString() )
+			Trace.critical( "## EXCEPTION: TWorkspace.open()~n"+Exception.toString() )
 		End Try
 	End Method
 
@@ -220,7 +220,7 @@ End Rem
 
 	' Validation of all documents
 '	Method validate()
-'logfile.debug( "# VALIDATING DOCUMENTS" )
+'Trace.debug( "# VALIDATING DOCUMENTS" )
 '		For Local key:String = EachIn documents.keys()
 '			Local document:TTextDocument = TTextDocument( documents[key] )
 '			If document ; document.validate()
@@ -243,7 +243,7 @@ End Rem
 		'AtomicSwap( QuitDocThread, False )  ' Inform thread it must exit
 		'PostSemaphore( semaphore )  		' Wake the thread from it's slumber
         'DetachThread( DocThread )
-        'logfile.debug( "Workspace '"+name+"' thread closed" )
+        'Trace.debug( "Workspace '"+name+"' thread closed" )
 	
 		' Save cache, ast or anything should be done here!
 	'End Method
@@ -252,7 +252,7 @@ End Rem
 	Method getConfiguration()
 		' Register for Configuration updates (If supported by client)
 		If client.has( "workspace|configuration" )
-			logfile.debug( "# Client supports workspace configuration" )
+			Trace.debug( "# Client supports workspace configuration" )
 			
 			' Create a JSON array for the configuration Parameters
 			Local configParams:JSON = New JSON( JARRAY )
@@ -286,16 +286,16 @@ Rem
         Local quit:Int = False          ' Always got to know when to quit!
 		Repeat
 			Try
-                logfile.debug( "Workspace "+workspace.uri.tostring()+": Resting..")
+                Trace.debug( "Workspace "+workspace.uri.tostring()+": Resting..")
 				WaitSemaphore( workspace.semaphore )
-                logfile.debug( "Workspace "+workspace.uri.tostring()+": Awoken.." )
+                Trace.debug( "Workspace "+workspace.uri.tostring()+": Awoken.." )
 				
 				' VALIDATE DOCUMENTS
 				workspace.validate()
 				
             Catch Exception:String 
                 'DebugLog( Exception )
-                logfile.critical( Exception )
+                Trace.critical( Exception )
             End Try
 		Until CompareAndSwap( workspace.QuitDocThread, quit, True )
 	End Function
