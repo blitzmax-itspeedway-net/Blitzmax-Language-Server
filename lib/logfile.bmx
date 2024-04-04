@@ -33,7 +33,7 @@ Type TLogfile Implements IObserver
         ' Set loglevel from config within bounds
         loglevel = Min( Max( Int( CONFIG["loglevel"] ), 0), 7 )
         Try
-			DebugStop
+			'DebugStop
             Local filename:String = Trim(CONFIG["logfile"])
             If Not filename 'Or filename = ""
 				' Revert to default log location

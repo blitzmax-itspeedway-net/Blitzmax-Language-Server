@@ -29,9 +29,10 @@ Type TClient_StdIO Extends TClient
 'DebugLog( "STDIN NOT NULL" )
 
         Local line:String
-        Local content:String
+        'Local content:String
         Local contentlength:Int
-		Local contenttype:String = "utf-8"
+		'Local contenttype:String = "utf-8"
+		Local contenttype:String = "application/vscode-jsonrpc; charset=utf-8"
 
         ' Read messages from StdIN
 		Local running:Int = True     ' Local loop state
@@ -40,6 +41,7 @@ Type TClient_StdIO Extends TClient
             Try
 'DebugLog( "STARTING TO LISTEN" )
                 line = stdIn.ReadLine()
+				Trace.info( "STDIN < "+line )
 'DebugLog( "GOT CONTENT" )
                 If line.startswith("Content-Length:")
                     contentlength = Int( line[15..] )
@@ -48,12 +50,13 @@ Type TClient_StdIO Extends TClient
                     contenttype = Int( line[13..] )
                     ' Backward compatibility, utf8 is no longer supported
                     If contenttype = "utf8" contenttype = "utf-8"
-                   Trace.debug( "Content-Type:"+contenttype)
+					contenttype.Replace( "utf8", "utf-8" )
+					Trace.debug( "Content-Type:"+contenttype)
                 ElseIf line=""
                     Trace.debug( "WAITING FOR CONTENT...")
-                    content = stdIN.ReadString$( contentlength )
+                    Local content:String = stdIN.ReadString$( contentlength )
                     Trace.debug( "TLSP_Stdio.getRequest() received "+contentlength+" bytes" )
-                    Return content
+                    If Len(content) > 0; Return content
                 Else
                     Trace.debug( "Skipping: "+line )
                 End If

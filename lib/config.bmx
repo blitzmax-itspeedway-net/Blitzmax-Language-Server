@@ -31,7 +31,7 @@ Type TConfig ' Extends TMap
     Method New()
         'logfile.write( "Config started" )
         'defaults()
-		DebugStop
+		'DebugStop
 ?win32
 		filename = GetUserAppDir() + "\bls\bls.config"
 ?linux

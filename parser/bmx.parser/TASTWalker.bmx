@@ -35,8 +35,11 @@ Type TASTWalker Extends TVisitor
 		
 	Function WalkByIDs:Object( node:TASTNode, data:Object, options:Int[])
 'DebugStop
+
+' 4 APR 2024 - Commented out due to compile error, but need to fix
+		Trace.Error( "!! ERROR, TASTWalker.bmx, line 40 - Bad Commented code, Please review. " )
+'		If Not in( node.tokenid, options ); Return data
 		' Check if node found
-		If Not in( node.tokenid, options ); Return data
 'DebugStop
 		' Add node to results
 		Local list:TList = TList(data)

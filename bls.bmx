@@ -68,6 +68,16 @@ Import bmx.json
 ' FIRST LOADED WILL BE LAST EXIT PROCEDURE TO RUN
 Import "lib/logfile.bmx"
 
+' It is important to start the services in this order
+Import "lib/Service_TaskQueue.bmx"	' Priority Task Queue Service
+Import "lib/Service_InQueue.bmx"	' Inbound Queue Service
+Import "lib/Service_StdOUT.bmx"		' StdOUT Service
+Import "lib/Service_StdIN.bmx"		' StdIN Service
+
+Import "lib/trace.bmx"				' Logging
+
+Import "lib/application.bmx"		' The Language Server Application
+
 ' ########## APPLICATION
 DebugStop
 
@@ -82,45 +92,45 @@ AppTitle = "BlitzMax Language Server"	' BLS
 Include "bin/language-server-protocol.bmx"
 
 ' Load order - SECOND
-Include "bin/TLanguageServer.bmx"
-Include "bin/TURI.bmx"					' URI Support
-Include "bin/responses.bmx"
+'Include "bin/TLanguageServer.bmx"
+'Include "bin/TURI.bmx"					' URI Support
+'Include "bin/responses.bmx"
 
-Include "bin/functions.bmx"
+'Include "bin/functions.bmx"
 
 ' Tasks
-Include "bin/TTask.bmx"						' Ancestral Task type
-Include "bin/TTaskQueue.bmx"				' The global task queue
-Include "bin/TTaskDiagnostic.bmx"			' Compiles and returns disagnostics information
-Include "bin/TTaskDocumentParse.bmx"		' Parses a source file
-Include "bin/TTaskModuleScan.bmx"			' Scans modules
-Include "bin/TTaskWorkspaceScan.bmx"		' Scans workspace looking for source files
-Include "bin/TTaskReceiver.bmx"				' Message Receiver (Listener)
-Include "bin/TTaskSend.bmx"					' Sends a message to the client (Server Request, Client Respose or Notification)
+'Include "bin/TTask.bmx"						' Ancestral Task type
+'Include "bin/TTaskQueue.bmx"				' The global task queue
+'Include "bin/TTaskDiagnostic.bmx"			' Compiles and returns disagnostics information
+'Include "bin/TTaskDocumentParse.bmx"		' Parses a source file
+'Include "bin/TTaskModuleScan.bmx"			' Scans modules
+'Include "bin/TTaskWorkspaceScan.bmx"		' Scans workspace looking for source files
+'Include "bin/TTaskReceiver.bmx"				' Message Receiver (Listener)
+'Include "bin/TTaskSend.bmx"					' Sends a message to the client (Server Request, Client Respose or Notification)
 
 ' Events and Messages
-Include "bin/TEventHandler.bmx"
-Include "bin/TMessage.bmx"
-Include "bin/TMessage_ServerRequest.bmx"	' Server Request Messages (To client)
-'Include "bin/TMessageQueue.bmx"			' 15/12/21, Replaced with TTaskQueue
-Include "bin/TClient.bmx"					' Represents the remote IDE
-Include "bin/TClient_StdIO.bmx"				' Client StdIO communication
-Include "bin/TClient_TCP.bmx"				' Client TCP communication
-'Include "bin/TTemplate.bmx"    			' Depreciated (Functionality moved into JSON)
-'Include "bin/json.bmx"
+'Include "bin/TEventHandler.bmx"
+'Include "bin/TMessage.bmx"
+'Include "bin/TMessage_ServerRequest.bmx"	' Server Request Messages (To client)
+''Include "bin/TMessageQueue.bmx"			' 15/12/21, Replaced with TTaskQueue
+'Include "bin/TClient.bmx"					' Represents the remote IDE
+'Include "bin/TClient_StdIO.bmx"				' Client StdIO communication
+'Include "bin/TClient_TCP.bmx"				' Client TCP communication
+''Include "bin/TTemplate.bmx"    			' Depreciated (Functionality moved into JSON)
+''Include "bin/json.bmx"
 
-'Include "bin/sandbox.bmx"
+''Include "bin/sandbox.bmx"
 
-Include "bin/TCacheDB.bmx"	
-Include "bin/TModuleCache.bmx"				' Manages the module cache database
+'Include "bin/TCacheDB.bmx"	
+'Include "bin/TModuleCache.bmx"				' Manages the module cache database
 
 ' Text Document Manager
-Include "bin/TSymbolTable.bmx"	
-Include "bin/TTextDocument.bmx"	
-Include "bin/TWorkspaces.bmx"		' Manages ALL workspaces
-Include "bin/TWorkspace.bmx"		' Manages a single workspace
-Include "bin/TWorkspaceCache.bmx"	' Manages the workspace cache
-Include "bin/TDBDocument.bmx"		' Database Document Interaction
+'Include "bin/TSymbolTable.bmx"	
+'Include "bin/TTextDocument.bmx"	
+'Include "bin/TWorkspaces.bmx"		' Manages ALL workspaces
+'Include "bin/TWorkspace.bmx"		' Manages a single workspace
+'Include "bin/TWorkspaceCache.bmx"	' Manages the workspace cache
+'Include "bin/TDBDocument.bmx"		' Database Document Interaction
 Include "bin/TGift.bmx"				' Gift brought by a Visitor ;)
 
 'Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - replaced by TWorkspace
@@ -131,34 +141,18 @@ Include "bin/TGift.bmx"				' Gift brought by a Visitor ;)
 'Include "lexer/TException.bmx"
 
 ' SANDBOX PARSER
-Include "sandbox/bmx.parser/TParser.bmx"
-Include "sandbox/bmx.parser/TASTNode.bmx"
-Include "sandbox/bmx.parser/TASTBinary.bmx"
-Include "sandbox/bmx.parser/TASTUnary.bmx"
-Include "sandbox/bmx.parser/TASTGroup.bmx"
-Include "sandbox/bmx.parser/TASTCompound.bmx"
-Include "sandbox/bmx.parser/TVisitor.bmx"
-Include "sandbox/bmx.parser/TParseValidator.bmx"
-Include "sandbox/bmx.parser/TASTErrorMessage.bmx"
-Include "sandbox/bmx.parser/TASTWalker.bmx"
-
-' SANDBOX BLITZMAX LEXER/PARSER
-' Included here until stable release pushed back into module
-Include "sandbox/bmx.blitzmaxparser/lexer-const-bmx.bmx"
-Include "sandbox/bmx.blitzmaxparser/TBlitzMaxAST.bmx"
-Include "sandbox/bmx.blitzmaxparser/TBlitzMaxLexer.bmx"
-Include "sandbox/bmx.blitzmaxparser/TBlitzMaxParser.bmx"
+Include "parser/parser.bmx"
 
 'debugstop
 ' Message Handlers
-Include "handlers/handlers.bmx"
+'Include "handlers/handlers.bmx"
 
-Include "bin/constants.bmx"
+'Include "bin/constants.bmx"
 
 '	INCLUDE SUPPORTED ARGUMENTS
 
 'Incbin "arguments.json"
-Include "lib/Arguments.bmx"
+Include "lib/arguments.bmx"
 
 '# Override BRL.Print()
 Function Print( str:String )
@@ -222,38 +216,36 @@ End If
 Trace.Debug( "- CURRENTDIR: "+CurrentDir$() )
 Trace.Debug( "- APPDIR:     "+AppDir )
 
-
-
-'	ARGUMENTS AND CONFIGURATION
-'DebugStop
-'New TArguments()			' Arguments
+'	ARGUMENTS And CONFIGURATION
 Trace.debug( "CONFIG:~n"+config.J.prettify() )
 
 '	START THE MESSAGE QUEUE
 
-Global TaskQueue:TTaskQueue = New TTaskQueue()			' 12/12/21, Standardised task queue
+'Global TaskQueue:TTaskQueue = New TTaskQueue()			' 12/12/21, Standardised task queue
 
 '	CLIENT COMMUNICATION
 
-Global Client:TClient 			' Client Manager
-Config["transport"]="stdio"		' 	This will be based on arguments in the future, but for now we only support STDIO
-Select Config["transport"]
-Case "tcp"
-	client = New TClient_TCP()
-Default
-	client = New TClient_StdIO()
-End Select
+'Global Client:TClient 			' Client Manager
+'Config["transport"]="stdio"		' 	This will be based on arguments in the future, but for now we only support STDIO
+'Select Config["transport"]
+'Case "tcp"
+'	client = New TClient_TCP()
+'Default
+'	client = New TClient_StdIO()
+'End Select
 
-If client
-	client.open()					' Start the client
-Else
-	Trace.critical( "Failed to create client" )
-End If
+'If client
+'	client.open()					' Start the client
+'Else
+'	Trace.critical( "Failed to create client" )
+'End If
 
-'	LANGUAGE SERVER
+'	CREATE THE LANGUAGE SERVER
 'DebugStop
-Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
+'Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 'DebugStop
+Global app:Application = New Application( "V"+appvermax+"."+appvermin+" build "+appbuild )
+
 
 ' Depreciated 15/12/21 in favour of TClient extensions.
 ' This will be based on arguments in the future, but for now we only support STDIO
@@ -267,14 +259,14 @@ Global LSP:TLanguageServer	 = New TLanguageServer()		' Language Server
 '	DOCUMENTS AND WORKSPACES
 
 'Global Documents:TDocumentMGR = New TDocumentMGR()	' Document Manager, Depreciated (See Workspace)
-Global Workspaces:TWorkspaces = New TWorkspaces()
+'Global Workspaces:TWorkspaces = New TWorkspaces()
 
 '	CREATE MODULE SCAN TASK
-DebugStop
-Global modules:TModuleCache = New TModuleCache()
 'DebugStop
-Local task:TTaskModuleScan = New TTaskModuleScan( modules )
-task.post()
+'Global modules:TModuleCache = New TModuleCache()
+'DebugStop
+'Local task:TTaskModuleScan = New TTaskModuleScan( modules )
+'task.post()
 
 Rem 31/8/21, Depreciated by new message queue
 '   Worker Thread
@@ -303,19 +295,32 @@ End Rem
 '   Run the Application
 Trace.debug( "Starting Language Server..." )
 
+' Start the service threads
+
+Service_StdIN.start()
+Service_StdOUT.start()
+Service_InQueue.start()
+Service_TaskQueue.start()
+
 'DebugStop
 
-Try
-	' V0.2, Moved creation into the TLSP file
-    'LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )
-    'exit_( LSP.run() )
-    'Publish( "debug", "Exit Gracefully" )
+'Try
+'	' V0.2, Moved creation into the TLSP file
+'    'LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )
+'    'exit_( LSP.run() )
+'    'Publish( "debug", "Exit Gracefully" )
+'
+'	' Wait for listener to close
+'	client.wait()
+'
+'Catch exception:String
+'    Trace.critical( exception )
+'End Try
 
-	' Wait for listener to close
-	client.wait()
-
-Catch exception:String
-    Trace.critical( exception )
-End Try
+' Put the main thread to sleep
+Local sleeper:TCondVar = CreateCondVar()
+Local wait:TMutex = CreateMutex()
+LockMutex( wait )
+sleeper.wait( wait )
 
 Trace.debug( "Language Server Closing..." )

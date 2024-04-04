@@ -8,22 +8,22 @@ Include "../bin/TGift.bmx"				' Gift brought by a Visitor ;)
 Include "../bin/TURI.bmx"					' URI Support
 
 ' SANDBOX PARSER
-Include "../sandbox/bmx.parser/TParser.bmx"
-Include "../sandbox/bmx.parser/TASTNode.bmx"
-Include "../sandbox/bmx.parser/TASTBinary.bmx"
-Include "../sandbox/bmx.parser/TASTUnary.bmx"
-Include "../sandbox/bmx.parser/TASTGroup.bmx"
-Include "../sandbox/bmx.parser/TASTCompound.bmx"
-Include "../sandbox/bmx.parser/TVisitor.bmx"
-Include "../sandbox/bmx.parser/TParseValidator.bmx"
-Include "../sandbox/bmx.parser/TASTErrorMessage.bmx"
+Include "../parser/bmx.parser/TParser.bmx"
+Include "../parser/bmx.parser/TASTNode.bmx"
+Include "../parser/bmx.parser/TASTBinary.bmx"
+Include "../parser/bmx.parser/TASTUnary.bmx"
+Include "../parser/bmx.parser/TASTGroup.bmx"
+Include "../parser/bmx.parser/TASTCompound.bmx"
+Include "../parser/bmx.parser/TVisitor.bmx"
+Include "../parser/bmx.parser/TParseValidator.bmx"
+Include "../parser/bmx.parser/TASTErrorMessage.bmx"
 
 ' SANDBOX BLITZMAX LEXER/PARSER
 ' Included here until stable release pushed back into module
-Include "../sandbox/bmx.blitzmaxparser/lexer-const-bmx.bmx"
-Include "../sandbox/bmx.blitzmaxparser/TBlitzMaxAST.bmx"
-Include "../sandbox/bmx.blitzmaxparser/TBlitzMaxLexer.bmx"
-Include "../sandbox/bmx.blitzmaxparser/TBlitzMaxParser.bmx"
+Include "../parser/bmx.blitzmaxparser/lexer-const-bmx.bmx"
+Include "../parser/bmx.blitzmaxparser/TBlitzMaxAST.bmx"
+Include "../parser/bmx.blitzmaxparser/TBlitzMaxLexer.bmx"
+Include "../parser/bmx.blitzmaxparser/TBlitzMaxParser.bmx"
 
 Function LoadFile:String(filename:String)
 	Local file:TStream = ReadStream( filename )

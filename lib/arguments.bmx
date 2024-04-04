@@ -134,7 +134,7 @@ Const ARGUMENTS:String = "{" +..
 End Rem
 'debuglog FEATURES.prettify()
 
-DebugStop
+'DebugStop
 
 New TArguments()
 
