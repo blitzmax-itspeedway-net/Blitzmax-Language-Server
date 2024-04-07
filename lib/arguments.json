@@ -6,7 +6,7 @@
         "ast":{ "key":"outline|ast",  "value":"true", "hint":"Show AST in Outline"},
         "eol":{ "key":"outline|eol", "value":"true", "hint":"Show EOL in AST" },
         "notype":{ "key":"outline|notype", "value":"true", "hint":"Hide node type in Outline"},
-        "desc":{ "key":"outline|desc", "value":"true", "hint":"Shwo descriptive Constructor/Destructor in Outline"}
+        "desc":{ "key":"outline|desc", "value":"true", "hint":"Show descriptive Constructor/Destructor in Outline"}
     },
     "-x": {
         "compl":{ "key":"experimental|compl", "value":"true", "hint":"Feature 'compl' (Code Completion) is experimental"},

@@ -43,20 +43,20 @@ Type TTextDocumentManager 'Implements IObserver
 	' ============================================================
 	
 	Method on_textDocument_didOpen( message:TMessage )	' NOTIFICATION	
-		Trace.debug( "on_textDocument_didOpen() - NOT IMPLEMENTED" )
+		Trace.error( "on_textDocument_didOpen() - NOT IMPLEMENTED" )
 		Client.Log( "thanks, opening file..." )
 	End Method
 
 	Method on_textDocument_didChange( message:TMessage )	' NOTIFICATION	
-		Trace.debug( "on_textDocument_didChange() - NOT IMPLEMENTED" )
+		Trace.error( "on_textDocument_didChange() - NOT IMPLEMENTED" )
 	End Method
 
 	Method on_textDocument_didClose( message:TMessage )	' NOTIFICATION	
-		Trace.debug( "on_textDocument_didClose() - NOT IMPLEMENTED" )
+		Trace.error( "on_textDocument_didClose() - NOT IMPLEMENTED" )
 	End Method
 
 	Method on_textDocument_didSave( message:TMessage )	' NOTIFICATION	
-		Trace.debug( "on_textDocument_didSave() - NOT IMPLEMENTED" )
+		Trace.error( "on_textDocument_didSave() - NOT IMPLEMENTED" )
 	End Method	
 End Type
 

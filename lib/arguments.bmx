@@ -2,6 +2,7 @@
 '   BLITZMAX LANGUAGE SERVER
 '   (c) Copyright Si Dunford, July 2021, All Right Reserved
 
+Incbin "arguments.json"
 'Import bmx.observer
 'Import bmx.json
 
@@ -36,7 +37,7 @@ Rem	IMPLEMENTED ARGUMENTS
 	
 	linting									-l:FEATURE:VALUE
 	
-	Diagnostics 							-diag
+	Diagnostics 							-diag		-x:diag
 	Code Completion Provider 				-cc
 	Code Action Provider					-ca
 	Codelens Provider 						-cl
@@ -211,9 +212,11 @@ Type TArguments
 			arguments = ReadString( file, file.size() )
 			CloseStream file
 		End If
+		'DebugStop
+		'Trace.Debug( "ARGUMENTS:~n"+arguments )
 		
 		Local Features:JSON = JSON.PARSE( arguments )
-		Trace.Debug( Features.Prettify() )
+		'Trace.Debug( Features.Prettify() )
 
 		' Set the application argument in case we need it later
 		CONFIG[ "app" ] = AppArgs[0]

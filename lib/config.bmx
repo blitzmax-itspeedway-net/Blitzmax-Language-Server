@@ -32,13 +32,7 @@ Type TConfig ' Extends TMap
         'logfile.write( "Config started" )
         'defaults()
 		'DebugStop
-?win32
-		filename = GetUserAppDir() + "\bls\bls.config"
-?linux
 		filename = GetUserAppDir() + "/.bls/bls.config"
-?macos
-		filename = GetUserAppDir() + "/bls/bls.config"
-?
 		CreateDir( ExtractDir( filename ), True )
         'Try
 		' Check if file exists

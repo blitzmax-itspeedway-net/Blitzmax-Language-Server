@@ -38,12 +38,12 @@ Type Service_InQueue Implements IObserver
 
 	' Start Thread
 	Function start()
-		If Not instance; Throw( "Failed to start inputQueue" )
+		If Not instance; Throw( "InQueue: Failed to start" )
 		instance.thread	= CreateThread( FN, instance )	
 	End Function
 		
 	Method New()
-		Trace.Info( "InputQueue Service starting" )
+		Trace.Info( "InQueue: Starting" )
 		
 		MessageQueue = New TList()
 		RequestQueue = New TStringMap()
@@ -109,7 +109,7 @@ Type Service_InQueue Implements IObserver
 		Case EV_SYSTEM_STATE
 			' System state has changed
 			systemstate = ESYSTEMSTATE(Int[](data)[0])	' Unbox the integer
-			trace.debug( "InQueue received system state change: "+systemState.toString() )
+			trace.debug( "InQueue: Received system state change: "+systemState.toString() )
 		End Select
 		
 	End Method

@@ -2,4 +2,4 @@
 
 Global appvermax:Int=0
 Global appvermin:Int=5
-Global appbuild:Int=39
+Global appbuild:Int=71

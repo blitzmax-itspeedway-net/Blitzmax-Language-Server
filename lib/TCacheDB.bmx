@@ -33,6 +33,9 @@ Type TCacheDB
 		Self.rootpath = rootpath
 		Self.cachePath = cachePath
 		Self.cacheFile = cacheFile
+		CreateDir( rootPath+"/"+cachePath, True )
+		
+		'DebugStop
 		'logfile.debug( "TCacheDB: "+rootPath+","+cachePath+","+cacheFile )
 		'Self.cacheVersion = cacheVersion
 	End Method
@@ -69,8 +72,9 @@ Type TCacheDB
 		dbpath = cachedir + "/" + cacheFile
 		
 		'	DELETE THE TABLE ON UNSTABLE VERSIONS
-		If appvermax=0 And (appvermin<4 Or (appvermin=4 And appbuild<87)) And FileType( dbpath ) = FILETYPE_FILE
-			Trace.debug( "** Deleted file: "+dbpath )
+		'If appvermax=0 And (appvermin<4 Or (appvermin=4 And appbuild<87)) And FileType( dbpath ) = FILETYPE_FILE
+		If appvermax=0 And appvermin<5 And FileType( dbpath ) = FILETYPE_FILE
+			Trace.debug( "TDBCacheDB: Deleted file: "+dbpath )
 			DeleteFile( dbpath )
 		End If
 		
@@ -114,7 +118,7 @@ Type TCacheDB
 	
 	' Upgrade cache or delete records so we start again.
 	Method updateDatabase() Final
-DebugStop
+'DebugStop
 		' Get cache version and update
 		Local SQL:String = ..
 			"SELECT " +..

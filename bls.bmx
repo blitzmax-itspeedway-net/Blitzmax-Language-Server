@@ -21,7 +21,7 @@ SuperStrict
 '		TTaskWorkspaceScan Extends TTask
 '		TTaskSend Extends TTask						' Sends a message to the client
 
-' ########## BLITZMAX MODULES
+'	BLITZ RESEARCH LIBRARIES
 
 Framework brl.standardio 
 
@@ -40,8 +40,7 @@ Import brl.threadpool
 'Import brl.randomdefault	' Used by genWorkDoneToken()
 Import random.core	' Used by genWorkDoneToken()
 
-' ########## BRUCEYS MODULES
-
+'	BRUCEYS MODULES
 Import bah.database
 Import bah.dbsqlite
 
@@ -57,13 +56,12 @@ Import pub.freeprocess
 
 Import Text.RegEx
 
-' ########## ITSPEEDWAY/SCAREMONGER MODULES
-
+'	ITSPEEDWAY/SCAREMONGER MODULES
 Import bmx.observer
 Import bmx.json
 'import bmx.blitzmaxparser
 
-' ########## APPLICATION LIBRARIES
+'	APPLICATION LIBRARIES
 
 ' FIRST LOADED WILL BE LAST EXIT PROCEDURE TO RUN
 Import "lib/logfile.bmx"
@@ -90,10 +88,10 @@ AppTitle = "BlitzMax Language Server"	' BLS
 
 ' Language Server Protocol Interface
 Include "bin/language-server-protocol.bmx"
-
+'DebugStop
 ' Load order - SECOND
 'Include "bin/TLanguageServer.bmx"
-'Include "bin/TURI.bmx"					' URI Support
+Include "lib/TURI.bmx"					' URI Support
 'Include "bin/responses.bmx"
 
 'Include "bin/functions.bmx"
@@ -121,17 +119,18 @@ Include "bin/language-server-protocol.bmx"
 
 ''Include "bin/sandbox.bmx"
 
-'Include "bin/TCacheDB.bmx"	
-'Include "bin/TModuleCache.bmx"				' Manages the module cache database
+'	DATABASE
+'DebugStop
+Include "lib/TCacheDB.bmx"			' Cache Database
+Include "lib/TModuleCache.bmx"		' Manages the module cache database
 
 ' Text Document Manager
-'Include "bin/TSymbolTable.bmx"	
+Include "lib/TSymbolTable.bmx"	
 'Include "bin/TTextDocument.bmx"	
 'Include "bin/TWorkspaces.bmx"		' Manages ALL workspaces
 'Include "bin/TWorkspace.bmx"		' Manages a single workspace
 'Include "bin/TWorkspaceCache.bmx"	' Manages the workspace cache
 'Include "bin/TDBDocument.bmx"		' Database Document Interaction
-Include "bin/TGift.bmx"				' Gift brought by a Visitor ;)
 
 'Include "bin/TDocumentMGR.bmx"	' Depreciated 20/10/21 - replaced by TWorkspace
 
@@ -142,6 +141,7 @@ Include "bin/TGift.bmx"				' Gift brought by a Visitor ;)
 
 ' SANDBOX PARSER
 Include "parser/parser.bmx"
+Include "bin/TGift.bmx"				' Gift brought by a Visitor ;)
 
 'debugstop
 ' Message Handlers
@@ -171,6 +171,7 @@ Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
 ' #####
 ' ########## BMK FEATURES
 
+Rem
 ' @bmk echo
 ' @bmk echo *******************************
 ?Debug
@@ -184,7 +185,9 @@ Global DEBUGGER:Int = True							' TURN ON/OFF DEBUGGING
 ' @bmk incrementVersion 
 ' @bmk echo *******************************
 ' @bmk echo
+EndRem
 Include "bin/version.bmx"
+
 
 ' ##########
 ' #####
@@ -199,7 +202,7 @@ Const OBSERVER_MINIMUM_VERSION:Float = 1.6
 
 Observer.threaded()		' Enable thread protection
 
-Trace.Debug( "------------------------------------------------------------" )
+Trace.Debug( "-------------------------------------------------------" )
 Trace.Info( AppTitle )
 Trace.Info( "- VERSION:    V"+appvermax+"."+appvermin+" build "+appbuild )
 Trace.Info( "- JSON:       V"+JSON.Version() )
@@ -263,6 +266,9 @@ Global app:Application = New Application( "V"+appvermax+"."+appvermin+" build "+
 
 '	CREATE MODULE SCAN TASK
 'DebugStop
+
+'Module CACHE SOMEHOW BREAKS THE LANGUAGE SERVER!
+
 'Global modules:TModuleCache = New TModuleCache()
 'DebugStop
 'Local task:TTaskModuleScan = New TTaskModuleScan( modules )
@@ -304,6 +310,12 @@ Service_TaskQueue.start()
 
 'DebugStop
 
+'	CREATE MODULE SCAN TASK
+'Global modules:TModuleCache = New TModuleCache()
+'DebugStop
+'Local task:TTaskModuleScan = New TTaskModuleScan( modules )
+'task.post()
+
 'Try
 '	' V0.2, Moved creation into the TLSP file
 '    'LSP = New TLSP_Stdio( Int(CONFIG["threadpool"]) )
@@ -318,6 +330,7 @@ Service_TaskQueue.start()
 'End Try
 
 ' Put the main thread to sleep
+Trace.Debug( "Application Initialisation complete" )
 Local sleeper:TCondVar = CreateCondVar()
 Local wait:TMutex = CreateMutex()
 LockMutex( wait )

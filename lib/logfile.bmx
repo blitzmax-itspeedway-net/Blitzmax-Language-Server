@@ -37,13 +37,7 @@ Type TLogfile Implements IObserver
             Local filename:String = Trim(CONFIG["logfile"])
             If Not filename 'Or filename = ""
 				' Revert to default log location
-?win32
-				filename = GetUserAppDir() + "\bls\bls.log"
-?linux
 				filename = GetUserAppDir() + "/.bls/bls.log"
-?macos
-				filename = GetUserAppDir() + "/bls/bls.log"
-?				
 			End If
 			CreateDir( ExtractDir( filename ), True )
 
@@ -52,6 +46,7 @@ Type TLogfile Implements IObserver
 			
 			'If file SeekStream( file, file.Size())
 			'If file file.seek( file.size(), SEEK_SET_ )
+			Write( SEVERITY.INFO, "=======================================================" )
 			Write( SEVERITY.INFO, "Logging Started" )
 			Write( SEVERITY.INFO, "LOG LEVEL="+loglevel )
  

@@ -32,14 +32,16 @@ Type TModuleCache Extends TCacheDB
 
 	Private
 	
-	Const CACHE_PATH:String = ".bls-cache"
+	Const CACHE_PATH:String = ".bls"
 	Const CACHE_FILE:String = "module.cache"
 	'Const CACHE_VERSION:Int = 2
 	
 	Public 
 	
 	Method New()
-		Super.New( BlitzMaxPath()+"/mod", CACHE_PATH, CACHE_FILE )
+		Super.New( GetUserAppDir(), CACHE_PATH, CACHE_FILE )
+		'Super.New( BlitzMaxPath()+"/mod", CACHE_PATH, CACHE_FILE )
+		'DebugStop
 'DebugStop
 		initialise()
 	End Method
